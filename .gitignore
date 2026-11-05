@@ -1,0 +1,10 @@
+node_modules/
+dist/
+meet-tercuman.zip
+.env
+test/e2e/fixtures/
+test/e2e/out/
+test/api/out/
+.DS_Store
+test/meet/out/
+.claude/
