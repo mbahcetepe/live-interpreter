@@ -10,6 +10,8 @@ const dist = path.join(root, 'dist');
 const watch = process.argv.includes('--watch');
 // `--debug` compiles in the opt-in local debug copy (src/offscreen/debug-sink.js).
 const debug = process.argv.includes('--debug');
+// `--test` (and `--debug`) leave the panel's shadow root open for the automated tests.
+const openShadow = debug || process.argv.includes('--test');
 
 const common = {
   bundle: true,
@@ -18,7 +20,7 @@ const common = {
   logLevel: 'info',
   sourcemap: watch ? 'inline' : false,
   minify: false,
-  define: { __DEBUG_SINK__: String(debug) },
+  define: { __DEBUG_SINK__: String(debug), __OPEN_SHADOW__: String(openShadow) },
 };
 
 const modules = {

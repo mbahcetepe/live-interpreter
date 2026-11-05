@@ -284,7 +284,7 @@ const STOP_RECORDER = (name) => `(async () => {
 
 const vars = env();
 if (!vars.ELEVENLABS_API_KEY) throw new Error('ELEVENLABS_API_KEY missing in .env');
-if (!existsSync(path.join(dist, 'manifest.json'))) throw new Error('Run npm run build first.');
+if (!existsSync(path.join(dist, 'manifest.json'))) throw new Error('Run npm run build:test first.');
 await mkdir(out, { recursive: true });
 const videoDir = await mkdtemp(path.join(os.tmpdir(), 'meet-video-'));
 

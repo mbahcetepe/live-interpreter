@@ -1,4 +1,5 @@
 import { platformForUrl } from '../shared/platforms.js';
+import { SHADOW_MODE } from './shadow.js';
 
 // What they say, translated, shown like film subtitles low in the Meet window: above
 // Meet's own controls, and above Meet's captions when those are on. It never takes a
@@ -35,10 +36,12 @@ const ABOVE_CONTROLS = PLATFORM?.subtitleBottom ?? 104;
 const CAPTIONS = (PLATFORM?.captionSelectors ?? ['[role="region"][aria-label*="aption" i]']).join(', ');
 
 export class SubtitleBar {
-  constructor() {
+  // panelBox: where the panel is (its shadow root is closed, so it has to be asked).
+  constructor({ panelBox = () => null } = {}) {
+    this.panelBox = panelBox;
     this.host = document.createElement('div');
     this.host.id = 'meet-tercuman-subtitles';
-    const root = this.host.attachShadow({ mode: 'open' });
+    const root = this.host.attachShadow({ mode: SHADOW_MODE });
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(CSS);
     root.adoptedStyleSheets = [sheet];
@@ -92,7 +95,7 @@ export class SubtitleBar {
     if (box && box.height > 0 && box.top > 0) bottom = Math.max(bottom, Math.round(window.innerHeight - box.top + 10));
     let left = 16;
     let right = window.innerWidth - 16;
-    const panel = document.getElementById('meet-tercuman-overlay')?.shadowRoot?.querySelector('.panel')?.getBoundingClientRect();
+    const panel = this.panelBox();
     // Measured at full width, as the subtitles would stand centred with nothing in the way.
     this.bar.style.maxWidth = `${Math.min(960, right - left)}px`;
     const { width, height } = this.bar.getBoundingClientRect();

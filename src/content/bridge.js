@@ -20,13 +20,20 @@ const state = {
 
 // ---- page hook handshake --------------------------------------------------------------
 
+// The hook runs before any of the site's scripts, so it takes the first port. The page's
+// scripts share its world and could also listen, so ports are offered only twice (at
+// load and when the hook says it is ready), only to this page's origin, and the first
+// 'hello' wins for good.
 const offered = [];
+let offers = 0;
 
 function offerPort() {
+  if (state.pagePort || offers >= 2) return;
+  offers += 1;
   const channel = new MessageChannel();
   channel.port1.onmessage = (event) => onPageMessage(channel.port1, event.data);
   offered.push(channel.port1);
-  window.postMessage({ __meetTercuman: 'port' }, '*', [channel.port2]);
+  window.postMessage({ __meetTercuman: 'port' }, location.origin, [channel.port2]);
 }
 
 function onPageMessage(port, msg) {
@@ -42,9 +49,7 @@ function onPageMessage(port, msg) {
   if (msg?.type === 'page-state') state.enginePort?.postMessage(msg);
 }
 
-document.addEventListener('meet-tercuman-hook-ready', () => {
-  if (!state.pagePort) offerPort();
-});
+document.addEventListener('meet-tercuman-hook-ready', () => offerPort());
 offerPort();
 
 // ---- engine connection ----------------------------------------------------------------
@@ -93,7 +98,7 @@ function showSubtitles() {
   if (state.subtitles || !state.hello?.subtitleBar) return;
   const mount = () => {
     if (state.subtitles || !state.hello?.subtitleBar) return;
-    state.subtitles = new SubtitleBar();
+    state.subtitles = new SubtitleBar({ panelBox: () => state.overlay?.panelBox() ?? null });
     state.subtitles.setEnabled(state.hello.incomingMode !== 'off');
   };
   if (document.body) mount();

@@ -1,5 +1,6 @@
 import { t, languageLabel } from '../shared/i18n.js';
 import { formatUsage, formatNumber as num } from '../shared/usage.js';
+import { SHADOW_MODE } from './shadow.js';
 
 // The floating panel on the Meet page: live subtitles in both directions, the
 // translation mode switches, the voice clone consent and a usage counter. It lives
@@ -154,7 +155,7 @@ export class Overlay {
     const theirs = languageLabel(hello.theirLanguage);
 
     this.host = h('div', { id: 'meet-tercuman-overlay' });
-    const root = this.host.attachShadow({ mode: 'open' });
+    const root = this.host.attachShadow({ mode: SHADOW_MODE });
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(CSS);
     root.adoptedStyleSheets = [sheet];
@@ -521,6 +522,11 @@ export class Overlay {
     this.panel.style.left = `${Math.max(8, Math.min(window.innerWidth - width - 8, spot.left))}px`;
     this.panel.style.bottom = `${Math.max(8, Math.min(window.innerHeight - height - 8, spot.bottom))}px`;
     this.onMove?.();
+  }
+
+  // Where the panel stands, for the subtitles to keep clear of it.
+  panelBox() {
+    return this.panel?.getBoundingClientRect() ?? null;
   }
 
   destroy() {

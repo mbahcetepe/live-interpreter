@@ -1,6 +1,6 @@
 // A four-person call with the real services, in a stand-in Meet page:
 //
-//   node test/meet/group-call.mjs        (npm run build first)
+//   node test/meet/group-call.mjs        (npm run build:test first)
 //
 // Three people speak English with different voices and accents (American, British,
 // Indian), and I speak Turkish. Speech recognition and speech are the real ElevenLabs

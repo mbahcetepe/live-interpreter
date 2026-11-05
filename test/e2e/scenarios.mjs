@@ -53,7 +53,8 @@ const asked = (stats, dir) => stats.claude.filter((c) => (dir === 'in' ? /thanks
 
 async function openCall(mock) {
   const env = await launch({ micWav: path.join(fixtures, 'turkish.wav'), remoteWav: path.join(fixtures, 'english.wav'), proxyPort: mock.port });
-  await setSettings(env.control, { elevenLabsKey: 'mock-el', anthropicKey: 'mock-an', claudeModel: 'claude-opus-5-5', uiLanguage: 'en', myVoiceId: '' });
+  // Claude's own failures are checked here, so the free backup (unit tested on its own) is off.
+  await setSettings(env.control, { elevenLabsKey: 'mock-el', anthropicKey: 'mock-an', claudeModel: 'claude-opus-5-5', translationFallback: false, uiLanguage: 'en', myVoiceId: '' });
   return env;
 }
 
@@ -278,7 +279,7 @@ async function cloneScenario() {
 }
 
 if (!existsSync(path.join(dist, 'manifest.json'))) {
-  console.error('dist/ is missing: run npm run build first');
+  console.error('dist/ is missing: run npm run build:test first');
   process.exit(1);
 }
 await mkdir(fixtures, { recursive: true });

@@ -437,7 +437,7 @@ async function translationTest(keys) {
 }
 
 if (!existsSync(path.join(dist, 'manifest.json'))) {
-  console.error('dist/ is missing: run npm run build first');
+  console.error('dist/ is missing: run npm run build:test first');
   process.exit(1);
 }
 await mkdir(fixtures, { recursive: true });

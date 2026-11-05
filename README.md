@@ -122,8 +122,8 @@ npm run test:free        # live check of DeepL, Mistral and Groq free plans (key
 ```
 
 - Keys for the live tests go in a local `.env` file (see `.env.example`). `.env` is ignored by git; never commit it.
-- The end-to-end tests still drive a stand-in Meet page; a stand-in Teams page is not there yet.
-- Test speech for the API checks is made with the macOS `say` command and ffmpeg.
+- The end-to-end tests build with `--test` (`npm run build:test`), which leaves the panel's shadow root open for them; a normal build closes it. They still drive a stand-in Meet page; a stand-in Teams page is not there yet.
+- The end-to-end and API tests make their speech samples with the macOS `say` command and ffmpeg, and their certificate with openssl. On Windows, put ready-made `english.wav`, `turkish.wav` and `tone.wav` (48 kHz mono) in `test/e2e/fixtures` and Git's `usr\bin` on the PATH for openssl.
 - A debug build (`npm run build:debug`) can copy the audio sent to speech recognition and the transcripts to `127.0.0.1` when `localStorage['meet-tercuman-debug'] = '<port>'` is set on the call page and `node test/meet/debug-sink-server.mjs <port>` runs. The normal build ignores the flag.
 
 ---
@@ -132,7 +132,10 @@ npm run test:free        # live check of DeepL, Mistral and Groq free plans (key
 
 - No backend, no analytics and no remote code: everything ships inside the extension.
 - No API key is in the source code. Keys are typed into the settings page, kept in `chrome.storage.local` and sent only to the service they belong to: `api.elevenlabs.io`, `api.anthropic.com`, and DeepL, Mistral or Groq when you add their keys.
-- The script inside the call page makes no network requests. Audio reaches it through a private `MessagePort`.
+- The script inside the call page makes no network requests. Audio reaches it through a private `MessagePort`, offered only to the page's own origin and only until the hook answers.
+- What the call page reports (muted or not, its microphone) is reduced to known fields of the right type; anything unclear counts as muted.
+- The service worker and the engine check who sends each message: a content script may only greet and stop its own session, mode values are checked against a list.
+- The panel and the subtitles use closed shadow roots, so the call site's scripts cannot read the transcripts. Only test and debug builds leave them open.
 - Nothing reaches the call while you are muted, while translation to them is off, or before the call has started.
 - The other person's voice is cloned only after you tick the consent box, and the clone is deleted after the call unless you change that setting.
 - Recordings stay in the extension's storage on your computer until you save or delete them.

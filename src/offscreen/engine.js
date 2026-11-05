@@ -15,6 +15,8 @@ import { PcmScheduler, testChime } from '../shared/scheduler.js';
 import { int16ToBase64 } from '../shared/pcm.js';
 import { EchoGuard, EarlySentences, isOnlyPunctuation } from '../shared/text.js';
 import { Usage } from '../shared/usage.js';
+import { sanitizePageState } from '../shared/page-state.js';
+import { cleanModes } from '../background/message-policy.js';
 import { ScribeRealtime } from './stt.js';
 import { Translator, describeClaudeError, claudeRestMs } from './translator.js';
 import { FreeTranslator, freeKeys } from './free-translator.js';
@@ -79,8 +81,11 @@ let session = null;
 // hears. Web pages cannot reach the offscreen document.
 Object.defineProperty(globalThis, '__tercuman', { value: Object.freeze({ get session() { return session; } }) });
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg?.target !== 'offscreen') return false;
+  // Only the service worker and the extension's own pages drive the engine; a content
+  // script (which reports the call page's address) never does.
+  if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL(''))) return false;
   handle(msg).then(sendResponse, (err) => sendResponse({ ok: false, error: err?.message || String(err), code: err?.code }));
   return true;
 });
@@ -656,17 +661,18 @@ class Session {
       return;
     }
     if (m?.type === 'page-state') {
+      const state = sanitizePageState(m.state);
       const wasOpen = !this.page.muted && this.page.senders > 0;
-      this.page = { ...this.page, ...m.state };
+      this.page = { ...this.page, ...state };
       // Only in a joined call: in the lobby the microphone shows on before any connection.
-      const micOnInMeet = m.state.debug?.dom === false;
-      if (micOnInMeet && m.state.inCall && !(m.state.senders > 0)) this.unattachedSince ||= Date.now();
+      const micOnInMeet = state.debug.dom === false;
+      if (micOnInMeet && state.inCall && !(state.senders > 0)) this.unattachedSince ||= Date.now();
       else this.unattachedSince = 0;
       const isOpen = !this.page.muted && this.page.senders > 0;
       if (wasOpen && !isOpen) this.onOutgoingClosed();
       if (!wasOpen && isOpen) this.onOutgoingOpened();
-      if (m.state.micLabel) this.followMeetMic(m.state.micLabel);
-      this.watchCall(Boolean(m.state.inCall));
+      if (state.micLabel) this.followMeetMic(state.micLabel);
+      this.watchCall(state.inCall);
     } else if (m?.type === 'ui') {
       if (m.action === 'options') this.setOptions(m.options || {});
       else if (m.action === 'chime') this.sendChime();
@@ -706,7 +712,9 @@ class Session {
     this.report();
   }
 
-  setOptions(options) {
+  setOptions(raw) {
+    const options = cleanModes(raw);
+    if (typeof raw?.cloneConsent === 'boolean') options.cloneConsent = raw.cloneConsent;
     if (!this.diagnostic && options.incomingMode && options.incomingMode !== this.incomingMode) {
       this.incomingMode = options.incomingMode;
       this.incoming?.setMode(this.incomingMode);

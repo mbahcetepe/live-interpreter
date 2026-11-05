@@ -5,6 +5,7 @@
 import { loadSettings, saveSettings, missingKeys } from '../shared/settings.js';
 import { setLanguage, t, joinNames } from '../shared/i18n.js';
 import { isSupportedUrl } from '../shared/platforms.js';
+import { isAllowed, cleanModes } from './message-policy.js';
 
 const OFFSCREEN_PATH = 'offscreen.html';
 const IDLE = { status: 'idle', tabId: null, error: null, engine: null };
@@ -122,6 +123,19 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || msg.target === 'offscreen') return false;
+  // The session's tab is needed to decide on 'stop', so the check waits for the state.
+  getState().then((s) => {
+    const policy = { extensionId: chrome.runtime.id, offscreenUrl: chrome.runtime.getURL(OFFSCREEN_PATH), sessionTabId: s.tabId };
+    if (isAllowed(msg.type, sender, policy)) {
+      if (!onMessage(msg, sender, sendResponse)) sendResponse();
+    } else {
+      sendResponse({ ok: false, error: 'not allowed' });
+    }
+  });
+  return true;
+});
+
+function onMessage(msg, sender, sendResponse) {
   const reply = (promise) => {
     promise.then(
       (value) => sendResponse({ ok: true, ...(value && typeof value === 'object' ? value : {}) }),
@@ -138,13 +152,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     case 'options':
       return reply(
         (async () => {
-          if (msg.options?.incomingMode || msg.options?.outgoingMode) {
-            const patch = {};
-            if (msg.options.incomingMode) patch.incomingMode = msg.options.incomingMode;
-            if (msg.options.outgoingMode) patch.outgoingMode = msg.options.outgoingMode;
-            await saveSettings(patch);
-          }
-          if (await hasOffscreen()) return toEngine({ type: 'options', options: msg.options });
+          const options = cleanModes(msg.options);
+          if (Object.keys(options).length) await saveSettings(options);
+          if (typeof msg.options?.cloneConsent === 'boolean') options.cloneConsent = msg.options.cloneConsent;
+          if (await hasOffscreen()) return toEngine({ type: 'options', options });
           return {};
         })(),
       );
@@ -158,10 +169,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       });
       return false;
     case 'recording-ready':
-      chrome.tabs.create({ url: chrome.runtime.getURL(`recording.html?id=${encodeURIComponent(msg.id)}`) }).catch(() => {});
+      if (typeof msg.id === 'string' && msg.id.length < 200) chrome.tabs.create({ url: chrome.runtime.getURL(`recording.html?id=${encodeURIComponent(msg.id)}`) }).catch(() => {});
       return false;
     case 'engine-options':
-      saveSettings(msg.options).catch(() => {});
+      if (Object.keys(cleanModes(msg.options)).length) saveSettings(cleanModes(msg.options)).catch(() => {});
       return false;
     case 'engine-failed':
       (async () => {
@@ -177,7 +188,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     default:
       return false;
   }
-});
+}
 
 // Settings edited while a call is running reach the engine right away.
 chrome.storage.onChanged.addListener(async (changes, area) => {

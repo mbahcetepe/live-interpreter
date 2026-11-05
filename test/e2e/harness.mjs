@@ -63,9 +63,10 @@ export function makeFixtures() {
   }
 }
 
-// Chrome derives an unpacked extension's id from its path.
+// Chrome derives an unpacked extension's id from its path (as UTF-16 on Windows).
 export function extensionIdFor(dir) {
-  const hex = createHash('sha256').update(dir).digest('hex').slice(0, 32);
+  const bytes = process.platform === 'win32' ? Buffer.from(dir, 'utf16le') : dir;
+  const hex = createHash('sha256').update(bytes).digest('hex').slice(0, 32);
   return [...hex].map((c) => String.fromCharCode(97 + parseInt(c, 16))).join('');
 }
 
