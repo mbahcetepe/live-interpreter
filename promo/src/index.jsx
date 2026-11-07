@@ -19,7 +19,7 @@ async function timeline() {
         if (!(beat.line in lengths)) throw new Error(`no voice for "${beat.line}": run npm run voices`);
         const len = f(lengths[beat.line]);
         t += len + f(GAP);
-        return { ...beat, from, len, audio: manifest[beat.line] };
+        return { ...beat, from, len, audio: manifest[beat.line], bedAudio: beat.bed ? manifest[beat.bed] : undefined };
       }
       const len = f(beat.pause);
       t += len;

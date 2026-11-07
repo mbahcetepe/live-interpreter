@@ -148,10 +148,20 @@ try {
   if (!(await waitFor(async () => (await subtitles()).includes('teşekkürler'), 30000, 150))) throw new Error('no subtitles');
   await sleep(300);
   await shot(video, 'video-1');
+  // Spoken translation over the original, with the panel open.
+  await send(control, { type: 'options', options: { incomingMode: 'voice' } });
+  await openPanel(video);
+  await sleep(800);
+  await shot(video, 'video-2');
   await send(control, { type: 'stop' });
   await video.close();
 
-  // The popup, as if opened on the call tab.
+  // The popup, as if opened on the call tab, with both directions spoken (the video tab
+  // turned mine off).
+  await control.evaluate(async () => {
+    const { settings } = await chrome.storage.local.get('settings');
+    await chrome.storage.local.set({ settings: { ...settings, incomingMode: 'voice', outgoingMode: 'voice' } });
+  });
   await meet.setViewportSize({ width: W, height: H });
   await meet.evaluate(dressCall, CALL_STYLE);
   const callTab = await worker.evaluate((id) => chrome.tabs.get(id), tabId);
@@ -190,7 +200,8 @@ try {
 
   await pageShot(context, `${ext}/recording.html`, 760, 600, 'transcripts', {
     prepare: async (page) => {
-      await page.locator('#transcripts li button').first().click();
+      // The video's transcript, opened under the list of both.
+      await page.locator('#transcripts li', { hasText: 'Webinar' }).locator('button').first().click();
       await sleep(400);
     },
   });
