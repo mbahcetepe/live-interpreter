@@ -182,8 +182,79 @@
           <select id="speechProvider">
             <option value="elevenlabs">ElevenLabs</option>
             <option value="local" data-i18n="opt.speech.local">My own speech server</option>
+            <option value="openai" data-i18n="opt.speech.openai">OpenAI-compatible (OpenAI, Groq, your own server)</option>
           </select>
         </label>
+
+        <div class="box" data-speech="openai">
+          <p class="subhead" data-i18n="opt.oaiSpeech.stt">Speech recognition</p>
+          <div class="grid3">
+            <label class="field">
+              <span data-i18n="opt.oaiSpeech.server">Server</span>
+              <select id="oaiSttServer">
+                <option value="openai">OpenAI</option>
+                <option value="groq">Groq</option>
+                <option value="custom" data-i18n="opt.oaiSpeech.custom">Another server</option>
+              </select>
+            </label>
+            <label class="field" data-custom="oaiSttServer">
+              <span data-i18n="opt.ollama.url">Server address</span>
+              <input id="oaiSttUrl" autocomplete="off" spellcheck="false" placeholder="http://192.168.1.5:8000/v1" />
+            </label>
+            <label class="field">
+              <span data-i18n="opt.oai.key">API key</span>
+              <input type="password" id="oaiSttKey" class="key" autocomplete="off" spellcheck="false" data-i18n-placeholder="opt.oaiSpeech.keyHint" />
+            </label>
+          </div>
+          <div class="picker">
+            <label class="field">
+              <span data-i18n="opt.tr.model">Model</span>
+              <select id="oaiSttModel"></select>
+            </label>
+            <button type="button" class="refresh" data-models="oaiSpeech" data-i18n-title="opt.models.refresh">↻</button>
+          </div>
+          <p class="subhead" data-i18n="opt.oaiSpeech.tts">Voice</p>
+          <div class="grid3">
+            <label class="field">
+              <span data-i18n="opt.oaiSpeech.server">Server</span>
+              <select id="oaiTtsServer">
+                <option value="openai">OpenAI</option>
+                <option value="custom" data-i18n="opt.oaiSpeech.custom">Another server</option>
+              </select>
+            </label>
+            <label class="field" data-custom="oaiTtsServer">
+              <span data-i18n="opt.ollama.url">Server address</span>
+              <input id="oaiTtsUrl" autocomplete="off" spellcheck="false" placeholder="http://192.168.1.5:8880/v1" />
+            </label>
+            <label class="field">
+              <span data-i18n="opt.oai.key">API key</span>
+              <input type="password" id="oaiTtsKey" class="key" autocomplete="off" spellcheck="false" data-i18n-placeholder="opt.oaiSpeech.keyHint" />
+            </label>
+          </div>
+          <div class="picker">
+            <label class="field">
+              <span data-i18n="opt.tr.model">Model</span>
+              <select id="oaiTtsModel"></select>
+            </label>
+            <button type="button" class="refresh" data-models="oaiSpeech" data-i18n-title="opt.models.refresh">↻</button>
+          </div>
+          <div class="grid2">
+            <div class="picker">
+              <label class="field">
+                <span data-i18n="opt.voice.mine">My voice</span>
+                <select id="oaiMyVoice"></select>
+              </label>
+              <button id="previewOaiMine" type="button" class="refresh" data-i18n-title="opt.voice.preview">▶</button>
+            </div>
+            <div class="picker">
+              <label class="field">
+                <span data-i18n="opt.voice.theirs">Their voice</span>
+                <select id="oaiTheirVoice"></select>
+              </label>
+              <button id="previewOaiTheirs" type="button" class="refresh" data-i18n-title="opt.voice.preview">▶</button>
+            </div>
+          </div>
+        </div>
 
         <div class="box" data-speech="elevenlabs">
           <div class="grid2">

@@ -285,4 +285,12 @@ export default {
   'oai.http': "{name} answered with an error ({status}): {detail}",
   'err.modelMissing': 'Choose a translation model in the extension settings.',
   'warn.serviceOff': "{name} is off for the rest of this call: {message} Fix it in Settings, Translation; until then the next service translates.",
+  'opt.speech.openai': "OpenAI-compatible (OpenAI, Groq, your own server)",
+  'opt.oaiSpeech.stt': "Speech recognition",
+  'opt.oaiSpeech.tts': "Voice",
+  'opt.oaiSpeech.server': "Server",
+  'opt.oaiSpeech.custom': "Another server",
+  'opt.oaiSpeech.keyHint': "Empty: the key under Translation",
+  'opt.oaiSpeech.ok': "Works both ways: {seconds} s of speech made in {ms} ms, and heard back as \"{heard}\".",
+  'opt.oaiSpeech.nothing': "The voice was made, but the recognition server heard nothing in it.",
 };

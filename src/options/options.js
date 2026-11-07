@@ -4,6 +4,7 @@ import {
   translationProvider,
   claudeModelOf,
   isLocalSpeech,
+  isOpenAISpeech,
   missingKeys,
   missingServers,
   PROVIDERS,
@@ -19,6 +20,8 @@ import { Translator, describeClaudeError } from '../offscreen/translator.js';
 import { FreeTranslator, checkFreeKey, freeKeys, FREE_KEY_NAMES } from '../offscreen/free-translator.js';
 import { OllamaTranslator, listOllamaModels } from '../offscreen/ollama-translator.js';
 import { OpenAITranslator, listOpenAIModels } from '../offscreen/openai-translator.js';
+import { OpenAITranscriber, openaiSynthesize, listAudioModels, listAudioVoices } from '../offscreen/openai-speech.js';
+import { StreamResampler } from '../shared/dsp.js';
 import { serverBase, originPattern, originRules } from '../shared/servers.js';
 import { localPairs, localTranslationState, prepareLocalTranslation } from '../shared/local-translation.js';
 import { PcmByteAligner, encodeWav, float32ToInt16 } from '../shared/pcm.js';
@@ -150,10 +153,11 @@ async function micGranted() {
 async function refreshStatus() {
   const provider = translationProvider(settings);
   const missing = [...missingKeys(settings), ...missingServers(settings)];
-  const speechOk = isLocalSpeech(settings) ? !missing.includes('speech') : !missing.includes('ElevenLabs');
+  const speechOk = isLocalSpeech(settings) || isOpenAISpeech(settings) ? !missing.includes('speech') && !(isOpenAISpeech(settings) && missing.some((m) => m === 'Groq')) : !missing.includes('ElevenLabs');
   const translationOk =
     provider === 'free' ? localState === 'ready' || FREE_KEY_NAMES.some((k) => settings[k]) : !missing.some((m) => m !== 'ElevenLabs' && m !== 'speech');
-  $('check-speech').textContent = `${t('opt.speech.title')}: ${isLocalSpeech(settings) ? t('opt.speech.local') : 'ElevenLabs'}`;
+  const speechName = isLocalSpeech(settings) ? t('opt.speech.local') : isOpenAISpeech(settings) ? t('opt.speech.openai') : 'ElevenLabs';
+  $('check-speech').textContent = `${t('opt.speech.title')}: ${speechName}`;
   $('check-translation').textContent = `${t('opt.tr.title')}: ${t(PROVIDERS.find((p) => p.id === provider).labelKey)}`;
   $('check-speech').classList.toggle('done', speechOk);
   $('check-translation').classList.toggle('done', translationOk);
@@ -321,12 +325,81 @@ async function prepareFree() {
 // ---- speech ----------------------------------------------------------------------------
 
 function renderSpeech() {
-  const local = isLocalSpeech(settings);
-  $('speechProvider').value = local ? 'local' : 'elevenlabs';
-  for (const box of document.querySelectorAll('[data-speech]')) box.hidden = box.dataset.speech !== (local ? 'local' : 'elevenlabs');
+  const provider = isLocalSpeech(settings) ? 'local' : isOpenAISpeech(settings) ? 'openai' : 'elevenlabs';
+  $('speechProvider').value = provider;
+  for (const box of document.querySelectorAll('[data-speech]')) box.hidden = box.dataset.speech !== provider;
   result('speechResult', '');
-  if (local) loadLocalSpeech({ quiet: true });
+  if (provider === 'local') loadLocalSpeech({ quiet: true });
+  else if (provider === 'openai') loadOpenAISpeech({ quiet: true });
   else loadVoices();
+}
+
+// ---- OpenAI's audio API ------------------------------------------------------------------
+
+function renderCustomFields() {
+  for (const el of document.querySelectorAll('[data-custom]')) el.hidden = settings[el.dataset.custom] !== 'custom';
+  // Only OpenAI and Groq fall back to the key under Translation.
+  $('oaiSttKey').placeholder = settings.oaiSttServer === 'custom' ? '' : t('opt.oaiSpeech.keyHint');
+  $('oaiTtsKey').placeholder = settings.oaiTtsServer === 'custom' ? '' : t('opt.oaiSpeech.keyHint');
+}
+
+function fillChoice(id, items, current, fallback) {
+  const list = [...new Set([...(current ? [current] : []), ...items])];
+  fillSelect($(id), [['', t('opt.voice.auto') + (fallback ? ` (${fallback})` : '')], ...list.map((v) => [v, v])], current || '');
+}
+
+// The model and voice lists of the chosen servers. Servers of one's own are reached only
+// once access to them has been given.
+async function loadOpenAISpeech({ quiet = false } = {}) {
+  renderCustomFields();
+  const account = speechAccount(settings);
+  fillChoice('oaiSttModel', [], settings.oaiSttModel, account.stt.model);
+  fillChoice('oaiTtsModel', [], settings.oaiTtsModel, account.tts.model);
+  fillChoice('oaiMyVoice', [], settings.oaiMyVoice, 'alloy');
+  fillChoice('oaiTheirVoice', [], settings.oaiTheirVoice, 'nova');
+  const reachable = async (base) => {
+    if (!base) return false;
+    if (/api\.openai\.com|api\.groq\.com/.test(base)) return true;
+    return quiet ? chrome.permissions.contains({ origins: [originPattern(base)] }) : allow(base);
+  };
+  try {
+    if (await reachable(account.stt.base) && (account.stt.key || settings.oaiSttServer === 'custom')) {
+      fillChoice('oaiSttModel', await listAudioModels({ ...account.stt, kind: 'stt' }), settings.oaiSttModel, account.stt.model);
+    }
+    if (await reachable(account.tts.base) && (account.tts.key || settings.oaiTtsServer === 'custom')) {
+      fillChoice('oaiTtsModel', await listAudioModels({ ...account.tts, kind: 'tts' }), settings.oaiTtsModel, account.tts.model);
+      const voices = await listAudioVoices(account.tts);
+      fillChoice('oaiMyVoice', voices, settings.oaiMyVoice, 'alloy');
+      fillChoice('oaiTheirVoice', voices, settings.oaiTheirVoice, 'nova');
+    }
+  } catch (err) {
+    if (!quiet) result('speechResult', err?.message || String(err), 'bad');
+  }
+}
+
+// The whole way round: a sentence is spoken by the voice server and heard back by the
+// recognition server.
+async function testOpenAISpeech() {
+  const account = speechAccount(settings);
+  for (const base of [account.stt.base, account.tts.base]) {
+    if (!base) return result('speechResult', t('opt.speech.noUrl'), 'bad');
+    if (!/api\.openai\.com|api\.groq\.com/.test(base) && !(await allow(base))) return result('speechResult', t('opt.denied', { url: base }), 'bad');
+  }
+  const started = performance.now();
+  const chunks = [];
+  for await (const chunk of openaiSynthesize({ ...account.tts, voice: settings.oaiMyVoice || 'alloy', text: SAMPLE.text })) chunks.push(chunk);
+  const ms = Math.round(performance.now() - started);
+  const samples = new Float32Array(chunks.reduce((n, c) => n + c.length, 0));
+  let at = 0;
+  for (const c of chunks) for (let i = 0; i < c.length; i++) samples[at++] = c[i] / 32768;
+  const resampler = new StreamResampler(24000, 16000);
+  const audio = Float32Array.from([...resampler.process(samples), ...resampler.flush()]);
+  let heard = '';
+  const listener = new OpenAITranscriber({ name: 'test', ...account.stt, languageCode: 'en', onCommitted: (text) => (heard = text) });
+  listener.stopped = false;
+  await listener.request(audio);
+  if (!heard) return result('speechResult', t('opt.oaiSpeech.nothing'), 'bad');
+  result('speechResult', t('opt.oaiSpeech.ok', { seconds: (samples.length / 24000).toFixed(1), ms, heard }), 'ok');
 }
 
 function voiceOptions(placeholder) {
@@ -390,6 +463,13 @@ async function loadLocalSpeech({ quiet = false } = {}) {
 
 async function testSpeech() {
   result('speechResult', t('opt.testing'));
+  if (isOpenAISpeech(settings)) {
+    try {
+      return await testOpenAISpeech();
+    } catch (err) {
+      return result('speechResult', err?.message || String(err), 'bad');
+    }
+  }
   if (!isLocalSpeech(settings)) {
     if (!settings.elevenLabsKey) return result('speechResult', t('opt.keys.elMissing'), 'bad');
     try {
@@ -442,6 +522,7 @@ async function testSpeech() {
 let previewCtx;
 async function preview(voiceId, languageCode) {
   const account = speechAccount(settings);
+  if (account.kind === 'openai') return previewOpenAI(voiceId, languageCode);
   if (!account.key && !account.local) return toast(t('opt.voice.needKey'));
   if (!voiceId && !account.local) return toast(t('opt.voice.needVoice'));
   try {
@@ -466,6 +547,20 @@ async function preview(voiceId, languageCode) {
     player.end(id);
   } catch (err) {
     toast(describeElevenLabsError(err, account));
+  }
+}
+
+async function previewOpenAI(voice, languageCode) {
+  const account = speechAccount(settings);
+  try {
+    previewCtx ||= new AudioContext();
+    await previewCtx.resume();
+    const player = new PcmScheduler(previewCtx, previewCtx.destination);
+    const id = `preview-${Date.now()}`;
+    for await (const chunk of openaiSynthesize({ ...account.tts, voice, text: PREVIEW_TEXT[languageCode] || PREVIEW_TEXT.en })) player.push(id, chunk);
+    player.end(id);
+  } catch (err) {
+    toast(err?.message || String(err));
   }
 }
 
@@ -658,7 +753,7 @@ async function init() {
   for (const id of ['anthropicKey', 'openaiUrl', 'openaiKey', 'openrouterKey', 'ollamaUrl', 'ollamaBackupUrl', ...FREE_KEY_NAMES, 'meetingContext', 'keyterms']) bindText(id);
   for (const kind of Object.keys(PICKERS)) bindSelect(PICKERS[kind].select);
   for (const button of document.querySelectorAll('[data-models]')) {
-    if (button.dataset.models === 'speech') continue;
+    if (button.dataset.models === 'speech' || button.dataset.models === 'oaiSpeech') continue;
     button.addEventListener('click', () => loadModels(button.dataset.models));
   }
   // A new address or key brings that server's list once typing stops.
@@ -686,7 +781,16 @@ async function init() {
   $('elevenLabsKey').addEventListener('change', loadVoices);
   $('localSpeechUrl').addEventListener('change', () => loadLocalSpeech());
   bindSelect('ttsModel');
-  for (const id of ['localWhisperModel', 'localMyVoice', 'localTheirVoice']) bindSelect(id);
+  for (const id of ['localWhisperModel', 'localMyVoice', 'localTheirVoice', 'oaiSttModel', 'oaiTtsModel', 'oaiMyVoice', 'oaiTheirVoice']) bindSelect(id);
+  for (const id of ['oaiSttServer', 'oaiTtsServer']) {
+    $(id).value = settings[id] || 'openai';
+    bindSelect(id, { onChange: () => loadOpenAISpeech({ quiet: true }) });
+  }
+  for (const id of ['oaiSttUrl', 'oaiSttKey', 'oaiTtsUrl', 'oaiTtsKey']) bindText(id);
+  for (const id of ['oaiSttUrl', 'oaiTtsUrl', 'oaiSttKey', 'oaiTtsKey']) $(id).addEventListener('change', () => loadOpenAISpeech());
+  document.querySelectorAll('[data-models="oaiSpeech"]').forEach((b) => b.addEventListener('click', () => loadOpenAISpeech()));
+  $('previewOaiMine').addEventListener('click', () => preview(settings.oaiMyVoice || 'alloy', settings.theirLanguage));
+  $('previewOaiTheirs').addEventListener('click', () => preview(settings.oaiTheirVoice || 'nova', settings.myLanguage));
   document.querySelector('[data-models="speech"]').addEventListener('click', () => loadLocalSpeech());
   $('myVoiceSelect').addEventListener('change', () => {
     const voice = voices.find((v) => v.voice_id === $('myVoiceSelect').value);

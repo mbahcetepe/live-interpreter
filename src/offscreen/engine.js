@@ -23,6 +23,7 @@ import { sanitizePageState } from '../shared/page-state.js';
 import { describeMissingServers } from '../shared/setup-messages.js';
 import { cleanModes } from '../background/message-policy.js';
 import { ScribeRealtime } from './stt.js';
+import { OpenAITranscriber, openaiSynthesize, listAudioModels } from './openai-speech.js';
 import { Translator, describeClaudeError, claudeRestMs } from './translator.js';
 import { FreeTranslator, freeKeys } from './free-translator.js';
 import { FallbackTranslator } from './fallback-translator.js';
@@ -180,7 +181,8 @@ class Session {
     this.stt = { in: 'off', out: 'off' };
     // ElevenLabs, or the person's own local speech server (speech-server/).
     this.speech = speechAccount(settings);
-    this.usage = new Usage({ freeSpeech: this.speech.local });
+    // The local server costs nothing; OpenAI's and Groq's prices are not in the estimate.
+    this.usage = new Usage({ freeSpeech: this.speech.local || this.speech.kind === 'openai' });
     this.latencies = [];
     this.warnings = new Map();
     this.clone = { state: 'off' };
@@ -474,6 +476,7 @@ class Session {
   async resolveVoices() {
     const s = this.settings;
     if (this.speech.local) return this.resolveLocalVoices();
+    if (this.speech.kind === 'openai') return this.resolveOpenAIVoices();
     this.myVoiceId = s.myVoiceId;
     this.theirVoiceId = s.theirVoiceId;
     let voices;
@@ -515,7 +518,37 @@ class Session {
     this.theirVoiceId = s.localTheirVoice || 'local-2';
   }
 
+  // OpenAI's audio API: the keys work (a model list answers) and the chosen voices.
+  async resolveOpenAIVoices() {
+    const s = this.settings;
+    const { stt, tts } = this.speech;
+    try {
+      await listAudioModels({ base: stt.base, key: stt.key, kind: 'stt' });
+      if (tts.base !== stt.base || tts.key !== stt.key) await listAudioModels({ base: tts.base, key: tts.key, kind: 'tts' });
+    } catch (err) {
+      throw new UserError(err?.message || String(err), 'speech');
+    }
+    this.myVoiceId = s.oaiMyVoice || 'alloy';
+    this.theirVoiceId = s.oaiTheirVoice || 'nova';
+  }
+
   createStt(dir, languageCode, keyterms) {
+    if (this.speech.kind === 'openai') {
+      return new OpenAITranscriber({
+        name: dir === 'in' ? 'stt-in' : 'stt-out',
+        ...this.speech.stt,
+        languageCode,
+        vadSilenceSecs: this.settings.vadSilenceSecs,
+        keyterms,
+        onCommitted: (text) => this.onCommitted(dir, text),
+        onStatus: (status) => {
+          this.stt[dir] = status;
+          this.report();
+        },
+        onFatal: (err) => this.fail(new UserError(t('stt.stopped', { message: err.message }), 'stt')),
+        log,
+      });
+    }
     return new ScribeRealtime({
       name: dir === 'in' ? 'stt-in' : 'stt-out',
       apiKey: this.speech,
@@ -616,6 +649,9 @@ class Session {
     const backlog = (dir === 'in' ? this.localPlayer.backlog() : this.page.backlog) + queued;
     const speed = backlog > 5 ? 1.2 : backlog > 2.5 ? 1.1 : 1;
     this.usage.addTts(item.text.length, s.ttsModel);
+    if (this.speech.kind === 'openai') {
+      return openaiSynthesize({ ...this.speech.tts, voice: voiceId, text: item.text, speed, signal: item.signal });
+    }
     return synthesize({
       apiKey: this.speech,
       voiceId,
@@ -718,7 +754,7 @@ class Session {
       theirLanguage: this.sourceLanguage(this.settings),
       incomingMode: this.incomingMode,
       outgoingMode: this.outgoingMode,
-      offerClone: this.settings.offerTheirClone && !this.diagnostic && !this.speech.local && !this.media,
+      offerClone: this.settings.offerTheirClone && !this.diagnostic && !this.speech.local && this.speech.kind !== 'openai' && !this.media,
       subtitleBar: (this.settings.subtitleBar || this.media) && !this.diagnostic,
       cloneConsent: this.cloneConsent,
       media: this.media,
@@ -877,7 +913,7 @@ class Session {
     // A new ElevenLabs key is used from the next connection on (speech takes it right away).
     const speechBefore = this.speech;
     this.speech = speechAccount(next);
-    this.usage.freeSpeech = this.speech.local;
+    this.usage.freeSpeech = this.speech.local || this.speech.kind === 'openai';
     for (const stt of [this.sttIn, this.sttOut]) if (stt) stt.apiKey = this.speech;
     const pairChanged = next.myLanguage !== prev.myLanguage || this.sourceLanguage(next) !== this.sourceLanguage(prev) || next.theirLanguage !== prev.theirLanguage;
     if (pairChanged && this.incoming) {
@@ -886,7 +922,7 @@ class Session {
       Object.assign(this.outgoing, { from: next.myLanguage, to: next.theirLanguage });
       this.postTab({ type: 'pair', myLanguage: next.myLanguage, theirLanguage: this.sourceLanguage(next) });
     }
-    if (this.sttIn && (pairChanged || speechBefore.base !== this.speech.base || next.localWhisperModel !== prev.localWhisperModel || next.vadSilenceSecs !== prev.vadSilenceSecs || next.keyterms !== prev.keyterms)) {
+    if (this.sttIn && (pairChanged || JSON.stringify(speechBefore) !== JSON.stringify(this.speech) || next.localWhisperModel !== prev.localWhisperModel || next.vadSilenceSecs !== prev.vadSilenceSecs || next.keyterms !== prev.keyterms)) {
       // Speech recognition takes these when it connects. Typing in the glossary saves on
       // every pause, so the new connections wait until the typing is over.
       clearTimeout(this.sttRestartTimer);
@@ -897,7 +933,10 @@ class Session {
       this.warnings.delete('my-voice');
     }
     if (next.theirVoiceId && next.theirVoiceId !== prev.theirVoiceId) this.theirVoiceId = next.theirVoiceId;
-    if (this.speech.local) {
+    if (this.speech.kind === 'openai') {
+      this.myVoiceId = next.oaiMyVoice || 'alloy';
+      if (!this.theirCloneId) this.theirVoiceId = next.oaiTheirVoice || 'nova';
+    } else if (this.speech.local) {
       this.myVoiceId = next.localMyVoice || 'local-1';
       if (!this.theirCloneId) this.theirVoiceId = next.localTheirVoice || 'local-2';
     }
@@ -910,7 +949,7 @@ class Session {
 
   startClone() {
     if (this.diagnostic || this.incomingMode !== 'voice' || this.theirCloneId || this.collector) return;
-    if (!this.settings.offerTheirClone || this.speech.local || this.clone.state === 'creating') return;
+    if (!this.settings.offerTheirClone || this.speech.local || this.speech.kind === 'openai' || this.clone.state === 'creating') return;
     this.collector = new CloneCollector({ targetSeconds: this.settings.cloneSeconds });
     this.tabNode.port.postMessage({ type: 'collect-raw', on: true });
     this.clone = { state: 'collecting', seconds: 0, target: this.settings.cloneSeconds };

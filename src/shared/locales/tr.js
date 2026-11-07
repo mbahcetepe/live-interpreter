@@ -285,4 +285,12 @@ export default {
   'oai.http': "{name} hata döndürdü ({status}): {detail}",
   'err.modelMissing': 'Eklenti ayarlarından bir çeviri modeli seçin.',
   'warn.serviceOff': "{name} bu görüşmenin geri kalanında kapalı: {message} Ayarlar, Çeviri bölümünden düzeltin; o zamana kadar sıradaki servis çeviriyor.",
+  'opt.speech.openai': "OpenAI uyumlu (OpenAI, Groq, kendi sunucunuz)",
+  'opt.oaiSpeech.stt': "Ses tanıma",
+  'opt.oaiSpeech.tts': "Seslendirme",
+  'opt.oaiSpeech.server': "Sunucu",
+  'opt.oaiSpeech.custom': "Başka bir sunucu",
+  'opt.oaiSpeech.keyHint': "Boş: Çeviri bölümündeki anahtar",
+  'opt.oaiSpeech.ok': "İki yönde de çalışıyor: {ms} ms içinde {seconds} sn konuşma üretildi ve \"{heard}\" olarak geri duyuldu.",
+  'opt.oaiSpeech.nothing': "Ses üretildi ama ses tanıma sunucusu içinde bir şey duymadı.",
 };

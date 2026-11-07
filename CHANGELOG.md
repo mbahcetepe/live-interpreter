@@ -2,6 +2,17 @@
 
 Versions follow [semantic versioning](https://semver.org): MAJOR for changes that need something done (new settings, a server update), MINOR for new features, PATCH for fixes. The version lives in `package.json`; the build writes it into the extension's manifest, and the popup and the settings page show it. The speech server has its own version and a protocol number (`/health`); the extension warns when the server is older than it needs.
 
+## 2.1.0 (2026-11-07)
+
+### New
+
+- **OpenAI-compatible speech services**: speech recognition and voices through OpenAI's audio API, from OpenAI (`whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-tts`), Groq Whisper (recognition) or a server of your own (Speaches, LocalAI, Kokoro-FastAPI). Server, key, model and voices are chosen separately for recognition and speech; an empty key takes the same service's key under Translation. Test speaks a sentence and hears it back.
+- These services take whole recordings, so the extension cuts the speech into sentences itself (by loudness, the same rules as the speech server before Silero) and sends each one when it ends; there are no live drafts.
+
+### Changed
+
+- The subtitles show only the sentence being said; the earlier one no longer stays above it.
+
 ## 2.0.0 (2026-11-07)
 
 The project is now **Live Interpreter** (Canlı Tercüman in Turkish), for Microsoft Teams on the web, Google Meet and any video or radio tab.

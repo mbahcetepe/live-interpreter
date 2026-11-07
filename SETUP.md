@@ -80,6 +80,12 @@ Choose the **Service**.
 2. Paste the key into **ElevenLabs API key** and press **Test**.
 3. Choose **My voice** (what they hear when you speak) and **Their voice**. **Make my own voice (clone)** records 1–2 minutes of you reading and makes your voice from it.
 
+**OpenAI-compatible** (OpenAI, Groq Whisper, or a server of your own such as Speaches, LocalAI or Kokoro-FastAPI):
+
+1. Under **Speech recognition**, choose the server (OpenAI, Groq, or **Another server** with its address), the key and the model. With OpenAI or Groq an empty key takes the same service's key under Translation.
+2. Under **Voice**, the same for speech, then **My voice** and **Their voice**.
+3. Press **Test**: a sentence is spoken and heard back. Recognition comes once a sentence has ended (no live drafts).
+
 **My own speech server** (free, the audio stays on your network):
 
 1. On an Ubuntu computer with an NVIDIA GPU:

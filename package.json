@@ -1,6 +1,6 @@
 {
   "name": "live-interpreter",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "license": "MIT",
   "description": "Live speech translation for Microsoft Teams (web), Google Meet and any video or radio tab, as a browser extension; Claude, Ollama or free translation, ElevenLabs or a self-hosted speech server",

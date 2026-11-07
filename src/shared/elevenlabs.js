@@ -10,7 +10,26 @@ export const ELEVENLABS_API = 'https://api.elevenlabs.io';
 // Where speech recognition and speech come from: ElevenLabs, or the person's own local
 // speech server (speech-server/), which speaks the same API. Every function here takes
 // either such an account or a plain ElevenLabs key.
+// Defaults for OpenAI's audio API when no model is chosen.
+export const OPENAI_STT_MODEL = { openai: 'whisper-1', groq: 'whisper-large-v3-turbo', custom: 'whisper-1' };
+export const OPENAI_TTS_MODEL = { openai: 'gpt-4o-mini-tts', custom: 'tts-1' };
+const AUDIO_BASE = { openai: 'https://api.openai.com/v1', groq: 'https://api.groq.com/openai/v1' };
+
 export function speechAccount(settings) {
+  if (settings?.speechProvider === 'openai') {
+    const sttServer = settings.oaiSttServer || 'openai';
+    const ttsServer = settings.oaiTtsServer || 'openai';
+    const sttKey = String(settings.oaiSttKey || (sttServer === 'groq' ? settings.groqKey : sttServer === 'openai' ? settings.openaiKey : '') || '').trim();
+    const ttsKey = String(settings.oaiTtsKey || (ttsServer === 'openai' ? settings.openaiKey : '') || '').trim();
+    return {
+      kind: 'openai',
+      local: false,
+      key: '',
+      base: '',
+      stt: { base: sttServer === 'custom' ? serverBase(settings.oaiSttUrl, { defaultPort: '' }) : AUDIO_BASE[sttServer], key: sttKey, model: settings.oaiSttModel || OPENAI_STT_MODEL[sttServer] },
+      tts: { base: ttsServer === 'custom' ? serverBase(settings.oaiTtsUrl, { defaultPort: '' }) : AUDIO_BASE.openai, key: ttsKey, model: settings.oaiTtsModel || OPENAI_TTS_MODEL[ttsServer] },
+    };
+  }
   if (settings?.speechProvider === 'local') {
     return { key: String(settings.localSpeechKey || '').trim(), base: serverBase(settings.localSpeechUrl, { defaultPort: '8765' }), local: true };
   }

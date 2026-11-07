@@ -285,4 +285,12 @@ export default {
   'oai.http': '{name} 返回错误（{status}）：{detail}',
   'err.modelMissing': '请在扩展设置中选择一个翻译模型。',
   'warn.serviceOff': "{name} 在本次通话剩余时间内已停用：{message} 请在“设置 > 翻译”中修正；在此之前由下一个服务翻译。",
+  'opt.speech.openai': "兼容 OpenAI（OpenAI、Groq、您的自建服务器）",
+  'opt.oaiSpeech.stt': "语音识别",
+  'opt.oaiSpeech.tts': "语音合成",
+  'opt.oaiSpeech.server': "服务器",
+  'opt.oaiSpeech.custom': "其他服务器",
+  'opt.oaiSpeech.keyHint': "留空：使用“翻译”中的密钥",
+  'opt.oaiSpeech.ok': "双向正常：{ms} 毫秒生成 {seconds} 秒语音，识别回来的内容为“{heard}”。",
+  'opt.oaiSpeech.nothing': "语音已生成，但识别服务器没有听到任何内容。",
 };

@@ -479,6 +479,52 @@ async function openaiTranslationTest() {
   }
 }
 
+// Everything on one server with OpenAI's API (like LocalAI): recognition, translation and speech.
+async function openaiSpeechTest() {
+  console.log('\n== Speech and translation on one OpenAI-compatible server (no ElevenLabs, no Claude) ==');
+  const mock = await startMockApi({
+    cert: readFileSync(path.join(fixtures, 'mock-cert.pem')),
+    key: readFileSync(path.join(fixtures, 'mock-key.pem')),
+  });
+  const server = await startMockOpenAI();
+  const env = await launch({ micWav: path.join(fixtures, 'turkish.wav'), remoteWav: path.join(fixtures, 'english.wav'), proxyPort: mock.port });
+  const { control, meet, tabId } = env;
+  const setSettings = (patch) =>
+    control.evaluate(async (p) => {
+      const { settings } = await chrome.storage.local.get('settings');
+      await chrome.storage.local.set({ settings: { ...(settings || {}), ...p } });
+    }, patch);
+  try {
+    await setSettings({
+      elevenLabsKey: '', anthropicKey: '',
+      translationProvider: 'openai', openaiUrl: server.url, openaiKey: server.key, openaiModel: 'mock-llm',
+      speechProvider: 'openai', oaiSttServer: 'custom', oaiSttUrl: server.url, oaiSttKey: server.key, oaiSttModel: 'whisper-mock',
+      oaiTtsServer: 'custom', oaiTtsUrl: server.url, oaiTtsKey: server.key, oaiTtsModel: 'tts-mock', oaiMyVoice: 'echo', oaiTheirVoice: 'nova',
+    });
+    const start = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('a call starts with speech on an OpenAI-compatible server', start?.ok === true, start?.error);
+    if (!start?.ok) return;
+    const incoming = await waitFor(async () => done((await readCaptions(meet)).incoming), 40000, 300);
+    check('their speech is recognized by that server and translated', incoming?.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.', JSON.stringify(incoming));
+    const outgoing = await waitFor(async () => done((await readCaptions(meet)).outgoing), 40000, 300);
+    check('my speech is recognized by that server and translated', outgoing?.translation === 'Friday at three works for us.', JSON.stringify(outgoing));
+    const heard = await maxLevel(meet, 5000);
+    check('the far end receives my translated voice from that server', heard > 0.01, `level ${heard.toFixed(3)}`);
+    const t0 = server.stats.transcriptions;
+    check('recordings go up with the chosen model, in both languages', t0.length > 0 && t0.every((x) => x.model === 'whisper-mock') && t0.some((x) => x.language === 'en') && t0.some((x) => x.language === 'tr'), JSON.stringify(t0.slice(0, 2)));
+    const sp = server.stats.speech;
+    check('speech is asked for as raw PCM in the chosen voices', sp.length > 0 && sp.every((x) => x.model === 'tts-mock' && x.format === 'pcm') && sp.some((x) => x.voice === 'echo') && sp.some((x) => x.voice === 'nova'), JSON.stringify(sp.slice(0, 2)));
+    check('nothing went to ElevenLabs or Claude', !mock.stats.requests.some((x) => /elevenlabs|anthropic/.test(x)), mock.stats.requests.slice(0, 4).join(', '));
+    await send(control, { type: 'stop' });
+    check('no script errors on the Meet page', env.pageErrors.length === 0, env.pageErrors.join(' | '));
+  } finally {
+    await env.context.close();
+    await rm(env.userDataDir, { recursive: true, force: true });
+    mock.close();
+    server.close();
+  }
+}
+
 // Everything on the person's own servers: the real speech server (speech-server/, with
 // its stand-in engines) for recognition and speech, and a stand-in Ollama for translation.
 async function startSpeechServer() {
@@ -681,6 +727,7 @@ await mockTranslationTest();
 await freeTranslationTest();
 await ollamaTranslationTest();
 await openaiTranslationTest();
+await openaiSpeechTest();
 await localServersTest();
 await mediaTest();
 const env = loadEnv();

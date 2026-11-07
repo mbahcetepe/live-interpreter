@@ -40,6 +40,8 @@ export const isClaudeTranslation = (settings) => translationProvider(settings) =
 export const isOpenAITranslation = (settings) => ['openai', 'openrouter'].includes(translationProvider(settings));
 // Speech recognition and speech on the local speech server instead of ElevenLabs.
 export const isLocalSpeech = (settings) => settings.speechProvider === 'local';
+// Speech recognition and speech through OpenAI's audio API (offscreen/openai-speech.js).
+export const isOpenAISpeech = (settings) => settings.speechProvider === 'openai';
 
 export const OPENAI_URL = 'https://api.openai.com/v1';
 export const OPENROUTER_URL = 'https://openrouter.ai/api/v1';
@@ -108,6 +110,18 @@ export const DEFAULT_SETTINGS = {
   localWhisperModel: '',
   localMyVoice: '',
   localTheirVoice: '',
+  // 'openai': OpenAI's audio API, from OpenAI, Groq (recognition) or a server of one's own.
+  // An empty key falls back to the same service's key under Translation.
+  oaiSttServer: 'openai', // 'openai' | 'groq' | 'custom'
+  oaiSttUrl: '',
+  oaiSttKey: '',
+  oaiSttModel: '',
+  oaiTtsServer: 'openai', // 'openai' | 'custom'
+  oaiTtsUrl: '',
+  oaiTtsKey: '',
+  oaiTtsModel: '',
+  oaiMyVoice: '',
+  oaiTheirVoice: '',
   ttsModel: 'eleven_flash_v2_5',
   meetingContext: '',
   keyterms: '',
@@ -167,7 +181,13 @@ export async function saveSettings(patch) {
 export function missingKeys(settings) {
   const missing = [];
   const provider = translationProvider(settings);
-  if (!settings.elevenLabsKey && !isLocalSpeech(settings)) missing.push('ElevenLabs');
+  if (!settings.elevenLabsKey && !isLocalSpeech(settings) && !isOpenAISpeech(settings)) missing.push('ElevenLabs');
+  if (isOpenAISpeech(settings)) {
+    const stt = settings.oaiSttServer || 'openai';
+    if (stt === 'openai' && !String(settings.oaiSttKey || settings.openaiKey || '').trim()) missing.push('OpenAI');
+    if (stt === 'groq' && !String(settings.oaiSttKey || settings.groqKey || '').trim()) missing.push('Groq');
+    if ((settings.oaiTtsServer || 'openai') === 'openai' && !String(settings.oaiTtsKey || settings.openaiKey || '').trim() && !missing.includes('OpenAI')) missing.push('OpenAI');
+  }
   if (provider === 'claude' && !settings.anthropicKey) missing.push('Anthropic');
   if (provider === 'openrouter' && !String(settings.openrouterKey || '').trim()) missing.push('OpenRouter');
   // OpenAI itself needs a key; a server of one's own with the same API may not.
@@ -183,6 +203,7 @@ export function missingServers(settings) {
   if (provider === 'openai' && !String(settings.openaiModel || '').trim()) missing.push('model');
   if (provider === 'openrouter' && !String(settings.openrouterModel || '').trim()) missing.push('model');
   if (isLocalSpeech(settings) && !String(settings.localSpeechUrl || '').trim()) missing.push('speech');
+  if (isOpenAISpeech(settings) && ((settings.oaiSttServer === 'custom' && !String(settings.oaiSttUrl || '').trim()) || (settings.oaiTtsServer === 'custom' && !String(settings.oaiTtsUrl || '').trim()))) missing.push('speech');
   return missing;
 }
 

@@ -285,4 +285,12 @@ export default {
   'oai.http': '{name} hat mit einem Fehler geantwortet ({status}): {detail}',
   'err.modelMissing': 'Wählen Sie in den Einstellungen der Erweiterung ein Übersetzungsmodell.',
   'warn.serviceOff': "{name} ist für den Rest dieses Anrufs aus: {message} Beheben Sie es in den Einstellungen unter Übersetzung; bis dahin übersetzt der nächste Dienst.",
+  'opt.speech.openai': "OpenAI-kompatibel (OpenAI, Groq, eigener Server)",
+  'opt.oaiSpeech.stt': "Spracherkennung",
+  'opt.oaiSpeech.tts': "Stimme",
+  'opt.oaiSpeech.server': "Server",
+  'opt.oaiSpeech.custom': "Anderer Server",
+  'opt.oaiSpeech.keyHint': "Leer: der Schlüssel unter Übersetzung",
+  'opt.oaiSpeech.ok': "Funktioniert in beide Richtungen: {seconds} s Sprache in {ms} ms erzeugt und als \"{heard}\" wieder erkannt.",
+  'opt.oaiSpeech.nothing': "Die Stimme wurde erzeugt, aber der Erkennungsserver hat darin nichts gehört.",
 };

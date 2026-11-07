@@ -80,6 +80,12 @@ Ayarlar sayfası dört bölümden oluşur: **Diller**, **Çeviri**, **Ses tanım
 2. Anahtarı **ElevenLabs API anahtarı** kutusuna yapıştır ve **Test et** düğmesine bas.
 3. **Benim sesim**'i (sen konuşunca duydukları) ve **Karşı tarafın sesi**'ni seç. **Kendi sesimi oluştur (klon)** 1–2 dakikalık bir okumayı kaydedip sesini ondan oluşturur.
 
+**OpenAI uyumlu** (OpenAI, Groq Whisper ya da Speaches, LocalAI, Kokoro-FastAPI gibi kendi sunucun):
+
+1. **Ses tanıma** kısmında sunucuyu (OpenAI, Groq ya da adresiyle **Başka bir sunucu**), anahtarı ve modeli seç. OpenAI ya da Groq için anahtar boş bırakılırsa Çeviri bölümündeki aynı servisin anahtarı kullanılır.
+2. **Seslendirme** kısmında aynısını yap, sonra **Benim sesim** ve **Karşı tarafın sesi**'ni seç.
+3. **Test et** düğmesine bas: bir cümle seslendirilip geri duyulur. Metin cümle bitince gelir (canlı taslak yok).
+
 **Kendi ses sunucum** (ücretsiz, ses ağının dışına çıkmaz):
 
 1. NVIDIA ekran kartlı bir Ubuntu bilgisayarda:

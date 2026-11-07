@@ -14,7 +14,7 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
   <tr><td><b>Browsers</b></td><td>Chrome, Edge, Brave and other Chromium browsers</td></tr>
   <tr><td><b>Languages</b></td><td>20, any two of them; the first start follows your browser's language; on video tabs the spoken language can be detected automatically</td></tr>
   <tr><td><b>Translation</b></td><td>Claude, OpenAI or a compatible server, OpenRouter, your own Ollama, or free services; each one's models listed in the settings</td></tr>
-  <tr><td><b>Speech</b></td><td>ElevenLabs, or your own speech server (faster-whisper and Piper)</td></tr>
+  <tr><td><b>Speech</b></td><td>ElevenLabs, OpenAI-compatible services (OpenAI, Groq Whisper, LocalAI, Speaches, Kokoro), or your own speech server (faster-whisper and Piper)</td></tr>
   <tr><td><b>Delay</b></td><td>About 1.5–3 s after a sentence ends</td></tr>
   <tr><td><b>Interface</b></td><td>English (default), Turkish, German, Spanish, Chinese</td></tr>
 </table>
@@ -63,9 +63,9 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
 
 | | Speech recognition and voices | Translation |
 | --- | --- | --- |
-| **Hosted** | ElevenLabs (Scribe v2 Realtime, Flash v2.5 / v4 Turbo) | Claude Opus, Sonnet or Haiku 5.5; OpenAI; OpenRouter (hundreds of models, one key) |
+| **Hosted** | ElevenLabs (Scribe v2 Realtime, Flash v2.5 / v4 Turbo); OpenAI (Whisper, gpt-4o-transcribe, gpt-4o-mini-tts); Groq Whisper (recognition, fast and cheap) | Claude Opus, Sonnet or Haiku 5.5; OpenAI; OpenRouter (hundreds of models, one key) |
 | **Free services** | | DeepL Free, Mistral, Groq, Chrome's built-in translator |
-| **Your own servers** | The speech server in [speech-server/](speech-server/README.md): faster-whisper and Piper, model and voices chosen in the settings | Ollama (for example `gemma4:12b`), or any server with OpenAI's API (LM Studio, vLLM) |
+| **Your own servers** | The speech server in [speech-server/](speech-server/README.md) (faster-whisper and Piper), or any server with OpenAI's audio API (Speaches, LocalAI, Kokoro-FastAPI) | Ollama (for example `gemma4:12b`), or any server with OpenAI's API (LM Studio, vLLM) |
 
 The two columns are chosen separately. With your own servers in both, nothing of the call leaves your computers and nothing is billed.
 
@@ -85,6 +85,12 @@ cd live-interpreter/speech-server && sudo ./install-ubuntu.sh
 ```
 
 This installs faster-whisper (`large-v3-turbo`) and Piper with voices for 16 of the 20 languages (all but Greek, Indonesian, Japanese and Korean, which Piper has no voice for) as a service on port 8765 and prints the address and key. In the settings, under **Speech recognition and voices**, choose **My own speech server**, enter both and press **Test**; then choose the recognition model (Whisper) and the voices from the server's lists. Measured over Tailscale: a sentence is recognized about 1.1–1.3 s after it ends (0.7 s of that is the silence that ends it) and spoken in under 0.2 s. Speech is found with Silero VAD, which tells a voice from music and effects, so a film's soundtrack does not hide where sentences end; loud sound with no voice found for 6 s is handed to Whisper anyway. No voice cloning in this mode. Details: [speech-server/README.md](speech-server/README.md).
+
+### OpenAI-compatible speech
+
+Under **Speech recognition and voices** choose **OpenAI-compatible**, then for recognition and for the voice a server (OpenAI, Groq for recognition, or another server's address), a key and a model; the lists come from the server. With OpenAI or Groq an empty key takes the same service's key under Translation. **Test** speaks a sentence with the voice server and hears it back with the recognition server.
+
+These services take whole recordings rather than a live stream: the extension cuts the speech into sentences itself and sends each one when it ends, so there are no live drafts and a long sentence is cut at 15 s. Their prices are not in the panel's estimate.
 
 ### Free translation
 
@@ -197,7 +203,7 @@ The panel counts what a call uses and estimates the cost from list prices (28 Oc
 
 ## Versions
 
-The version (now 2.0.0) is shown in the popup and at the top of the settings page; what changed in each one is in [CHANGELOG.md](CHANGELOG.md), and every version has a tag and a [release](https://github.com/mbahcetepe/live-interpreter/releases) with the built extension. The speech server reports its own version and protocol, and the extension says so when the server needs an update.
+The version is shown in the popup and at the top of the settings page; what changed in each one is in [CHANGELOG.md](CHANGELOG.md), and every version has a tag and a [release](https://github.com/mbahcetepe/live-interpreter/releases) with the built extension. The speech server reports its own version and protocol, and the extension says so when the server needs an update.
 
 ---
 

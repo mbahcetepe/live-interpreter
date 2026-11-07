@@ -461,3 +461,15 @@ details > summary {
   font-size: 13px;
   margin-bottom: 6px;
 }
+
+.subhead {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 6px 0 4px;
+}
+
+[data-custom][hidden] {
+  display: none;
+}
+
