@@ -16,7 +16,7 @@ function fileName(meta) {
   const d = new Date(meta.startedAt);
   const pad = (n) => String(n).padStart(2, '0');
   const ext = meta.mimeType?.includes('mp4') ? 'mp4' : 'webm';
-  return `meet-tercuman-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.${ext}`;
+  return `live-interpreter-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.${ext}`;
 }
 
 let objectUrl = null;

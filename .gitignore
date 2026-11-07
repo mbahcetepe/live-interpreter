@@ -1,6 +1,6 @@
 node_modules/
 dist/
-meet-tercuman.zip
+live-interpreter.zip
 .env
 test/e2e/fixtures/
 test/e2e/out/

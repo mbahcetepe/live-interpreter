@@ -172,6 +172,12 @@ def test_speech_is_24k_pcm(client):
     assert bad.status_code == 400
 
 
+def test_a_language_without_a_voice_is_refused_not_misread(client):
+    r = client.post('/v1/text-to-speech/local-1/stream?output_format=pcm_24000', headers={**EXT, 'xi-api-key': KEY}, json={'text': '안녕하세요', 'language_code': 'ko'})
+    assert r.status_code == 422
+    assert client.get('/health').json()['speech_languages'] == ['en', 'tr']
+
+
 def test_cloning_says_it_is_not_available(client):
     assert client.post('/v1/voices/add', headers={**EXT, 'xi-api-key': KEY}).status_code == 501
 

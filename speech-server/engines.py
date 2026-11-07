@@ -134,17 +134,31 @@ class PiperSpeaker:
         if not self.by_language:
             raise ValueError(f'no voices in {voices_file}')
         log.info('piper voices: %s', {k: [v['name'] for v in vs] for k, vs in self.by_language.items()})
-        # Loading a voice takes seconds; done now, the first sentence of a call does not wait.
+        # Loading a voice takes seconds. They are all loaded in the background as the server
+        # starts, so it answers at once and the first sentence of a call does not wait.
+        threading.Thread(target=self._warm_all, daemon=True).start()
+
+    def _warm_all(self):
         for language, entries in self.by_language.items():
             for i in range(len(entries)):
-                self.synthesize('.', f'local-{i + 1}', language)
+                try:
+                    self.synthesize('.', f'local-{i + 1}', language)
+                except Exception:  # noqa: BLE001 - a voice that fails here fails visibly later
+                    log.exception('could not load a %s voice', language)
+        log.info('all voices loaded')
+
+    def languages(self) -> list[str]:
+        return sorted(self.by_language)
 
     def voices(self) -> list[Voice]:
         count = max(len(v) for v in self.by_language.values())
         return [Voice(f'local-{i + 1}', f'Yerel ses {i + 1}', '') for i in range(max(2, count))]
 
     def _voice(self, voice_id: str, language: str):
-        options = self.by_language.get(language) or self.by_language.get('en') or next(iter(self.by_language.values()))
+        options = self.by_language.get(language)
+        if not options:
+            # Another language's voice would read it as gibberish.
+            raise LookupError(f'no local voice for {language}')
         index = int(voice_id.rsplit('-', 1)[-1]) - 1 if re.fullmatch(r'local-\d+', voice_id or '') else 0
         entry = options[index % len(options)]
         with self.lock:
@@ -176,10 +190,15 @@ class PiperSpeaker:
 
 
 class FakeSpeaker:
+    def languages(self) -> list[str]:
+        return ['en', 'tr']
+
     def voices(self) -> list[Voice]:
         return [Voice('local-1', 'Yerel ses 1', ''), Voice('local-2', 'Yerel ses 2', '')]
 
     def synthesize(self, text: str, voice_id: str, language: str, speed: float = 1.0) -> bytes:
+        if language not in self.languages():
+            raise LookupError(f'no local voice for {language}')
         seconds = min(4.0, 0.06 * len(text) / max(0.7, speed or 1.0))
         t = np.arange(int(seconds * OUT_RATE)) / OUT_RATE
         freq = 300 if voice_id == 'local-1' else 420

@@ -1,63 +1,65 @@
-# Microsoft Teams (web): teknik notlar
+# Microsoft Teams (web): technical notes
 
-Meet Tercüman, Google Meet'e ek olarak **tarayıcıdaki Microsoft Teams** ile çalışır. Masaüstü Teams uygulaması desteklenmez: tarayıcı eklentileri yalnızca tarayıcıda çalışır. Kurulum için [SETUP.tr.md](SETUP.tr.md).
+**English** · [Türkçe](TEAMS.tr.md)
 
-> **Durum:** Brave'de gerçek bir iş hesabı Teams görüşmesinde iki yönlü çeviri denendi; çeviriler karşıya ulaştı. Aşağıdaki "Doğrulanmamış noktalar" henüz kontrol ediliyor. Önemli bir toplantıdan önce deneme görüşmesi yapın.
+Live Interpreter works with **Microsoft Teams in the browser** as well as Google Meet. The desktop Teams app is not supported: browser extensions only run in the browser. Setup: [SETUP.md](SETUP.md).
+
+> **Status:** two-way translation worked in a real work-account Teams call in Brave; the translations reached the other side. The "Unverified points" below are still being checked. Run a test call before an important meeting.
 >
-> Teams görüşmelerinde de çeviri Ollama'da, ses tanıma ve seslendirme kendi ses sunucunuzda yapılabilir; kurulum için [SETUP.tr.md](SETUP.tr.md), 3. ve 4. adımlar. Video ve radyo sekmeleri için 7. adım.
+> In Teams calls too, translation can run on Ollama and speech recognition and speech on your own speech server: [SETUP.md](SETUP.md), steps 3 and 4. Video and radio tabs: step 7.
 
-## Desteklenen adresler
+## Supported addresses
 
-| Adres | Ne için |
+| Address | For |
 | --- | --- |
-| `https://teams.microsoft.com/` | İş/okul hesabıyla Teams |
-| `https://teams.cloud.microsoft/` | Teams'in yeni adresi |
-| `https://teams.live.com/` | Kişisel (ücretsiz) Teams |
+| `https://teams.microsoft.com/` | Teams with a work or school account |
+| `https://teams.cloud.microsoft/` | Teams' newer address |
+| `https://teams.live.com/` | Personal (free) Teams |
 | `https://meet.google.com/` | Google Meet |
 
-Teams bir toplantı bağlantısını açarken uygulamayı başlatmayı önerirse "Bu tarayıcıda devam et" seçeneğini seçin.
+If Teams offers to start the app when you open a meeting link, choose "Continue on this browser".
 
-## Teams için yapılanlar
+## What was done for Teams
 
-- **`src/shared/platforms.js`:** Siteye özgü her şey tek yerde: adresler, mikrofon düğmesinden mute durumunun okunması, sitenin kendi altyazı alanı ve altyazı çubuğunun alttan yüksekliği.
-- **`src/manifest.json`:** Teams adresleri content script eşleşmelerine ve host izinlerine eklendi.
-- **`src/content/page-hook.js`:** Ses yolu (RTCRtpSender takası) her WebRTC sitesinde aynı çalışır; mute algılama platforma göre seçilir. Teams sayfasının ana iş parçacığı yoğun olduğu için çeviri sesi sayfada 0,25 sn tamponlanır; konuşmanın ortasında ses kesilirse tampon kendiliğinden 0,6 sn'ye kadar büyür.
-- **`src/offscreen/fallback-translator.js`:** Claude bir cümlede hata verirse (aşırı yük, hız sınırı, kredi, bağlantı) cümleyi ücretsiz çeviri zinciri çevirir.
-- **`src/content/subtitle-bar.js`:** Teams'te altyazı daha aşağıda durur ve Teams'in canlı altyazı alanı aranır.
-- **`test/unit/platforms.test.mjs`:** Adres eşleşmesi (benzer görünen sahte alan adları dahil), manifest kapsamı ve mute algılayıcıları.
+- **`src/shared/platforms.js`:** everything site specific in one place: addresses, reading mute from the microphone button, the site's own caption area and how high the subtitle bar sits.
+- **`src/manifest.json`:** the Teams addresses are in the content script matches and the host permissions.
+- **`src/content/page-hook.js`:** the audio path (swapping the `RTCRtpSender` track) works the same on every WebRTC site; mute detection is chosen per platform. Teams keeps its page's main thread busy, so the translated speech is buffered 0.25 s in the page; when speech breaks up mid-sentence the buffer grows by itself up to 0.6 s.
+- **`src/offscreen/fallback-translator.js`:** when the main translation fails on a sentence, the backup translates it.
+- **`src/content/subtitle-bar.js`:** in Teams the subtitles sit lower, and Teams' live caption area is looked for.
+- **`test/unit/platforms.test.mjs`:** address matching (look-alike domains included), manifest coverage and the mute detectors.
 
-## Güvenlik ilkesi
+## Safety rule
 
-Mute algılayıcısı emin olamadığında `null` döner ve eklenti yalnızca mikrofon track'inin durumuna bakar. Sayfa yapısından okunan bilgi hiçbir zaman sesi *açmaz*; yalnızca susmak için ek bir neden olabilir.
+When the mute detector is not sure, it returns `null` and the extension looks only at the state of the microphone track. What is read from the page never *opens* the sound; it can only be one more reason to stay silent.
 
-Sınırı: Teams sizi sessize alırken track'e hiç dokunmuyorsa **ve** düğme algılaması da tutmazsa, Teams'te sessizdeyken çevrilmiş sesiniz karşıya gitmeye devam edebilir. Bu yüzden aşağıdaki kontrol listesinin mute adımı atlanmamalı.
+Its limit: if Teams muted you without touching the track **and** the button were not recognized, your translated voice could keep reaching the call while Teams shows you muted. So the mute step of the checklist below must not be skipped.
 
-## Görüşme sonu
+## End of the call
 
-Meet'te görüşmeden çıkınca adres değişir ve çeviri hemen durur. Teams'te toplantı bitince aynı sitede kalırsınız; çeviri, bağlı WebRTC bağlantısı kalmadıktan **30 saniye sonra** durur (`src/offscreen/engine.js`, `CALL_GONE_MS`). Popup'tan ya da `Alt+Shift+T` ile hemen durdurabilirsiniz.
+In Meet, leaving the call changes the address and the translation stops at once. In Teams you stay on the same site after a meeting, so the translation stops **30 seconds** after no WebRTC connection is left (`src/offscreen/engine.js`, `CALL_GONE_MS`). The popup or `Alt+Shift+T` stops it at once.
 
-## Doğrulanmamış noktalar
+## Unverified points
 
-Hepsi kodda `UNVERIFIED` yorumuyla işaretli.
+All are marked `UNVERIFIED` in the code.
 
-1. **Mikrofon düğmesi** (`platforms.js` → `teamsMuted`, `page-hook.js` → `CANDIDATES.teams`): Düğmenin etiketinde `Ctrl+Shift+M` kısayolunun geçtiği ve etiketin "Unmute / Mute" gibi ne olacağını söylediği varsayıldı. Teams arayüz diliniz İngilizce ya da Türkçe değilse kelime listesi genişletilmeli.
-2. **Canlı altyazı alanı** (`platforms.js` → `captionSelectors`): `data-tid` değerleri tahmindir. Yanlışsa tek sonuç, Teams altyazısı açıkken iki altyazının üst üste binmesidir.
-3. **Görüşme sonu:** Teams'in toplantıdan çıkınca peer connection'ları kapattığı varsayıldı.
+1. **Microphone button** (`platforms.js` → `teamsMuted`, `page-hook.js` → `CANDIDATES.teams`): the button's label or tooltip is assumed to contain the `Ctrl+Shift+M` shortcut and to say what a click does ("Unmute" / "Mute"). The word list covers Teams in English and Turkish; for another Teams interface language it needs that language's words. Until then the track state alone decides (see the safety rule).
+2. **Live caption area** (`platforms.js` → `captionSelectors`): the `data-tid` values are a guess. If wrong, the only effect is that both subtitles overlap while Teams' captions are on.
+3. **End of the call:** Teams is assumed to close its peer connections when you leave.
 
-## Kontrol listesi
+## Checklist
 
-Kulaklık takın ve ikinci bir cihazdan (telefon olabilir) aynı toplantıya katılın.
+Put on headphones and join the same meeting from a second device (a phone will do).
 
-1. `npm run build`, uzantılar sayfasında yalnızca `dist`'ten yüklenen tek kopya olsun, yenile düğmesine basın.
-2. Teams toplantısına tarayıcıdan katılın, sekmeyi bir kez yenileyin (F5).
-3. **Gelen yön:** Telefondan konuşun; bilgisayarda çeviriyi duymalı ve altyazıyı görmelisiniz.
-4. **Giden yön:** Bilgisayarda konuşun; telefonda *çevrilmiş* sesi duymalısınız.
-5. **Mute (en önemlisi):** Teams'te mikrofonu kapatın (`Ctrl+Shift+M`) ve konuşun; telefona hiçbir şey gitmemeli.
-6. Teams altyazılarını açın; eklentinin altyazısı onların üstüne çıkmalı.
-7. Toplantıdan ayrılın; en geç 30 saniye içinde araç çubuğundaki "ON" rozeti kaybolmalı.
+1. `npm run build`; on the extensions page keep only the one copy loaded from `dist` and press reload.
+2. Join the Teams meeting in the browser and reload the tab once (F5).
+3. **Incoming:** speak on the phone; the computer should play the translation and show the subtitles.
+4. **Outgoing:** speak at the computer; the phone should hear the *translated* voice.
+5. **Mute (the most important):** mute in Teams (`Ctrl+Shift+M`) and speak; nothing may reach the phone.
+6. Turn on Teams' captions; the extension's subtitles should move above them.
+7. Leave the meeting; the "ON" badge on the toolbar should go within 30 seconds.
 
-Bir adım tutmazsa Teams sayfasında mikrofon düğmesine sağ tıklayıp "İncele" deyin ve düğmenin `id`, `data-tid`, `aria-label` ve `title` değerlerini not edin; `platforms.js` bunlara göre düzeltilir.
+If a step fails, right-click the microphone button in Teams, choose "Inspect" and note the button's `id`, `data-tid`, `aria-label` and `title`; `platforms.js` is fixed from those.
 
-## Uçtan uca testler
+## End-to-end tests
 
-`npm run test:e2e` ve `npm run test:scenarios` şimdilik sahte bir Meet sayfasını sürer. Sahte bir Teams sayfası (`test/e2e/mock-meet.html` örnek alınarak) bir sonraki adımdır.
+`npm run test:e2e` and `npm run test:scenarios` still drive a stand-in Meet page. A stand-in Teams page (modelled on `test/e2e/mock-meet.html`) is the next step.

@@ -11,6 +11,7 @@
 import { buildSystemPrompt, buildUserMessage } from './translator.js';
 import { SentenceSplitter, isOnlyPunctuation } from '../shared/text.js';
 import { t, locale } from '../shared/i18n.js';
+import { AUTO_LANGUAGE } from '../shared/languages.js';
 
 const MISTRAL_URL = 'https://api.mistral.ai/v1/chat/completions';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -90,8 +91,10 @@ export function deeplBase(key) {
 
 const DEEPL_TARGET = { en: 'EN-US', pt: 'PT-BR', zh: 'ZH-HANS' };
 
+// With the source language left out, DeepL finds it itself.
 export function deeplCodes(from, to) {
-  return { source_lang: from.toUpperCase(), target_lang: DEEPL_TARGET[to] || to.toUpperCase() };
+  const target = { target_lang: DEEPL_TARGET[to] || to.toUpperCase() };
+  return from === AUTO_LANGUAGE ? target : { source_lang: from.toUpperCase(), ...target };
 }
 
 // DeepL's context field steers the translation without being translated or billed.
@@ -204,7 +207,7 @@ export function restFor(err) {
 // ---- the translator -----------------------------------------------------------------------
 
 export class FreeTranslator {
-  constructor({ keys = {}, myLanguage, theirLanguage, meetingContext = '', keyterms = [], fetchImpl, local, log, now } = {}) {
+  constructor({ keys = {}, myLanguage, theirLanguage, meetingContext = '', keyterms = [], fetchImpl, local, detector, log, now } = {}) {
     this.keys = { ...keys };
     this.myLanguage = myLanguage;
     this.theirLanguage = theirLanguage;
@@ -212,6 +215,8 @@ export class FreeTranslator {
     this.keyterms = keyterms;
     this.fetch = fetchImpl || ((...args) => fetch(...args));
     this.local = local === undefined ? globalThis.Translator : local;
+    // Chrome's translator needs the source language; for an unknown one it is found first.
+    this.detector = detector === undefined ? globalThis.LanguageDetector : detector;
     this.log = log || (() => {});
     this.now = now || (() => Date.now());
     this.restUntil = new Map(); // step id -> time
@@ -238,6 +243,7 @@ export class FreeTranslator {
   usable(step, from, to) {
     if (step.key && !this.keys[step.key]) return false;
     if (step.kind === 'local' && typeof this.local?.create !== 'function') return false;
+    if (step.kind === 'local' && from === AUTO_LANGUAGE && typeof this.detector?.create !== 'function') return false;
     if ((this.restUntil.get(step.id) || 0) > this.now()) return false;
     return !this.badPairs.get(step.id)?.has(`${from}>${to}`);
   }
@@ -256,13 +262,13 @@ export class FreeTranslator {
   }
 
   // Yields the translation in speakable pieces, like the Claude translator.
-  async *translate({ text, from, to, history, concise, signal }) {
+  async *translate({ text, from, to, history, concise, media, signal }) {
     let lastError = null;
     for (const step of FREE_STEPS) {
       if (!this.usable(step, from, to)) continue;
       const started = this.now();
       try {
-        const output = await this.run(step, { text, from, to, history, concise, signal });
+        const output = await this.run(step, { text, from, to, history, concise, media, signal });
         this.log('info', `free translation by ${step.id} in ${this.now() - started} ms`);
         const translation = matchCase(text, cleanTranslation(output), to);
         if (translation) yield* speakable(translation);
@@ -309,7 +315,7 @@ export class FreeTranslator {
     return data?.translations?.[0]?.text || '';
   }
 
-  async chat(step, { text, from, to, history, concise }, signal) {
+  async chat(step, { text, from, to, history, concise, media }, signal) {
     const system = buildSystemPrompt({
       from,
       to,
@@ -318,6 +324,7 @@ export class FreeTranslator {
       meetingContext: this.meetingContext,
       keyterms: this.keyterms,
       concise,
+      media,
     });
     const user = buildUserMessage({ text, from, to, history });
     const body = {
@@ -334,6 +341,11 @@ export class FreeTranslator {
   }
 
   async localTranslate({ text, from, to }, signal) {
+    if (from === AUTO_LANGUAGE) {
+      from = await this.detectLanguage(text);
+      if (!from) throw new StepError('language not recognized');
+      if (from === to) return text;
+    }
     const translator = await this.localTranslator(from, to);
     try {
       return await translator.translate(text, { signal });
@@ -341,6 +353,13 @@ export class FreeTranslator {
       if (err?.name === 'TimeoutError') throw new StepError('timed out', { timeout: true });
       throw err;
     }
+  }
+
+  async detectLanguage(text) {
+    this.languageDetector ||= this.detector.create();
+    const results = await (await this.languageDetector).detect(text);
+    const best = results?.[0];
+    return best && best.confidence >= 0.5 ? String(best.detectedLanguage).split('-')[0] : '';
   }
 
   localTranslator(from, to) {

@@ -138,7 +138,10 @@ function applyLanguage(code) {
   const mine = languageLabel(settings.myLanguage);
   const theirs = languageLabel(settings.theirLanguage);
   $('pair').textContent = `${theirs} ↔ ${mine}`;
-  $('inLabel').textContent = isMedia() ? t('popup.mediaLabel', { from: theirs, to: mine }) : t('popup.inLabel', { from: theirs, to: mine });
+  // A video tab speaks its own language, or one found as it plays.
+  const tabLanguage = languageLabel(settings.mediaLanguage || 'auto');
+  $('inLabel').textContent = isMedia() ? t('popup.mediaLabel', { from: tabLanguage, to: mine }) : t('popup.inLabel', { from: theirs, to: mine });
+  if (isMedia()) $('pair').textContent = `${tabLanguage} → ${mine}`;
   $('outLabel').textContent = t('popup.outLabel', { from: mine, to: theirs });
   setSeg('incoming', settings.incomingMode);
   setSeg('outgoing', settings.outgoingMode);

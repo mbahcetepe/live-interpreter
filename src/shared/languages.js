@@ -23,6 +23,10 @@ export const LANGUAGES = [
   { code: 'ko', name: 'Korece', english: 'Korean' },
 ];
 
+// The language of a video or radio tab can be left to speech recognition to find.
+export const AUTO_LANGUAGE = 'auto';
+
 export function languageByCode(code) {
+  if (code === AUTO_LANGUAGE) return { code, name: 'Otomatik algıla', english: 'Detect automatically' };
   return LANGUAGES.find((l) => l.code === code) || { code, name: code, english: code };
 }

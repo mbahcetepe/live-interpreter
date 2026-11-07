@@ -232,9 +232,9 @@ if (process.argv.includes('--clone')) {
     if (!turkishSpeech) throw new Error('no sample audio');
     const sample = new Blob([readFileSync(turkishSpeech.file)], { type: 'audio/wav' });
     const created = await createVoiceClone(EL, {
-      name: 'Meet Tercuman smoke test (safe to delete)',
+      name: 'Live Interpreter smoke test (safe to delete)',
       files: [{ blob: sample, filename: 'sample.wav' }],
-      description: 'Created by the Meet Tercuman API check and deleted right after.',
+      description: 'Created by the Live Interpreter API check and deleted right after.',
     });
     cloneId = created.voice_id;
     return `voice ${cloneId}${created.requires_verification ? ', needs verification' : ''}`;

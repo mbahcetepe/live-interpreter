@@ -16,6 +16,7 @@ import { listVoices, createVoiceClone, deleteVoice, describeElevenLabsError, spe
 import { PcmScheduler, testChime } from '../shared/scheduler.js';
 import { int16ToBase64 } from '../shared/pcm.js';
 import { EchoGuard, EarlySentences, isOnlyPunctuation } from '../shared/text.js';
+import { AUTO_LANGUAGE } from '../shared/languages.js';
 import { Usage } from '../shared/usage.js';
 import { sanitizePageState } from '../shared/page-state.js';
 import { cleanModes } from '../background/message-policy.js';
@@ -323,7 +324,8 @@ class Session {
 
     this.incoming = new DirectionPipeline({
       dir: 'in',
-      from: s.theirLanguage,
+      from: this.sourceLanguage(s),
+      media: this.media,
       to: s.myLanguage,
       translator: this.translator,
       history: this.history,
@@ -360,7 +362,7 @@ class Session {
     this.incoming.setMode(this.incomingMode);
     this.outgoing.setMode(this.outgoingMode === 'voice' ? 'voice' : 'off');
 
-    this.sttIn = this.createStt('in', s.theirLanguage, keyterms);
+    this.sttIn = this.createStt('in', this.sourceLanguage(s), keyterms);
     this.sttOut = this.createStt('out', s.myLanguage, keyterms);
     this.ensureStt('in', this.incomingMode !== 'off');
     // My side starts listening once Meet is actually sending my microphone (see onOutgoingOpened).
@@ -462,11 +464,18 @@ class Session {
     if (!this.theirVoiceId || !exists(this.theirVoiceId)) this.theirVoiceId = (pool[1] || pool[0]).voice_id;
   }
 
+  // What is heard on the tab: their language in a call; on a video tab the language set
+  // for those, or 'auto' (speech recognition and translation find it).
+  sourceLanguage(s) {
+    return this.media ? s.mediaLanguage || AUTO_LANGUAGE : s.theirLanguage;
+  }
+
   createStt(dir, languageCode, keyterms) {
     return new ScribeRealtime({
       name: dir === 'in' ? 'stt-in' : 'stt-out',
       apiKey: this.speech,
-      languageCode,
+      // Left out, speech recognition finds the language itself.
+      languageCode: languageCode === AUTO_LANGUAGE ? '' : languageCode,
       vadSilenceSecs: this.settings.vadSilenceSecs,
       keyterms,
       onPartial: (text) => this.onPartial(dir, text),
@@ -489,7 +498,7 @@ class Session {
     this.sttOut.stop();
     this.early.in.reset();
     this.early.out.reset();
-    this.sttIn = this.createStt('in', this.settings.theirLanguage, keyterms);
+    this.sttIn = this.createStt('in', this.sourceLanguage(this.settings), keyterms);
     this.sttOut = this.createStt('out', this.settings.myLanguage, keyterms);
     this.ensureStt('in', this.incomingMode !== 'off');
     this.ensureStt('out', this.outgoingMode === 'voice' && this.canSendOutgoing());
@@ -660,7 +669,7 @@ class Session {
       diagnostic: this.diagnostic,
       showOverlay: this.settings.showOverlay,
       myLanguage: this.settings.myLanguage,
-      theirLanguage: this.settings.theirLanguage,
+      theirLanguage: this.sourceLanguage(this.settings),
       incomingMode: this.incomingMode,
       outgoingMode: this.outgoingMode,
       offerClone: this.settings.offerTheirClone && !this.diagnostic && !this.speech.local && !this.media,
@@ -824,12 +833,12 @@ class Session {
     this.speech = speechAccount(next);
     this.usage.freeSpeech = this.speech.local;
     for (const stt of [this.sttIn, this.sttOut]) if (stt) stt.apiKey = this.speech;
-    const pairChanged = next.myLanguage !== prev.myLanguage || next.theirLanguage !== prev.theirLanguage;
+    const pairChanged = next.myLanguage !== prev.myLanguage || this.sourceLanguage(next) !== this.sourceLanguage(prev) || next.theirLanguage !== prev.theirLanguage;
     if (pairChanged && this.incoming) {
       // A new language pair mid-call: both sides are heard and translated in it from now on.
-      Object.assign(this.incoming, { from: next.theirLanguage, to: next.myLanguage });
+      Object.assign(this.incoming, { from: this.sourceLanguage(next), to: next.myLanguage });
       Object.assign(this.outgoing, { from: next.myLanguage, to: next.theirLanguage });
-      this.postTab({ type: 'pair', myLanguage: next.myLanguage, theirLanguage: next.theirLanguage });
+      this.postTab({ type: 'pair', myLanguage: next.myLanguage, theirLanguage: this.sourceLanguage(next) });
     }
     if (this.sttIn && (pairChanged || speechBefore.base !== this.speech.base || next.vadSilenceSecs !== prev.vadSilenceSecs || next.keyterms !== prev.keyterms)) {
       // Speech recognition takes these when it connects. Typing in the glossary saves on
@@ -887,7 +896,7 @@ class Session {
       const result = await createVoiceClone(this.speech, {
         name: t('clone.name', { stamp }),
         files: [{ blob: collector.toWavBlob(), filename: 'meet-sample.wav' }],
-        description: "Instant clone made by Meet Tercüman during a call, with the participant's consent.",
+        description: "Instant clone made by Live Interpreter during a call, with the participant's consent.",
       });
       if (this.stopped) {
         if (this.settings.deleteCloneAfter) deleteVoice(this.speech, result.voice_id).catch(() => {});

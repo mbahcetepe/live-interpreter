@@ -1,5 +1,5 @@
 {
-  "name": "meet-tercuman",
+  "name": "live-interpreter",
   "version": "1.0.0",
   "private": true,
   "license": "MIT",
@@ -10,7 +10,7 @@
     "build:debug": "node scripts/build.mjs --debug",
     "build:test": "node scripts/build.mjs --test",
     "watch": "node scripts/build.mjs --watch",
-    "zip": "node scripts/build.mjs && cd dist && rm -f ../meet-tercuman.zip && zip -qrX ../meet-tercuman.zip . -x '.DS_Store'",
+    "zip": "node scripts/build.mjs && cd dist && rm -f ../live-interpreter.zip && zip -qrX ../live-interpreter.zip . -x '.DS_Store'",
     "test": "node --test test/unit/*.test.mjs",
     "test:e2e": "node scripts/build.mjs --test && node test/e2e/run.mjs",
     "test:scenarios": "node scripts/build.mjs --test && node test/e2e/scenarios.mjs",

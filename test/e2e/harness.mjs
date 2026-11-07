@@ -105,6 +105,11 @@ export async function launch({ micWav, remoteWav, proxyPort }) {
 
   const control = await context.newPage();
   await control.goto(`chrome-extension://${id}/options.html`);
+  // The test speech is Turkish (me) and English (them); a first start would follow the browser's language.
+  await control.evaluate(async () => {
+    const { settings } = await chrome.storage.local.get('settings');
+    await chrome.storage.local.set({ settings: { ...(settings || {}), myLanguage: 'tr', theirLanguage: 'en', uiLanguage: 'en' } });
+  });
   const meet = await context.newPage();
   const pageErrors = [];
   meet.on('pageerror', (err) => pageErrors.push(err.message));

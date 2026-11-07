@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title data-i18n="opt.title">Meet Tercüman settings</title>
+    <title data-i18n="opt.title">Live Interpreter settings</title>
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
@@ -11,7 +11,7 @@
       <header class="page-head">
         <img src="icons/icon128.png" alt="" width="48" height="48" />
         <div class="page-title">
-          <h1 data-i18n="app.name">Meet Tercüman</h1>
+          <h1 data-i18n="app.name">Live Interpreter</h1>
           <p data-i18n="opt.tagline">Live speech translation for Microsoft Teams (web) and Google Meet calls. You hear the other person in your language, and they hear you in theirs.</p>
         </div>
         <div class="lang" id="uiLanguage" role="radiogroup" data-i18n-title="lang.switch">
@@ -105,6 +105,10 @@
           <label class="field">
             <span data-i18n="opt.lang.theirs">Their language</span>
             <select id="theirLanguage"></select>
+          </label>
+          <label class="field">
+            <span data-i18n="opt.lang.media">Language of video and radio tabs</span>
+            <select id="mediaLanguage"></select>
           </label>
         </div>
       </section>

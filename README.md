@@ -1,20 +1,20 @@
 <div align="center">
 
-# Meet Tercüman
+# Live Interpreter
 
 ### Live speech translation for Microsoft Teams on the web, Google Meet and any video or radio tab
 
-In a call both ways: they speak English and you hear Turkish; you speak Turkish and they hear English, in your own voice. On YouTube, X or an online radio: subtitles, or a spoken translation over the original. A browser extension with no backend of its own; translation and speech can run on ElevenLabs and Claude, or entirely on your own servers.
+In a call both ways: they speak Spanish and you hear English; you speak English and they hear Spanish, in your own voice. On YouTube, X or an online radio: subtitles, or a spoken translation over the original, in any language you follow. Any two of 20 languages; the language of a video can be detected automatically. A browser extension with no backend of its own; translation and speech can run on ElevenLabs and Claude, or entirely on your own servers.
 
 <table>
   <tr><td><b>Calls</b></td><td>Microsoft Teams in the browser (work/school and personal), Google Meet</td></tr>
   <tr><td><b>Other tabs</b></td><td>YouTube, X, online radio, any web page with sound</td></tr>
   <tr><td><b>Browsers</b></td><td>Chrome, Edge, Brave and other Chromium browsers</td></tr>
-  <tr><td><b>Languages</b></td><td>20, any two of them; English and Turkish by default</td></tr>
+  <tr><td><b>Languages</b></td><td>20, any two of them; the first start follows your browser's language; on video tabs the spoken language can be detected automatically</td></tr>
   <tr><td><b>Translation</b></td><td>Claude, your own Ollama server, or free services</td></tr>
   <tr><td><b>Speech</b></td><td>ElevenLabs, or your own speech server (faster-whisper and Piper)</td></tr>
   <tr><td><b>Delay</b></td><td>About 1.5–3 s after a sentence ends</td></tr>
-  <tr><td><b>Interface</b></td><td>English or Turkish</td></tr>
+  <tr><td><b>Interface</b></td><td>English or Turkish (more languages are welcome: <code>src/shared/i18n.js</code>)</td></tr>
 </table>
 
 </div>
@@ -39,12 +39,12 @@ In a call both ways: they speak English and you hear Turkish; you speak Turkish 
 
 **On any other tab (YouTube, X, an online radio)**
 
-- Click the extension on that tab and press **Translate this tab**. Its sound becomes subtitles low in the page (moved into YouTube's player in full screen), or a spoken translation while the original is turned down to 20%.
+- Click the extension on that tab and press **Translate this tab**. The spoken language is detected automatically, or set in the settings. Its sound becomes subtitles low in the page (moved into YouTube's player in full screen), or a spoken translation while the original is turned down to 20%.
 - Only that tab is reached, and only after your click; nothing is sent back into it. Moving to another video on the same site keeps translating.
 
 **Everywhere**
 
-- Twenty languages: English, Turkish, German, French, Spanish, Italian, Portuguese, Dutch, Polish, Russian, Ukrainian, Arabic, Greek, Romanian, Swedish, Indonesian, Hindi, Chinese, Japanese and Korean.
+- Twenty languages, any two of them, in either direction: English, Turkish, German, French, Spanish, Italian, Portuguese, Dutch, Polish, Russian, Ukrainian, Arabic, Greek, Romanian, Swedish, Indonesian, Hindi, Chinese, Japanese and Korean.
 - Subtitles like a film's, with the translation in large type and the original under it, and a panel with both sides, the live delay and a usage counter with an estimated cost.
 - A sentence is never lost to one failing service: translation falls back from Ollama to a second Ollama server, to Claude and to free translation; from Claude to free translation.
 
@@ -78,11 +78,11 @@ Ollama refuses requests whose `Origin` header it does not know, and browsers sen
 On an Ubuntu computer with an NVIDIA GPU:
 
 ```bash
-git clone https://github.com/mbahcetepe/meet-tercuman.git
-cd meet-tercuman/speech-server && sudo ./install-ubuntu.sh
+git clone https://github.com/mbahcetepe/live-interpreter.git
+cd live-interpreter/speech-server && sudo ./install-ubuntu.sh
 ```
 
-This installs faster-whisper (`large-v3-turbo`) and Piper with Turkish and English voices as a service on port 8765 and prints the address and key. In the settings, under **1. API keys**, set **Speech recognition and voices** to **My own speech server**, enter both and press **Test and allow**. Measured over Tailscale: a sentence is recognized about 1.1–1.3 s after it ends (0.7 s of that is the silence that ends it) and spoken in under 0.2 s. Speech is found with Silero VAD, which tells a voice from music and effects, so a film's soundtrack does not hide where sentences end; loud sound with no voice found for 6 s is handed to Whisper anyway. No voice cloning in this mode. Details: [speech-server/README.md](speech-server/README.md).
+This installs faster-whisper (`large-v3-turbo`) and Piper with voices for 16 of the 20 languages (all but Greek, Indonesian, Japanese and Korean, which Piper has no voice for) as a service on port 8765 and prints the address and key. In the settings, under **1. API keys**, set **Speech recognition and voices** to **My own speech server**, enter both and press **Test and allow**. Measured over Tailscale: a sentence is recognized about 1.1–1.3 s after it ends (0.7 s of that is the silence that ends it) and spoken in under 0.2 s. Speech is found with Silero VAD, which tells a voice from music and effects, so a film's soundtrack does not hide where sentences end; loud sound with no voice found for 6 s is handed to Whisper anyway. No voice cloning in this mode. Details: [speech-server/README.md](speech-server/README.md).
 
 ### Free translation
 
@@ -113,8 +113,8 @@ In Brave, add a free DeepL key, since Chrome's built-in translator may be missin
 ## Install
 
 ```bash
-git clone https://github.com/mbahcetepe/meet-tercuman.git
-cd meet-tercuman
+git clone https://github.com/mbahcetepe/live-interpreter.git
+cd live-interpreter
 npm install
 npm run build
 ```
@@ -123,7 +123,7 @@ This works the same in Windows PowerShell, macOS and Linux. Then open `chrome://
 
 Keep only one copy of the extension loaded. After pulling changes, run `npm install` and `npm run build` again, press reload on the extension and reload the call tab (F5).
 
-`npm run zip` packs `dist` into `meet-tercuman.zip`; it needs the `zip` command (macOS, Linux or WSL).
+`npm run zip` packs `dist` into `live-interpreter.zip`; it needs the `zip` command (macOS, Linux or WSL).
 
 ---
 
@@ -195,4 +195,4 @@ The panel counts what a call uses and estimates the cost from list prices (28 Oc
 
 ## Credits and license
 
-Based on the Google Meet extension by UfukNode. [MIT](LICENSE). The speech server uses faster-whisper (MIT) and piper-tts (GPL-3.0 in its recent versions), installed separately; each Piper voice has its own license.
+Called Canlı Tercüman in its Turkish interface. Based on the Google Meet extension by UfukNode. [MIT](LICENSE). The speech server uses faster-whisper (MIT) and piper-tts (GPL-3.0 in its recent versions), installed separately; each Piper voice has its own license.

@@ -1,6 +1,6 @@
 <div align="center">
 
-# Meet Tercüman setup
+# Live Interpreter setup
 
 **English** · [Türkçe](SETUP.tr.md)
 
@@ -29,8 +29,8 @@ The extension has no server of its own. Your keys stay in your browser and go on
 In PowerShell (Terminal on macOS/Linux):
 
 ```bash
-git clone https://github.com/mbahcetepe/meet-tercuman.git
-cd meet-tercuman
+git clone https://github.com/mbahcetepe/live-interpreter.git
+cd live-interpreter
 npm install
 npm run build
 ```
@@ -60,12 +60,12 @@ In the settings, under **1. API keys**, choose one under **Speech recognition an
 
 1. On an Ubuntu computer with an NVIDIA GPU:
    ```bash
-   git clone https://github.com/mbahcetepe/meet-tercuman.git
-   cd meet-tercuman/speech-server && sudo ./install-ubuntu.sh
+   git clone https://github.com/mbahcetepe/live-interpreter.git
+   cd live-interpreter/speech-server && sudo ./install-ubuntu.sh
    ```
    It prints an **address** and a **key** at the end ([details](speech-server/README.md)).
 2. In the settings choose **My own speech server**, enter the address and key, press **Test and allow** and accept the browser's prompt for that address. The result should end with "live recognition ready".
-3. There is no voice cloning in this mode. Its voices show as `local-1`, `local-2` and so on.
+3. There is no voice cloning in this mode. Its voices show as `local-1`, `local-2` and so on, and each speaks the language of the sentence. Piper has voices for 16 of the 20 languages; Greek, Indonesian, Japanese and Korean get subtitles but no local speech.
 
 ## 4. Translation: Claude, Ollama or free
 
@@ -84,7 +84,7 @@ The computer you use must be on the same network as your own servers (Tailscale,
 ## 5. Microphone, languages, voice
 
 - Click **Allow microphone** and accept the browser's prompt. Pick the microphone you use in Teams, or leave "Same as the call".
-- **Languages:** choose your language and theirs. On a video tab, the video's language counts as **their language**.
+- **Languages:** choose your language and theirs; the first start takes your browser's language as yours. **Language of video and radio tabs** is **Detect automatically** unless you set one.
 - **My voice (optional):** with ElevenLabs, read for 1–2 minutes to make your own voice clone, or pick a ready-made voice. With your own speech server, pick `local-1` or `local-2`.
 - **Audio:** a **0.5 s** "silence that ends a phrase" starts the translation sooner. Without headphones turn on **Speaker mode**.
 
@@ -112,7 +112,7 @@ Supported addresses: `teams.microsoft.com`, `teams.cloud.microsoft` (work/school
 
 With your own speech server there are no credits; everything in these tables is free.
 
-A small **Meet Tercüman** button shows at the bottom left of the page; click it for both sides' sentences, the delay and the cost.
+A small **Live Interpreter** button shows at the bottom left of the page; click it for both sides' sentences, the delay and the cost.
 
 **When you mute in Teams** (`Ctrl+Shift+M`) nothing may reach the call. Check this in your first call.
 
@@ -153,7 +153,7 @@ Two participants on one computer garble each other's audio; use a second device.
 | They cannot hear me | Is your Teams microphone on? Read the warning in the panel; try **Send test sound** |
 | They hear odd sounds or their own words back | Your translation leaks from the speakers into the mic: use headphones or turn on **Speaker mode** |
 | "Ollama server at ... could not be reached" | Is the server on, and is this computer on Tailscale? Press **Test and allow** in the settings |
-| "The local speech server refused the key" | Enter `SPEECH_KEY` from `/etc/meet-tercuman-speech.env` on the server |
+| "The local speech server refused the key" | Enter `SPEECH_KEY` from `/etc/live-interpreter-speech.env` on the server |
 | "The backup translation is not ready yet" | Brave has no Chrome translator: add a DeepL Free key or a second Ollama server |
 | The delay is long | Choose Ollama or **Claude Haiku 5.5**, set the silence to **0.5 s**, speak in short sentences |
 | No translation in a film | Update your speech server (`git pull` and `sudo ./install-ubuntu.sh`); the voice detector came in a later version. Expect subtitles only where someone speaks |

@@ -1,4 +1,4 @@
-"""Local speech server for Meet Tercüman: speech recognition and speech on your own
+"""Local speech server for Live Interpreter: speech recognition and speech on your own
 computer, in place of ElevenLabs.
 
 It speaks the part of the ElevenLabs API the extension uses, so the extension only
@@ -47,7 +47,7 @@ def allowed_origin(origin: str | None) -> bool:
 
 
 def create_app(recognizer, speaker, key: str = '') -> FastAPI:
-    app = FastAPI(title='Meet Tercüman speech server', docs_url=None, redoc_url=None)
+    app = FastAPI(title='Live Interpreter speech server', docs_url=None, redoc_url=None)
     tokens: dict[str, float] = {}
 
     def refuse(status: int, message: str) -> JSONResponse:
@@ -63,7 +63,7 @@ def create_app(recognizer, speaker, key: str = '') -> FastAPI:
 
     @app.get('/health')
     async def health():
-        return {'ok': True, 'recognizer': type(recognizer).__name__, 'speaker': type(speaker).__name__, 'voices': [v.id for v in speaker.voices()]}
+        return {'ok': True, 'recognizer': type(recognizer).__name__, 'speaker': type(speaker).__name__, 'voices': [v.id for v in speaker.voices()], 'speech_languages': speaker.languages()}
 
     @app.post('/v1/single-use-token/realtime_scribe')
     async def token():
@@ -98,7 +98,10 @@ def create_app(recognizer, speaker, key: str = '') -> FastAPI:
         speed = float((body.get('voice_settings') or {}).get('speed') or 1.0)
         if not text:
             return Response(b'', media_type='audio/pcm')
-        pcm = await asyncio.to_thread(speaker.synthesize, text, voice_id, language, speed)
+        try:
+            pcm = await asyncio.to_thread(speaker.synthesize, text, voice_id, language, speed)
+        except LookupError as err:
+            return refuse(422, str(err))
 
         async def stream():
             step = 4800  # 0.1 s
@@ -193,7 +196,7 @@ class RealtimeSession:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Meet Tercüman local speech server')
+    parser = argparse.ArgumentParser(description='Live Interpreter local speech server')
     parser.add_argument('--host', default=os.environ.get('SPEECH_HOST', '0.0.0.0'))
     parser.add_argument('--port', type=int, default=int(os.environ.get('SPEECH_PORT', '8765')))
     parser.add_argument('--key', default=os.environ.get('SPEECH_KEY', ''), help='the key the extension sends (xi-api-key)')

@@ -1,6 +1,6 @@
 <div align="center">
 
-# Meet Tercüman kurulumu
+# Live Interpreter (Canlı Tercüman) kurulumu
 
 [English](SETUP.md) · **Türkçe**
 
@@ -16,7 +16,7 @@ Kurulumdan ilk çevrilen Teams görüşmesine ya da YouTube videosuna adım adı
 | --- | --- |
 | **Chrome 116+, Edge ya da Brave** | Teams toplantısına da bu tarayıcıdan katılırsın. Masaüstü Teams uygulaması desteklenmez |
 | **Node.js 18+** | Eklentiyi derlemek için ([nodejs.org](https://nodejs.org)) |
-| **Ses tanıma ve sesler için biri** | ElevenLabs hesabı (kendi ses klonun için Starter veya üstü plan, [planlar](https://elevenlabs.io/pricing)) **ya da** kendi ses sunucun ([speech-server](speech-server/README.md)) |
+| **Ses tanıma ve sesler için biri** | ElevenLabs hesabı (kendi ses klonun için Starter veya üstü plan, [planlar](https://elevenlabs.io/pricing)) **ya da** kendi ses sunucun ([speech-server](speech-server/README.tr.md)) |
 | **Çeviri için biri** | Anthropic API anahtarı (Claude) **ya da** kendi Ollama sunucun **ya da** hiçbiri (ücretsiz çeviri) |
 | **Kulaklık** | Görüşmelerde, duyduğun çeviri mikrofonuna girip karşıya geri gitmesin diye |
 
@@ -29,8 +29,8 @@ Eklentinin kendi sunucusu yok. Anahtarların yalnızca tarayıcında kalır ve y
 PowerShell'de (macOS/Linux'ta Terminal'de):
 
 ```bash
-git clone https://github.com/mbahcetepe/meet-tercuman.git
-cd meet-tercuman
+git clone https://github.com/mbahcetepe/live-interpreter.git
+cd live-interpreter
 npm install
 npm run build
 ```
@@ -60,12 +60,12 @@ Ayarlarda **1. API anahtarları** bölümündeki **Ses tanıma ve sesler** alan�
 
 1. NVIDIA ekran kartlı bir Ubuntu bilgisayarda:
    ```bash
-   git clone https://github.com/mbahcetepe/meet-tercuman.git
-   cd meet-tercuman/speech-server && sudo ./install-ubuntu.sh
+   git clone https://github.com/mbahcetepe/live-interpreter.git
+   cd live-interpreter/speech-server && sudo ./install-ubuntu.sh
    ```
-   Betik sonunda bir **adres** ve **anahtar** yazar ([ayrıntılar](speech-server/README.md)).
+   Betik sonunda bir **adres** ve **anahtar** yazar ([ayrıntılar](speech-server/README.tr.md)).
 2. Ayarlarda **Kendi ses sunucum**'u seç, adresi ve anahtarı gir, **Test et ve izin ver** düğmesine bas. Tarayıcı bu adrese erişim izni ister; izin ver. Sonuçta "canlı ses tanıma hazır" yazmalı.
-3. Bu modda ses klonu yoktur. Seslerin `local-1`, `local-2` gibi adlarla görünür.
+3. Bu modda ses klonu yoktur. Seslerin `local-1`, `local-2` gibi adlarla görünür ve her biri cümlenin dilinde konuşur. Piper'ın 20 dilin 16'sı için sesi var; Yunanca, Endonezce, Japonca ve Korece için altyazı çalışır ama yerel seslendirme yoktur.
 
 ## 4. Çeviri: Claude, Ollama ya da ücretsiz
 
@@ -84,7 +84,7 @@ Toplantıyı yapacağın bilgisayar, kendi sunucularınla aynı ağda (örneğin
 ## 5. Mikrofon, diller, ses
 
 - **Mikrofon iznini ver** düğmesine bas ve tarayıcının sorusuna izin ver. Teams'te kullandığın mikrofonu seç ya da "Görüşmeyle aynı" bırak.
-- **Diller:** kendi dilini ve karşı tarafın dilini seç. Video sekmelerinde videonun dili **karşı tarafın dili** sayılır.
+- **Diller:** kendi dilini ve karşı tarafın dilini seç; ilk açılışta tarayıcının dili senin dilin olarak gelir. **Video ve radyo sekmelerinin dili** sen seçmedikçe **Otomatik algıla**dır.
 - **Benim sesim (isteğe bağlı):** ElevenLabs'te 1–2 dakika okuyarak kendi ses klonunu oluştur ya da hazır bir ses seç. Kendi ses sunucunda `local-1` ya da `local-2`'yi seç.
 - **Ses:** "Konuşma bitti sayılması için sessizlik" ayarını **0,5 sn** yaparsan çeviri daha erken başlar. Kulaklık yoksa **Hoparlör modu**nu aç.
 
@@ -112,7 +112,7 @@ Desteklenen adresler: `teams.microsoft.com`, `teams.cloud.microsoft` (iş/okul h
 
 Kendi ses sunucunda kredi yoktur; tablodaki her şey ücretsizdir.
 
-Sayfanın sol altında küçük bir **Meet Tercüman** düğmesi çıkar. Tıklayınca iki tarafın cümleleri, gecikme ve maliyet görünür.
+Sayfanın sol altında küçük bir **Canlı Tercüman** düğmesi çıkar. Tıklayınca iki tarafın cümleleri, gecikme ve maliyet görünür.
 
 **Teams'te mikrofonunu kapatınca** (`Ctrl+Shift+M`) karşıya hiçbir şey gitmemeli. İlk görüşmede bunu mutlaka dene.
 
@@ -153,7 +153,7 @@ Aynı bilgisayardan iki katılımcı birbirinin sesini bozar; ikinci bir cihaz k
 | Karşı taraf beni duymuyor | Teams'te mikrofonun açık mı? Paneldeki uyarıyı oku; **Test sesi gönder** ile dene |
 | Karşı taraf anlamsız sesler ya da kendi sözlerini geri duyuyor | Çevirin hoparlörden mikrofona giriyor: kulaklık kullan ya da **Hoparlör modu**nu aç |
 | "Ollama sunucusu ... adresine ulaşılamadı" | Sunucu açık mı, bu bilgisayar Tailscale'de mi? Ayarlarda **Test et ve izin ver** |
-| "Yerel ses sunucusu anahtarı kabul etmedi" | Sunucudaki `/etc/meet-tercuman-speech.env` dosyasındaki `SPEECH_KEY`'i gir |
+| "Yerel ses sunucusu anahtarı kabul etmedi" | Sunucudaki `/etc/live-interpreter-speech.env` dosyasındaki `SPEECH_KEY`'i gir |
 | "Yedek çeviri henüz hazır değil" | Brave'de Chrome'un çevirmeni yok: bir DeepL Free anahtarı ya da ikinci bir Ollama sunucusu ekle |
 | Gecikme fazla | Ollama ya da **Claude Haiku 5.5** seç, sessizlik ayarını **0,5 sn** yap, kısa cümlelerle konuş |
 | Filmde çeviri gelmiyor | Kendi ses sunucunu güncelle (`git pull` ve `sudo ./install-ubuntu.sh`); konuşma algılayıcısı yeni sürümde. Altyazıyı yalnızca konuşmanın olduğu yerlerde bekle |
@@ -169,4 +169,4 @@ npm run build
 
 Sonra uzantılar sayfasında eklentinin yenile düğmesine bas ve açık sekmeyi F5 ile yenile. Ayarların ve sesin yerinde kalır. Kendi ses sunucunu güncellemek için Ubuntu'da `git pull` yapıp `speech-server` klasöründe `sudo ./install-ubuntu.sh` komutunu tekrar çalıştır; anahtar korunur.
 
-Teams'e özgü teknik notlar ve henüz doğrulanmamış noktalar: [TEAMS.md](TEAMS.md).
+Teams'e özgü teknik notlar ve henüz doğrulanmamış noktalar: [TEAMS.tr.md](TEAMS.tr.md).

@@ -124,6 +124,7 @@ export function describeElevenLabsError(err, { local = false } = {}) {
     if (isNetworkError(err)) return t('lsp.network');
     if (err instanceof ElevenLabsError && err.status === 401) return t('lsp.key');
     if (err instanceof ElevenLabsError && err.status === 501) return t('lsp.noClone');
+    if (err instanceof ElevenLabsError && err.status === 422) return t('lsp.noVoice');
   }
   if (isNetworkError(err)) return t('el.network');
   if (err?.name === 'TimeoutError') return t('el.stalled');

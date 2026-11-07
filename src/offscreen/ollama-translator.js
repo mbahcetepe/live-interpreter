@@ -143,7 +143,7 @@ export class OllamaTranslator {
     }).catch(() => {});
   }
 
-  async *translate({ text, from, to, history, concise, signal }) {
+  async *translate({ text, from, to, history, concise, media, signal }) {
     const system = buildSystemPrompt({
       from,
       to,
@@ -152,6 +152,7 @@ export class OllamaTranslator {
       meetingContext: this.meetingContext,
       keyterms: this.keyterms,
       concise,
+      media,
     });
     const user = buildUserMessage({ text, from, to, history });
     const body = {

@@ -109,7 +109,7 @@ async function recordingTest() {
         return v && v.readyState >= 1 ? { w: v.videoWidth, h: v.videoHeight, info: document.getElementById('info').textContent, file: document.getElementById('download').download } : null;
       }), 10000);
       check('the recording has a picture', media?.w > 0 && media?.h > 0, JSON.stringify(media));
-      check('the recording can be saved as a file', /^meet-tercuman-.*\.(mp4|webm)$/.test(media?.file || ''), media?.file);
+      check('the recording can be saved as a file', /^live-interpreter-.*\.(mp4|webm)$/.test(media?.file || ''), media?.file);
       const audio = await page.evaluate(async () => {
         const v = document.getElementById('player');
         const blob = await (await fetch(v.src)).blob();

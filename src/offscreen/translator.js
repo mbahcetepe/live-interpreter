@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { languageByCode } from '../shared/languages.js';
+import { languageByCode, AUTO_LANGUAGE } from '../shared/languages.js';
 import { SentenceSplitter, isOnlyPunctuation } from '../shared/text.js';
 import { t } from '../shared/i18n.js';
 
@@ -14,15 +14,23 @@ export class TranslationRefusedError extends Error {
   }
 }
 
-export function buildSystemPrompt({ from, to, myLanguage, theirLanguage, meetingContext, keyterms, concise }) {
-  const src = languageByCode(from).english;
+// from may be AUTO_LANGUAGE: the utterance can be in any language. media: the sound of a
+// video or radio tab the user is following, rather than a call.
+export function buildSystemPrompt({ from, to, myLanguage, theirLanguage, meetingContext, keyterms, concise, media = false }) {
   const dst = languageByCode(to).english;
   const mine = languageByCode(myLanguage).english;
   const theirs = languageByCode(theirLanguage).english;
+  const scene = media
+    ? `You are a professional simultaneous interpreter. The user is watching or listening to a video, a broadcast or a radio stream and understands ${dst}. Each request carries one utterance from it, captured by live speech recognition, and your reply is shown as a subtitle or spoken aloud the moment you produce it.`
+    : `You are a professional simultaneous interpreter in a live video call. The user speaks ${mine}; their counterpart speaks ${theirs}. Each request carries one utterance captured by live speech recognition, and your reply is spoken aloud by a text-to-speech voice the moment you produce it.`;
+  const task =
+    from === AUTO_LANGUAGE
+      ? `Translate the utterance into ${dst}. It can be in any language: recognize which one from the text itself.`
+      : `Translate the utterance from ${languageByCode(from).english} into ${dst}.`;
   const lines = [
-    `You are a professional simultaneous interpreter in a live video call. The user speaks ${mine}; their counterpart speaks ${theirs}. Each request carries one utterance captured by live speech recognition, and your reply is spoken aloud by a text-to-speech voice the moment you produce it.`,
+    scene,
     '',
-    `Translate the utterance from ${src} into ${dst}.`,
+    task,
     '',
     'Rules:',
     '- Reply with the translation only: no quotes, labels, notes, alternatives or explanations.',
@@ -37,7 +45,7 @@ export function buildSystemPrompt({ from, to, myLanguage, theirLanguage, meeting
   if (concise) {
     lines.push('- The listener is falling behind the speaker right now: make this translation noticeably shorter, keeping every important point.');
   }
-  if (meetingContext?.trim()) {
+  if (meetingContext?.trim() && !media) {
     lines.push('', 'About this meeting (background, given by the user):', meetingContext.trim());
   }
   if (keyterms?.length) {
@@ -47,8 +55,8 @@ export function buildSystemPrompt({ from, to, myLanguage, theirLanguage, meeting
 }
 
 export function buildUserMessage({ text, from, to, history }) {
-  const src = languageByCode(from).english;
   const dst = languageByCode(to).english;
+  const pair = from === AUTO_LANGUAGE ? `into ${dst}` : `${languageByCode(from).english} to ${dst}`;
   const parts = [];
   if (history?.length) {
     parts.push('Conversation so far, for context only (do not translate it):');
@@ -58,7 +66,7 @@ export function buildUserMessage({ text, from, to, history }) {
     }
     parts.push('');
   }
-  parts.push(`Utterance to interpret, ${src} to ${dst}:`, '<utterance>', text, '</utterance>');
+  parts.push(`Utterance to interpret, ${pair}:`, '<utterance>', text, '</utterance>');
   return parts.join('\n');
 }
 
@@ -103,7 +111,7 @@ export class Translator {
   }
 
   // Yields the translation in speakable pieces while Claude is still writing it.
-  async *translate({ text, from, to, history, concise, signal }) {
+  async *translate({ text, from, to, history, concise, media, signal }) {
     const system = buildSystemPrompt({
       from,
       to,
@@ -112,6 +120,7 @@ export class Translator {
       meetingContext: this.meetingContext,
       keyterms: this.keyterms,
       concise,
+      media,
     });
     const user = buildUserMessage({ text, from, to, history });
     const { beta, params } = buildRequest({ model: this.model, system, user });

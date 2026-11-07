@@ -2,6 +2,8 @@
 // extension needs at runtime is read through loadSettings(), so new fields only
 // need a default here.
 
+import { LANGUAGES, AUTO_LANGUAGE } from './languages.js';
+
 // Labels are i18n keys (see shared/i18n.js).
 export const CLAUDE_MODELS = [
   { id: 'claude-opus-5-5', labelKey: 'model.opus' },
@@ -37,8 +39,11 @@ export const DEFAULT_SETTINGS = {
   mistralKey: '',
   groqKey: '',
 
-  myLanguage: 'tr',
-  theirLanguage: 'en',
+  // On the very first start these follow the browser's language (firstRunDefaults).
+  myLanguage: 'en',
+  theirLanguage: 'es',
+  // What a video or radio tab speaks; 'auto' lets speech recognition find it.
+  mediaLanguage: AUTO_LANGUAGE,
 
   // How the counterpart reaches me: spoken translation, subtitles only (no speech
   // credits used), or off. And whether they hear my translated voice or my own.
@@ -101,8 +106,16 @@ export async function loadSettings() {
 
 // Before version 2 voice mode kept their original voice at 0.3 (0.08 under a
 // translation) by default. Settings still on those defaults move to the silent ones.
+// The first start speaks the browser's language: the interface (English or Turkish), my
+// language, and theirs (English, or Spanish for someone who speaks English).
+export function firstRunDefaults(locale = globalThis.navigator?.language || 'en') {
+  const code = String(locale).toLowerCase().split('-')[0];
+  const mine = LANGUAGES.some((l) => l.code === code) ? code : 'en';
+  return { uiLanguage: code === 'tr' ? 'tr' : 'en', myLanguage: mine, theirLanguage: mine === 'en' ? 'es' : 'en' };
+}
+
 export function migrateSettings(stored) {
-  const merged = { ...DEFAULT_SETTINGS, ...(stored || {}) };
+  const merged = { ...DEFAULT_SETTINGS, ...(stored ? {} : firstRunDefaults()), ...(stored || {}) };
   if ((stored?.settingsVersion ?? 1) < 2 && merged.originalVolume === 0.3 && merged.duckVolume === 0.08) {
     merged.originalVolume = 0;
     merged.duckVolume = 0;

@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { loadSettings, saveSettings, isFreeTranslation, isOllamaTranslation, isLocalSpeech, TRANSLATION_MODELS, TTS_MODELS } from '../shared/settings.js';
 import { OllamaTranslator } from '../offscreen/ollama-translator.js';
 import { serverBase, originPattern, originRules } from '../shared/servers.js';
-import { LANGUAGES } from '../shared/languages.js';
+import { LANGUAGES, AUTO_LANGUAGE } from '../shared/languages.js';
 import { setLanguage, t, applyI18n, languageLabel } from '../shared/i18n.js';
 import { listVoices, createVoiceClone, deleteVoice, speechStream, describeElevenLabsError, speechAccount, fetchScribeToken, realtimeUrl } from '../shared/elevenlabs.js';
 import { describeClaudeError } from '../offscreen/translator.js';
@@ -528,6 +528,7 @@ function renderTexts() {
   const languages = LANGUAGES.map((l) => [l.code, languageLabel(l.code)]);
   fillSelect($('myLanguage'), languages, settings.myLanguage);
   fillSelect($('theirLanguage'), languages, settings.theirLanguage);
+  fillSelect($('mediaLanguage'), [[AUTO_LANGUAGE, languageLabel(AUTO_LANGUAGE)], ...languages], settings.mediaLanguage);
   fillSelect($('claudeModel'), TRANSLATION_MODELS.map((m) => [m.id, t(m.labelKey)]), settings.claudeModel);
   fillSelect($('ttsModel'), TTS_MODELS.map((m) => [m.id, t(m.labelKey)]), settings.ttsModel);
   fillSelect($('cloneSeconds'), [30, 45, 60, 90].map((n) => [String(n), t('opt.their.secondsOption', { n })]), String(settings.cloneSeconds));
@@ -574,7 +575,7 @@ async function init() {
     $('testOllama').disabled = false;
   });
   bindText('keyterms');
-  for (const id of ['myLanguage', 'theirLanguage', 'claudeModel', 'ttsModel', 'micDeviceLabel', 'outputDeviceLabel']) bindSelect(id);
+  for (const id of ['myLanguage', 'theirLanguage', 'mediaLanguage', 'claudeModel', 'ttsModel', 'micDeviceLabel', 'outputDeviceLabel']) bindSelect(id);
   bindSelect('vadSilenceSecs', Number);
   bindSelect('cloneSeconds', Number);
   for (const id of ['offerTheirClone', 'deleteCloneAfter', 'halfDuplex', 'showOverlay', 'subtitleBar']) bindCheck(id);

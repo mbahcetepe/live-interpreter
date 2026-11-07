@@ -4,7 +4,7 @@
 //
 // Two test participants join the call as guests, and the host admits them:
 //   "EN test"                  speaks English (fake microphone), no extension
-//   "TR test (Meet Tercüman)"  speaks Turkish (fake microphone), runs the extension
+//   "TR test (Live Interpreter)"  speaks Turkish (fake microphone), runs the extension
 // Speech recognition and speech are the real ElevenLabs (ELEVENLABS_API_KEY in .env).
 // Translation is the real Claude when ANTHROPIC_API_KEY is set; otherwise the
 // extension's Claude requests are answered by Chrome's own on-device translator,
@@ -304,7 +304,7 @@ const mock = realClaude
 
 const en = await participant({ name: 'EN test', micWav: english, videoDir });
 en.label = 'en';
-const tr = await participant({ name: 'TR test (Meet Tercüman)', micWav: turkish, extension: true, proxyPort: mock?.port, videoDir });
+const tr = await participant({ name: 'TR test (Live Interpreter)', micWav: turkish, extension: true, proxyPort: mock?.port, videoDir });
 tr.label = 'tr';
 const timeline = [];
 let failed = null;

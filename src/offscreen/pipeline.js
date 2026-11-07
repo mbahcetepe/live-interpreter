@@ -155,8 +155,10 @@ export class Speaker {
 }
 
 export class DirectionPipeline {
-  constructor({ dir, from, to, translator, speaker, history, echoGuard, emit, describeError, isConcise, stallMs = TRANSLATION_STALL_MS }) {
+  // media: the sound of a video or radio tab, not one side of a call.
+  constructor({ dir, from, to, translator, speaker, history, echoGuard, emit, describeError, isConcise, media = false, stallMs = TRANSLATION_STALL_MS }) {
     this.dir = dir;
+    this.media = media;
     this.stallMs = stallMs;
     this.from = from;
     this.to = to;
@@ -219,6 +221,7 @@ export class DirectionPipeline {
         to: this.to,
         history: context,
         concise: this.isConcise(),
+        media: this.media,
         signal: watch.signal,
       });
       for await (const piece of watch.guard(pieces)) {
