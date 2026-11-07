@@ -30,10 +30,14 @@ HALLUCINATIONS = re.compile(
 
 @dataclass
 class Voice:
-    id: str  # what the extension asks for: local-1, local-2, ...
+    id: str  # local-1, local-2 (the n-th voice of whatever language is spoken) or a voice's own name
     name: str
-    language: str
+    language: str  # '' for local-1, local-2
     path: str | None = None
+
+
+# The Whisper models a speech server can switch to, fastest last.
+WHISPER_MODELS = ['large-v3-turbo', 'large-v3', 'distil-large-v3', 'medium', 'small', 'base', 'tiny']
 
 
 def resample(audio: np.ndarray, rate: int, target: int = OUT_RATE) -> np.ndarray:
@@ -55,15 +59,43 @@ def to_pcm16(audio: np.ndarray) -> bytes:
 
 
 class WhisperRecognizer:
-    def __init__(self, model: str = 'large-v3-turbo', device: str = 'cuda', compute_type: str = 'float16'):
-        from faster_whisper import WhisperModel
+    """The server's own model, plus one more a session asks for (kept loaded until a third
+    one is asked for; a model is downloaded the first time it is used)."""
 
-        log.info('loading faster-whisper %s on %s (%s)', model, device, compute_type)
-        self.model = WhisperModel(model, device=device, compute_type=compute_type)
+    def __init__(self, model: str = 'large-v3-turbo', device: str = 'cuda', compute_type: str = 'float16'):
+        self.default = model
+        self.device = device
+        self.compute_type = compute_type
+        self.models: dict[str, object] = {}
+        self.order: list[str] = []
+        self.load_lock = threading.Lock()
         # One transcription at a time on the GPU; both directions of a call share it.
         self.lock = threading.Lock()
+        self._get(model)
         # The first transcription sets the GPU up; done now, not on the call's first sentence.
         self.transcribe(np.zeros(16000, np.float32), 'en')
+
+    def available(self) -> list[str]:
+        return WHISPER_MODELS if self.default in WHISPER_MODELS else [self.default, *WHISPER_MODELS]
+
+    def loaded(self) -> list[str]:
+        return list(self.models)
+
+    def _get(self, name: str | None):
+        name = name if name in self.available() else self.default
+        with self.load_lock:
+            if name not in self.models:
+                from faster_whisper import WhisperModel
+
+                log.info('loading faster-whisper %s on %s (%s)', name, self.device, self.compute_type)
+                self.models[name] = WhisperModel(name, device=self.device, compute_type=self.compute_type)
+                self.order.append(name)
+                while len(self.order) > 2:
+                    old = next(n for n in self.order if n != self.default)
+                    self.order.remove(old)
+                    self.models.pop(old, None)
+                    log.info('unloaded faster-whisper %s', old)
+            return self.models[name]
 
     def speech_detector(self):
         """A Silero VAD per stream: it tells speech from music and noise (films)."""
@@ -71,9 +103,10 @@ class WhisperRecognizer:
 
         return SileroSpeech()
 
-    def transcribe(self, audio: np.ndarray, language: str | None, keyterms: list[str] | None = None) -> str:
+    def transcribe(self, audio: np.ndarray, language: str | None, keyterms: list[str] | None = None, model: str | None = None) -> str:
         if len(audio) < 1600:
             return ''
+        whisper = self._get(model)
         options = dict(
             language=language or None,
             beam_size=1,
@@ -85,10 +118,10 @@ class WhisperRecognizer:
             options['hotwords'] = ', '.join(keyterms)[:200]
         with self.lock:
             try:
-                segments, _info = self.model.transcribe(audio, **options)
+                segments, _info = whisper.transcribe(audio, **options)
             except TypeError:
                 options.pop('hotwords', None)
-                segments, _info = self.model.transcribe(audio, **options)
+                segments, _info = whisper.transcribe(audio, **options)
             parts = []
             for seg in segments:
                 if seg.no_speech_prob > 0.6 and seg.avg_logprob < -1.0:
@@ -99,12 +132,20 @@ class WhisperRecognizer:
 
 
 class FakeRecognizer:
+    default = 'fake'
+
+    def available(self) -> list[str]:
+        return ['fake', 'tiny']
+
+    def loaded(self) -> list[str]:
+        return ['fake']
+
     HEARD = {
         'en': 'Hi, thanks for joining the call today.',
         'tr': 'Cuma günü saat üç bizim için uygun.',
     }
 
-    def transcribe(self, audio: np.ndarray, language: str | None, keyterms: list[str] | None = None) -> str:
+    def transcribe(self, audio: np.ndarray, language: str | None, keyterms: list[str] | None = None, model: str | None = None) -> str:
         text = self.HEARD.get(language or 'en', self.HEARD['en'])
         # A partial is the start of the sentence, the final the whole of it.
         seconds = len(audio) / 16000
@@ -152,15 +193,20 @@ class PiperSpeaker:
 
     def voices(self) -> list[Voice]:
         count = max(len(v) for v in self.by_language.values())
-        return [Voice(f'local-{i + 1}', f'Yerel ses {i + 1}', '') for i in range(max(2, count))]
+        generic = [Voice(f'local-{i + 1}', f'Voice {i + 1}', '') for i in range(max(2, count))]
+        named = [Voice(e['name'], e['name'], language) for language, entries in sorted(self.by_language.items()) for e in entries]
+        return generic + named
 
     def _voice(self, voice_id: str, language: str):
         options = self.by_language.get(language)
         if not options:
             # Another language's voice would read it as gibberish.
             raise LookupError(f'no local voice for {language}')
-        index = int(voice_id.rsplit('-', 1)[-1]) - 1 if re.fullmatch(r'local-\d+', voice_id or '') else 0
-        entry = options[index % len(options)]
+        # A named voice of this language, the n-th one for local-n, the first one otherwise.
+        entry = next((e for e in options if e['name'] == voice_id), None)
+        if entry is None:
+            index = int(voice_id.rsplit('-', 1)[-1]) - 1 if re.fullmatch(r'local-\d+', voice_id or '') else 0
+            entry = options[index % len(options)]
         with self.lock:
             if entry['path'] not in self.cache:
                 self.cache[entry['path']] = self._load(entry['path'])
@@ -194,7 +240,7 @@ class FakeSpeaker:
         return ['en', 'tr']
 
     def voices(self) -> list[Voice]:
-        return [Voice('local-1', 'Yerel ses 1', ''), Voice('local-2', 'Yerel ses 2', '')]
+        return [Voice('local-1', 'Voice 1', ''), Voice('local-2', 'Voice 2', ''), Voice('en_US-fake', 'en_US-fake', 'en'), Voice('tr_TR-fake', 'tr_TR-fake', 'tr')]
 
     def synthesize(self, text: str, voice_id: str, language: str, speed: float = 1.0) -> bytes:
         if language not in self.languages():

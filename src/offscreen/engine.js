@@ -9,16 +9,18 @@
 // worker with each message, and everything for the Meet tab goes through a port the
 // tab's content script opens.
 
-import { isFreeTranslation, isOllamaTranslation, missingKeys, missingServers, parseKeyterms } from '../shared/settings.js';
+import { isFreeTranslation, isOllamaTranslation, translationProvider, claudeModelOf, missingKeys, missingServers, parseKeyterms, OPENAI_URL, OPENROUTER_URL } from '../shared/settings.js';
+import { OpenAITranslator, openaiRestMs } from './openai-translator.js';
 import { serverBase } from '../shared/servers.js';
 import { OllamaTranslator, ollamaRestMs } from './ollama-translator.js';
-import { listVoices, createVoiceClone, deleteVoice, describeElevenLabsError, speechAccount } from '../shared/elevenlabs.js';
+import { listVoices, createVoiceClone, deleteVoice, describeElevenLabsError, speechAccount, speechHealth, SPEECH_PROTOCOL } from '../shared/elevenlabs.js';
 import { PcmScheduler, testChime } from '../shared/scheduler.js';
 import { int16ToBase64 } from '../shared/pcm.js';
 import { EchoGuard, EarlySentences, isOnlyPunctuation } from '../shared/text.js';
 import { AUTO_LANGUAGE } from '../shared/languages.js';
 import { Usage } from '../shared/usage.js';
 import { sanitizePageState } from '../shared/page-state.js';
+import { describeMissingServers } from '../shared/setup-messages.js';
 import { cleanModes } from '../background/message-policy.js';
 import { ScribeRealtime } from './stt.js';
 import { Translator, describeClaudeError, claudeRestMs } from './translator.js';
@@ -71,15 +73,16 @@ function describeSttFatal(err, cause) {
   }
 }
 
-// With Ollama chosen, Claude (when a key is set) stands behind the Ollama servers. The
-// fastest model: it only translates the sentences an Ollama server could not.
+// Behind Ollama, OpenAI or OpenRouter stands Claude (when a key is set), in its fastest
+// model: it only translates the sentences the chosen service could not.
 const OLLAMA_BACKUP_CLAUDE = 'claude-haiku-5-5';
 
 // What decides which translators are made; a change rebuilds them mid-call.
 function translationSetup(s) {
-  if (isFreeTranslation(s)) return 'free';
-  if (!isOllamaTranslation(s)) return 'claude';
-  return ['ollama', serverBase(s.ollamaUrl), s.ollamaModel, serverBase(s.ollamaBackupUrl), s.ollamaBackupModel, Boolean(s.anthropicKey)].join('|');
+  const provider = translationProvider(s);
+  if (provider === 'free' || provider === 'claude') return provider;
+  if (provider === 'ollama') return ['ollama', serverBase(s.ollamaUrl), s.ollamaModel, serverBase(s.ollamaBackupUrl), s.ollamaBackupModel, Boolean(s.anthropicKey)].join('|');
+  return [provider, s.openaiUrl, s.openaiKey, s.openaiModel, s.openrouterKey, s.openrouterModel, Boolean(s.anthropicKey)].join('|');
 }
 
 // How loud a video stays while its spoken translation plays.
@@ -191,7 +194,7 @@ class Session {
       const missing = missingKeys(s);
       if (missing.length) throw new UserError(t('err.keysMissing', { names: joinNames(missing) }), 'keys');
       const servers = missingServers(s);
-      if (servers.length) throw new UserError(t('err.serverMissing', { names: joinNames(servers.map((id) => t(`server.${id}`))) }), 'servers');
+      if (servers.length) throw new UserError(describeMissingServers(servers), 'servers');
     }
 
     this.ctx = new AudioContext({ latencyHint: 'interactive', sampleRate: 48000 });
@@ -388,11 +391,36 @@ class Session {
         onUsage: (used, usage) => this.usage.addClaude(used, usage),
         ...(fallback ? { timeoutMs: 10_000, maxRetries: 1 } : {}),
       });
+    // A service that is out for the rest of the call says so once, in the panel.
+    const onOff = (name, err) => this.warn(`off-${name}`, 'warn.serviceOff', { name, message: describeClaudeError(err) });
+    const provider = translationProvider(s);
+    if (provider === 'claude') {
+      if (!fallback) return claude(claudeModelOf(s));
+      return new FallbackTranslator({ primary: claude(claudeModelOf(s)), backup: free(), restFor: claudeRestMs, onOff, log });
+    }
+    // Any other provider first, then Claude Haiku (with a key), then free translation. A
+    // Claude that is only the backup may fail its check without holding up the call.
+    const behind = () =>
+      s.anthropicKey
+        ? new FallbackTranslator({ primary: claude(OLLAMA_BACKUP_CLAUDE), backup: free(), restFor: claudeRestMs, name: 'Claude', requirePrimary: false, onOff, log })
+        : free();
+    if (provider === 'openai' || provider === 'openrouter') {
+      const openrouter = provider === 'openrouter';
+      const name = t(openrouter ? 'provider.openrouter' : 'provider.openai');
+      const primary = new OpenAITranslator({
+        ...common,
+        base: openrouter ? OPENROUTER_URL : serverBase(s.openaiUrl, { defaultPort: '' }) || OPENAI_URL,
+        key: openrouter ? s.openrouterKey : s.openaiKey,
+        model: openrouter ? s.openrouterModel : s.openaiModel,
+        label: name,
+        log,
+      });
+      if (!fallback) return primary;
+      return new FallbackTranslator({ primary, backup: behind(), restFor: openaiRestMs, name, onOff, log });
+    }
     if (isOllamaTranslation(s)) {
       // Ollama first, then a second Ollama server, then Claude (with a key), then free.
-      let backup = s.anthropicKey
-        ? new FallbackTranslator({ primary: claude(OLLAMA_BACKUP_CLAUDE), backup: free(), restFor: claudeRestMs, log })
-        : free();
+      let backup = behind();
       if (serverBase(s.ollamaBackupUrl) && String(s.ollamaBackupModel || '').trim()) {
         backup = new FallbackTranslator({
           primary: new OllamaTranslator({ ...common, url: s.ollamaBackupUrl, model: s.ollamaBackupModel, label: t('server.ollamaBackup'), log }),
@@ -400,6 +428,7 @@ class Session {
           restFor: ollamaRestMs,
           name: t('server.ollamaBackup'),
           requirePrimary: false,
+          onOff,
           log,
         });
       }
@@ -409,11 +438,11 @@ class Session {
         restFor: ollamaRestMs,
         name: t('server.ollama'),
         requirePrimary: false,
+        onOff,
         log,
       });
     }
-    if (!fallback) return claude(s.claudeModel);
-    return new FallbackTranslator({ primary: claude(s.claudeModel), backup: free(), restFor: claudeRestMs, log });
+    return free();
   }
 
   async verifyTranslator() {
@@ -423,7 +452,7 @@ class Session {
       for (const note of notes || []) this.warn(note.id, note.key, note.params);
       if (notes?.some((note) => note.id === 'backup')) this.watchBackup();
     } catch (err) {
-      throw new UserError(describeClaudeError(err), free ? 'free-translation' : 'anthropic');
+      throw new UserError(describeClaudeError(err), free ? 'free-translation' : 'translation');
     }
   }
 
@@ -444,6 +473,7 @@ class Session {
 
   async resolveVoices() {
     const s = this.settings;
+    if (this.speech.local) return this.resolveLocalVoices();
     this.myVoiceId = s.myVoiceId;
     this.theirVoiceId = s.theirVoiceId;
     let voices;
@@ -470,6 +500,21 @@ class Session {
     return this.media ? s.mediaLanguage || AUTO_LANGUAGE : s.theirLanguage;
   }
 
+  // The local speech server: the chosen voices (or its first and second voice for the
+  // language), and a note when the server is older than this extension.
+  async resolveLocalVoices() {
+    const s = this.settings;
+    try {
+      await listVoices(this.speech);
+      const health = await speechHealth(this.speech).catch(() => ({}));
+      if (!(health.protocol >= SPEECH_PROTOCOL)) this.warn('speech-old', 'lsp.old');
+    } catch (err) {
+      throw new UserError(describeElevenLabsError(err, this.speech), 'speech');
+    }
+    this.myVoiceId = s.localMyVoice || 'local-1';
+    this.theirVoiceId = s.localTheirVoice || 'local-2';
+  }
+
   createStt(dir, languageCode, keyterms) {
     return new ScribeRealtime({
       name: dir === 'in' ? 'stt-in' : 'stt-out',
@@ -478,6 +523,7 @@ class Session {
       languageCode: languageCode === AUTO_LANGUAGE ? '' : languageCode,
       vadSilenceSecs: this.settings.vadSilenceSecs,
       keyterms,
+      extraParams: this.speech.local ? { whisper_model: this.settings.localWhisperModel } : {},
       onPartial: (text) => this.onPartial(dir, text),
       onCommitted: (text) => this.onCommitted(dir, text),
       onServerMessage: (type, text) => this.debugSink?.event({ kind: 'stt-message', dir, type, text }),
@@ -819,8 +865,8 @@ class Session {
       if (this.outgoing) this.outgoing.translator = this.translator;
     } else {
       this.translator?.update({
-        // Behind Ollama, Claude keeps its own model (OLLAMA_BACKUP_CLAUDE).
-        model: isOllamaTranslation(next) ? undefined : next.claudeModel,
+        // Behind another provider, Claude keeps its own model (OLLAMA_BACKUP_CLAUDE).
+        model: translationProvider(next) === 'claude' ? claudeModelOf(next) : undefined,
         myLanguage: next.myLanguage,
         theirLanguage: next.theirLanguage,
         meetingContext: next.meetingContext,
@@ -840,7 +886,7 @@ class Session {
       Object.assign(this.outgoing, { from: next.myLanguage, to: next.theirLanguage });
       this.postTab({ type: 'pair', myLanguage: next.myLanguage, theirLanguage: this.sourceLanguage(next) });
     }
-    if (this.sttIn && (pairChanged || speechBefore.base !== this.speech.base || next.vadSilenceSecs !== prev.vadSilenceSecs || next.keyterms !== prev.keyterms)) {
+    if (this.sttIn && (pairChanged || speechBefore.base !== this.speech.base || next.localWhisperModel !== prev.localWhisperModel || next.vadSilenceSecs !== prev.vadSilenceSecs || next.keyterms !== prev.keyterms)) {
       // Speech recognition takes these when it connects. Typing in the glossary saves on
       // every pause, so the new connections wait until the typing is over.
       clearTimeout(this.sttRestartTimer);
@@ -851,6 +897,10 @@ class Session {
       this.warnings.delete('my-voice');
     }
     if (next.theirVoiceId && next.theirVoiceId !== prev.theirVoiceId) this.theirVoiceId = next.theirVoiceId;
+    if (this.speech.local) {
+      this.myVoiceId = next.localMyVoice || 'local-1';
+      if (!this.theirCloneId) this.theirVoiceId = next.localTheirVoice || 'local-2';
+    }
     if (next.outputDeviceLabel !== prev.outputDeviceLabel) this.applyOutputDevice();
     if (next.micDeviceLabel !== prev.micDeviceLabel) this.openMic().catch((err) => log('warn', 'microphone switch', err));
     if (next.showOverlay !== prev.showOverlay) this.postTab({ type: 'overlay', show: next.showOverlay });

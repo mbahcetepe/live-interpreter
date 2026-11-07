@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { STRINGS_FOR_TESTS as STRINGS, setLanguage, getLanguage, t, languageLabel, joinNames, locale } from '../../src/shared/i18n.js';
+import { STRINGS_FOR_TESTS as STRINGS, UI_LANGUAGES, setLanguage, getLanguage, t, languageLabel, joinNames, locale } from '../../src/shared/i18n.js';
 import { DEFAULT_SETTINGS } from '../../src/shared/settings.js';
 
 test('the interface starts in English', () => {
@@ -8,16 +8,29 @@ test('the interface starts in English', () => {
   assert.equal(getLanguage(), 'en');
 });
 
-test('English and Turkish have exactly the same keys', () => {
+test('every interface language has exactly the keys of English', () => {
+  assert.deepEqual(UI_LANGUAGES.map((l) => l.code), ['en', 'tr', 'de', 'es', 'zh']);
   const en = Object.keys(STRINGS.en).sort();
-  const tr = Object.keys(STRINGS.tr).sort();
-  assert.deepEqual(tr.filter((k) => !STRINGS.en[k]), []);
-  assert.deepEqual(en.filter((k) => !STRINGS.tr[k]), []);
+  for (const { code } of UI_LANGUAGES) {
+    const keys = Object.keys(STRINGS[code]).sort();
+    assert.deepEqual(keys.filter((k) => !(k in STRINGS.en)), [], `${code} has extra keys`);
+    assert.deepEqual(en.filter((k) => !(k in STRINGS[code])), [], `${code} is missing keys`);
+  }
 });
 
 test('placeholders match between the languages', () => {
   const names = (text) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',');
-  for (const key of Object.keys(STRINGS.en)) assert.equal(names(STRINGS.tr[key]), names(STRINGS.en[key]), key);
+  for (const { code } of UI_LANGUAGES) {
+    for (const key of Object.keys(STRINGS.en)) assert.equal(names(STRINGS[code][key]), names(STRINGS.en[key]), `${code} ${key}`);
+  }
+});
+
+test('the other interface languages name the call languages in their own words', () => {
+  for (const [code, word] of [['de', 'Englisch'], ['es', 'Inglés'], ['zh', '英语']]) {
+    setLanguage(code);
+    assert.equal(languageLabel('en'), word);
+  }
+  setLanguage('en');
 });
 
 test('no em dashes in any interface text', () => {

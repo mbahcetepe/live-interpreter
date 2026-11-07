@@ -83,6 +83,20 @@ export async function fetchScribeToken(apiKey, { signal } = {}) {
   return token;
 }
 
+// The local speech server only: its version, and what can be chosen on it.
+export async function speechHealth(apiKey) {
+  const res = await request(apiKey, '/health');
+  return res.json();
+}
+
+export async function speechModels(apiKey) {
+  const res = await request(apiKey, '/v1/models');
+  return res.json();
+}
+
+// Older local speech servers cannot do what this extension asks of them.
+export const SPEECH_PROTOCOL = 2;
+
 export async function listVoices(apiKey) {
   const res = await request(apiKey, '/v1/voices');
   const json = await res.json();

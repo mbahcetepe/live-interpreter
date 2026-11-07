@@ -13,10 +13,10 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
   <tr><td><b>Other tabs</b></td><td>YouTube, X, online radio, any web page with sound</td></tr>
   <tr><td><b>Browsers</b></td><td>Chrome, Edge, Brave and other Chromium browsers</td></tr>
   <tr><td><b>Languages</b></td><td>20, any two of them; the first start follows your browser's language; on video tabs the spoken language can be detected automatically</td></tr>
-  <tr><td><b>Translation</b></td><td>Claude, your own Ollama server, or free services</td></tr>
+  <tr><td><b>Translation</b></td><td>Claude, OpenAI or a compatible server, OpenRouter, your own Ollama, or free services; each one's models listed in the settings</td></tr>
   <tr><td><b>Speech</b></td><td>ElevenLabs, or your own speech server (faster-whisper and Piper)</td></tr>
   <tr><td><b>Delay</b></td><td>About 1.5–3 s after a sentence ends</td></tr>
-  <tr><td><b>Interface</b></td><td>English or Turkish (more languages are welcome: <code>src/shared/i18n.js</code>)</td></tr>
+  <tr><td><b>Interface</b></td><td>English (default), Turkish, German, Spanish, Chinese</td></tr>
 </table>
 
 </div>
@@ -63,15 +63,15 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
 
 | | Speech recognition and voices | Translation |
 | --- | --- | --- |
-| **Hosted** | ElevenLabs (Scribe v2 Realtime, Flash v2.5 / v4 Turbo) | Claude Opus, Sonnet or Haiku 5.5 |
+| **Hosted** | ElevenLabs (Scribe v2 Realtime, Flash v2.5 / v4 Turbo) | Claude Opus, Sonnet or Haiku 5.5; OpenAI; OpenRouter (hundreds of models, one key) |
 | **Free services** | | DeepL Free, Mistral, Groq, Chrome's built-in translator |
-| **Your own servers** | The speech server in [speech-server/](speech-server/README.md): faster-whisper and Piper | Ollama (for example `gemma4:12b`) |
+| **Your own servers** | The speech server in [speech-server/](speech-server/README.md): faster-whisper and Piper, model and voices chosen in the settings | Ollama (for example `gemma4:12b`), or any server with OpenAI's API (LM Studio, vLLM) |
 
 The two columns are chosen separately. With your own servers in both, nothing of the call leaves your computers and nothing is billed.
 
 ### Ollama for translation
 
-Choose **Ollama** as the translation model in the settings, enter the server's address (for example `100.65.147.84`; port 11434 is added when none is given) and a model, and press **Test and allow**: the browser asks once for access to that address. Measured on a desktop NVIDIA GPU over Tailscale, `gemma4:12b` and `gemma4:26b` translate a sentence in 0.3–0.6 s once the model is loaded. A second server on another computer can stand behind it, then Claude Haiku (if a key is set) and free translation.
+Choose **Ollama** as the translation service in the settings and enter the server's address (for example `100.65.147.84`; port 11434 is added when none is given): the browser asks once for access to that address, and the list of its models fills itself (embedding-only models are left out). Press **Test** to time one sentence. Measured on a desktop NVIDIA GPU over Tailscale, `gemma4:12b` and `gemma4:26b` translate a sentence in 0.3–0.6 s once the model is loaded. A second server on another computer can stand behind it, then Claude Haiku (if a key is set) and free translation.
 
 Ollama refuses requests whose `Origin` header it does not know, and browsers send one with every POST. The extension removes that header from its own requests to the servers in its settings (a `declarativeNetRequest` rule limited to this extension as the initiator), so **no `OLLAMA_ORIGINS` setting is needed**. A web page's request to the same server still carries its origin and is refused.
 
@@ -84,11 +84,11 @@ git clone https://github.com/mbahcetepe/live-interpreter.git
 cd live-interpreter/speech-server && sudo ./install-ubuntu.sh
 ```
 
-This installs faster-whisper (`large-v3-turbo`) and Piper with voices for 16 of the 20 languages (all but Greek, Indonesian, Japanese and Korean, which Piper has no voice for) as a service on port 8765 and prints the address and key. In the settings, under **1. API keys**, set **Speech recognition and voices** to **My own speech server**, enter both and press **Test and allow**. Measured over Tailscale: a sentence is recognized about 1.1–1.3 s after it ends (0.7 s of that is the silence that ends it) and spoken in under 0.2 s. Speech is found with Silero VAD, which tells a voice from music and effects, so a film's soundtrack does not hide where sentences end; loud sound with no voice found for 6 s is handed to Whisper anyway. No voice cloning in this mode. Details: [speech-server/README.md](speech-server/README.md).
+This installs faster-whisper (`large-v3-turbo`) and Piper with voices for 16 of the 20 languages (all but Greek, Indonesian, Japanese and Korean, which Piper has no voice for) as a service on port 8765 and prints the address and key. In the settings, under **Speech recognition and voices**, choose **My own speech server**, enter both and press **Test**; then choose the recognition model (Whisper) and the voices from the server's lists. Measured over Tailscale: a sentence is recognized about 1.1–1.3 s after it ends (0.7 s of that is the silence that ends it) and spoken in under 0.2 s. Speech is found with Silero VAD, which tells a voice from music and effects, so a film's soundtrack does not hide where sentences end; loud sound with no voice found for 6 s is handed to Whisper anyway. No voice cloning in this mode. Details: [speech-server/README.md](speech-server/README.md).
 
 ### Free translation
 
-Choose **Free** as the translation model and no Anthropic key is needed. The extension tries free services from the best quality down and moves on by itself when one runs out of quota, is slow or fails. The same chain stands behind Claude.
+Choose **Free** as the translation service and no key is needed. The extension tries free services from the best quality down and moves on by itself when one runs out of quota, is slow or fails. The same chain stands behind Claude.
 
 | Order | Service | Free allowance | Needs |
 | --- | --- | --- | --- |
@@ -107,7 +107,7 @@ In Brave, add a free DeepL key, since Chrome's built-in translator may be missin
 - Chrome 116 or newer, Edge or Brave
 - Node.js 18 or newer, to build the extension
 - For speech: an ElevenLabs API key (voice cloning needs a paid plan), or your own speech server
-- For translation: an Anthropic API key, or your own Ollama server, or nothing (free translation)
+- For translation: an API key for Claude, OpenAI or OpenRouter, or a server of your own (Ollama, LM Studio, vLLM), or nothing (free translation)
 - Headphones for calls
 
 ---
@@ -137,7 +137,7 @@ your microphone -> speech recognition (your language)  -> translation -> speech 
 video tab audio -> speech recognition                  -> translation -> subtitles, or speech over the original
 
 speech recognition and speech: ElevenLabs or the speech server
-translation: Ollama -> second Ollama -> Claude -> free, or Claude -> free, or free only
+translation: the chosen service (Claude, OpenAI/compatible, OpenRouter, Ollama -> second Ollama) -> Claude Haiku if a key is set -> free
 ```
 
 | Part | Where it runs | What it does |
@@ -191,7 +191,13 @@ cd speech-server && python -m pytest tests           # the speech server: protoc
 
 ## Costs
 
-The panel counts what a call uses and estimates the cost from list prices (28 October 2026): Scribe v2 Realtime is $0.39 an hour per active direction, Flash v2.5 and v4 Turbo speech is $0.04 per 1,000 characters, and Claude is billed per token (Haiku 5.5 is the cheapest). Subtitles-only mode makes no speech. Free translation, Ollama and your own speech server cost nothing, and the panel counts them as $0.
+The panel counts what a call uses and estimates the cost from list prices (28 October 2026): Scribe v2 Realtime is $0.39 an hour per active direction, Flash v2.5 and v4 Turbo speech is $0.04 per 1,000 characters, and Claude is billed per token (Haiku 5.5 is the cheapest). Subtitles-only mode makes no speech. Free translation, Ollama and your own speech server cost nothing, and the panel counts them as $0. OpenAI and OpenRouter bill per token too, but their prices are not in the estimate.
+
+---
+
+## Versions
+
+The version (now 2.0.0) is shown in the popup and at the top of the settings page; what changed in each one is in [CHANGELOG.md](CHANGELOG.md), and every version has a tag and a [release](https://github.com/mbahcetepe/live-interpreter/releases) with the built extension. The speech server reports its own version and protocol, and the extension says so when the server needs an update.
 
 ---
 

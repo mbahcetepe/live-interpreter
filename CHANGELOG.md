@@ -1,0 +1,36 @@
+# Changelog
+
+Versions follow [semantic versioning](https://semver.org): MAJOR for changes that need something done (new settings, a server update), MINOR for new features, PATCH for fixes. The version lives in `package.json`; the build writes it into the extension's manifest, and the popup and the settings page show it. The speech server has its own version and a protocol number (`/health`); the extension warns when the server is older than it needs.
+
+## 2.0.0 (2026-11-07)
+
+The project is now **Live Interpreter** (Canlı Tercüman in Turkish), for Microsoft Teams on the web, Google Meet and any video or radio tab.
+
+### New
+
+- **Video and radio tabs** (YouTube, X, online radio): subtitles or spoken translation, with the spoken language detected automatically.
+- **Translation services**: Claude, OpenAI or any server with the same API (LM Studio, vLLM), OpenRouter, your own Ollama server, and free services. The settings page fetches each one's list of models; a failing service hands the sentence to the next one.
+- **Your own speech server** (`speech-server/`): faster-whisper and Piper instead of ElevenLabs, with voices for 16 languages. Its recognition model and voices can be chosen in the settings.
+- **Interface in five languages**: English (default), Turkish, German, Spanish and Chinese.
+- Version shown in the popup and the settings page; `CHANGELOG.md`; `npm run zip` works on Windows too.
+
+### Changed
+
+- The settings page shows only what the chosen services need; prices and repeated hints are gone.
+- The speech server finds speech with Silero VAD, so films with music and effects are cut at the ends of sentences.
+- New icon and logo.
+- The speech server's service is now `live-interpreter-speech`; the installer moves an install made under the old name, key and model kept.
+
+### Security
+
+- The page bridge, the message senders and the panel were hardened (see the README, Security).
+
+### Update from 1.x
+
+1. `git pull`, `npm install`, `npm run build`, then press reload on the extension and reload the call tab.
+2. On a computer with your own speech server: `git pull`, then `cd speech-server && sudo ./install-ubuntu.sh`.
+3. Settings are kept. The translation service is taken from the old "Translation model" setting.
+
+## 1.0.0
+
+First version, for Google Meet, by UfukNode; Teams on the web added as a fork.

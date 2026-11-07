@@ -108,3 +108,21 @@ test('verify needs Claude to work and only notes a backup that is not ready', as
   const badKey = new FallbackTranslator({ primary: fake({ verifyFails: true }), backup: fake() });
   await assert.rejects(badKey.verify());
 });
+
+test('a service that is out for the rest of the call is reported once', async () => {
+  const off = [];
+  const authErr = Object.assign(new Error('bad key'), { status: 401 });
+  const t = new FallbackTranslator({ primary: fake({ failWith: authErr }), backup: fake({ pieces: ['Selam.'] }), restFor: () => Infinity, name: 'Claude', onOff: (name, err) => off.push([name, err.message]) });
+  await collect(t.translate(job));
+  await collect(t.translate(job));
+  assert.deepEqual(off, [['Claude', 'bad key']]);
+});
+
+test('a backup Claude with a bad key does not hold up the call', async () => {
+  const off = [];
+  const claude = fake({ verifyFails: true });
+  const t = new FallbackTranslator({ primary: claude, backup: fake(), restFor: () => Infinity, requirePrimary: false, onOff: (name) => off.push(name) });
+  const notes = await t.verify();
+  assert.equal(notes[0].key, 'warn.serverDown');
+  assert.deepEqual(off, ['Claude']);
+});

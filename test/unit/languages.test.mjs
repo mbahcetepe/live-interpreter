@@ -48,11 +48,12 @@ test("Chrome's translator gets the language Chrome's detector found", async () =
   assert.equal(blind.usable({ id: 'chrome', kind: 'local' }, AUTO_LANGUAGE, 'en'), false);
 });
 
-test('the first start follows the browser language', () => {
-  assert.deepEqual(firstRunDefaults('de-DE'), { uiLanguage: 'en', myLanguage: 'de', theirLanguage: 'en' });
-  assert.deepEqual(firstRunDefaults('tr-TR'), { uiLanguage: 'tr', myLanguage: 'tr', theirLanguage: 'en' });
-  assert.deepEqual(firstRunDefaults('en-US'), { uiLanguage: 'en', myLanguage: 'en', theirLanguage: 'es' });
-  assert.deepEqual(firstRunDefaults('xx'), { uiLanguage: 'en', myLanguage: 'en', theirLanguage: 'es' });
+test('the first start takes my language from the browser; the interface stays English', () => {
+  assert.deepEqual(firstRunDefaults('de-DE'), { myLanguage: 'de', theirLanguage: 'en' });
+  assert.deepEqual(firstRunDefaults('tr-TR'), { myLanguage: 'tr', theirLanguage: 'en' });
+  assert.deepEqual(firstRunDefaults('en-US'), { myLanguage: 'en', theirLanguage: 'es' });
+  assert.deepEqual(firstRunDefaults('xx'), { myLanguage: 'en', theirLanguage: 'es' });
+  assert.equal(DEFAULT_SETTINGS.uiLanguage, 'en');
   assert.equal(DEFAULT_SETTINGS.mediaLanguage, AUTO_LANGUAGE);
   assert.equal(languageByCode(AUTO_LANGUAGE).english, 'Detect automatically');
 });

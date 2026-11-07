@@ -7,6 +7,7 @@ import { setLanguage, t, joinNames } from '../shared/i18n.js';
 import { isSupportedUrl, isMediaUrl } from '../shared/platforms.js';
 import { isAllowed, cleanModes } from './message-policy.js';
 import { originRules } from '../shared/servers.js';
+import { describeMissingServers } from '../shared/setup-messages.js';
 
 const OFFSCREEN_PATH = 'offscreen.html';
 const IDLE = { status: 'idle', tabId: null, error: null, engine: null };
@@ -71,7 +72,7 @@ async function startSession({ tabId, streamId, options = {} }) {
       const missing = missingKeys(settings);
       if (missing.length) throw new Error(t('err.keysMissing', { names: joinNames(missing) }));
       const servers = missingServers(settings);
-      if (servers.length) throw new Error(t('err.serverMissing', { names: joinNames(servers.map((id) => t(`server.${id}`))) }));
+      if (servers.length) throw new Error(describeMissingServers(servers));
     }
 
     // The page hook is injected when Meet loads, so a tab opened before the extension

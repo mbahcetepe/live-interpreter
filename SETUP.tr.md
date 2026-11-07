@@ -17,7 +17,7 @@ Kurulumdan ilk çevrilen Teams görüşmesine ya da YouTube videosuna adım adı
 | **Chrome 116+, Edge ya da Brave** | Teams toplantısına da bu tarayıcıdan katılırsın. Masaüstü Teams uygulaması desteklenmez |
 | **Node.js 18+** | Eklentiyi derlemek için ([nodejs.org](https://nodejs.org)) |
 | **Ses tanıma ve sesler için biri** | ElevenLabs hesabı (kendi ses klonun için Starter veya üstü plan, [planlar](https://elevenlabs.io/pricing)) **ya da** kendi ses sunucun ([speech-server](speech-server/README.tr.md)) |
-| **Çeviri için biri** | Anthropic API anahtarı (Claude) **ya da** kendi Ollama sunucun **ya da** hiçbiri (ücretsiz çeviri) |
+| **Çeviri için biri** | Claude, OpenAI ya da OpenRouter için bir API anahtarı, **ya da** kendi sunucun (Ollama, LM Studio), **ya da** hiçbiri (ücretsiz çeviri) |
 | **Kulaklık** | Görüşmelerde, duyduğun çeviri mikrofonuna girip karşıya geri gitmesin diye |
 
 Eklentinin kendi sunucusu yok. Anahtarların yalnızca tarayıcında kalır ve yalnızca seçtiğin servise gider.
@@ -44,19 +44,43 @@ Sonunda `Built dist/` yazar. Eklenti `dist` klasöründedir; klasörü silme ya 
 3. **Paketlenmemiş öğe yükle** düğmesine bas ve `dist` klasörünü seç.
 4. **Yalnızca bir kopya yüklü olsun.** Eski bir sürüm yüklüyse onu **Kaldır**. İki kopya yüklüyse sayfa kancası çakışır ve açılır pencere sürekli "sekmeyi yenileyin (F5)" der.
 
-Ayarlar sayfası kendiliğinden açılır. Eklentiyi araç çubuğuna sabitle (yapboz simgesi → raptiye). Sağ üstteki **TR** düğmesiyle arayüzü Türkçeye geçir.
+Ayarlar sayfası kendiliğinden, İngilizce açılır; sağ üstteki menüden Türkçe, Almanca, İspanyolca ya da Çinceye geçebilirsin. Eklentiyi araç çubuğuna sabitle (yapboz simgesi → raptiye).
 
-## 3. Ses tanıma ve sesler: ElevenLabs ya da kendi ses sunucun
+Ayarlar sayfası dört bölümden oluşur: **Diller**, **Çeviri**, **Ses tanıma ve sesler**, **Mikrofon ve ses**. Her bölüm yalnızca orada seçilen servisin alanlarını gösterir ve kendi **Test et** düğmesi vardır.
 
-Ayarlarda **1. API anahtarları** bölümündeki **Ses tanıma ve sesler** alanından birini seç.
+## 3. Diller
+
+**Benim dilim**'i (ilk açılışta tarayıcının dili gelir) ve **Karşı tarafın dili (görüşmeler)**'ni seç. **Video ve radyo sekmeleri** sen bir dil seçmedikçe **Otomatik algıla**dır.
+
+## 4. Çeviri
+
+**Servis**'i seç:
+
+| Servis | Girilecekler |
+| --- | --- |
+| **Claude (Anthropic)** | [Claude Console › API keys](https://platform.claude.com/settings/keys) sayfasından bir API anahtarı (hesapta kredi olmalı) ve bir model; en kısa gecikme **Claude Haiku 5.5** |
+| **OpenAI ya da uyumlu bir sunucu** | OpenAI için **Sunucu**'yu boş bırak ve API anahtarını gir; ya da aynı arayüzü sunan bir sunucunun adresini gir (LM Studio, vLLM; örneğin `http://192.168.1.5:1234/v1`) |
+| **OpenRouter** | [openrouter.ai](https://openrouter.ai/keys) sayfasından bir API anahtarı |
+| **Ollama (kendi sunucunuz)** | Sunucunun adresi (örneğin `100.65.147.84`; port 11434 eklenir); altına bir **ikinci sunucu** eklenebilir |
+| **Ücretsiz** | Hiçbir şey; ücretsiz bir [DeepL API Free](https://www.deepl.com/pro-api) anahtarı kaliteyi artırır, Brave'de gereklidir |
+
+**Model** listesi servisten kendiliğinden dolar; **↻** listeyi yeniden getirir. Kendi sunucunda (Ollama, LM Studio) tarayıcı o adrese erişim için bir kez izin ister: izin ver. Ollama sunucusunda `OLLAMA_ORIGINS` ayarı gerekmez.
+
+**Test et** düğmesine bas: bir cümle çevrilir ve süresi ölçülür. Görüşme sırasında seçilen servis bir cümlede hata verirse sıradaki çevirir (ikinci Ollama sunucusu, anahtar varsa Claude Haiku, sonra ücretsiz çeviri). Kalıcı olarak devre dışı kalan bir servis (örneğin reddedilen bir anahtar) panelde bir kez bildirilir.
+
+**Toplantı notları ve özel terimler** (katlanır bölüm) çevirmene arka plan bilgisi ve isimlerin yazılışını verir.
+
+## 5. Ses tanıma ve sesler
+
+**Servis**'i seç.
 
 **ElevenLabs:**
 
-1. [elevenlabs.io](https://elevenlabs.io) → [Developers › API Keys](https://elevenlabs.io/app/developers/api-keys) → **Create Key**.
-2. **Text to Speech** ve **Speech to Text** satırlarını **Access**, **Voices** satırını **Write** yap ve anahtarı oluştur.
-3. Anahtarı kopyala (yalnızca bir kez gösterilir) ve **ElevenLabs API anahtarı** kutusuna yapıştır.
+1. [elevenlabs.io](https://elevenlabs.io) → [Developers › API Keys](https://elevenlabs.io/app/developers/api-keys) → **Create Key**. **Text to Speech** ve **Speech to Text** satırlarını **Access**, **Voices** satırını **Write** yap.
+2. Anahtarı **ElevenLabs API anahtarı** kutusuna yapıştır ve **Test et** düğmesine bas.
+3. **Benim sesim**'i (sen konuşunca duydukları) ve **Karşı tarafın sesi**'ni seç. **Kendi sesimi oluştur (klon)** 1–2 dakikalık bir okumayı kaydedip sesini ondan oluşturur.
 
-**Kendi ses sunucun** (ücretsiz, ses ağının dışına çıkmaz):
+**Kendi ses sunucum** (ücretsiz, ses ağının dışına çıkmaz):
 
 1. NVIDIA ekran kartlı bir Ubuntu bilgisayarda:
    ```bash
@@ -64,33 +88,19 @@ Ayarlarda **1. API anahtarları** bölümündeki **Ses tanıma ve sesler** alan�
    cd live-interpreter/speech-server && sudo ./install-ubuntu.sh
    ```
    Betik sonunda bir **adres** ve **anahtar** yazar ([ayrıntılar](speech-server/README.tr.md)).
-2. Ayarlarda **Kendi ses sunucum**'u seç, adresi ve anahtarı gir, **Test et ve izin ver** düğmesine bas. Tarayıcı bu adrese erişim izni ister; izin ver. Sonuçta "canlı ses tanıma hazır" yazmalı.
-3. Bu modda ses klonu yoktur. Seslerin `local-1`, `local-2` gibi adlarla görünür ve her biri cümlenin dilinde konuşur. Piper'ın 20 dilin 16'sı için sesi var; Yunanca, Endonezce, Japonca ve Korece için altyazı çalışır ama yerel seslendirme yoktur.
+2. İkisini gir, **Test et** düğmesine bas ve tarayıcı adrese erişim izni isteyince izin ver. Sonuç, sunucunun sürümünü yazar ve "canlı ses tanıma hazır" ile biter.
+3. **Ses tanıma modeli**'ni (Whisper) ve sesleri seç. Ses listeleri, her sesin konuşacağı dilin seslerini gösterir; Yunanca, Endonezce, Japonca ve Korece için yerel ses yoktur (yalnızca altyazı). Bu modda ses klonu yoktur.
 
-## 4. Çeviri: Claude, Ollama ya da ücretsiz
+Kullandığın bilgisayar kendi sunucularınla aynı ağda (örneğin Tailscale'de) olmalı. Hem ses hem çeviri kendi sunucularında olduğunda görüşmenin hiçbir parçası senin bilgisayarlarının dışına çıkmaz ve ücret yazmaz.
 
-Ayarlarda **6. Çeviri** bölümünde **Çeviri modeli**'ni seç.
-
-- **Claude:** [Claude Console › API keys](https://platform.claude.com/settings/keys) sayfasından bir anahtar al ve **Anthropic API anahtarı** kutusuna yapıştır. Hesapta kredi olmalı. En kısa gecikme için **Claude Haiku 5.5**.
-- **Ollama (kendi sunucun, ücretsiz):** **Ollama**'yı seç. Sunucunun adresini (örneğin `100.65.147.84`; port yazılmazsa 11434 eklenir) ve modeli (örneğin `gemma4:12b`) gir, **Test et ve izin ver** düğmesine bas ve tarayıcının sorusuna izin ver. Sunucuda `OLLAMA_ORIGINS` ayarı gerekmez. İstersen **İkinci sunucu** alanına başka bir bilgisayardaki Ollama'yı ekle. Ollama yanıt vermezse sırayla ikinci sunucu, Claude (anahtar varsa Haiku) ve ücretsiz çeviri devralır.
-- **Ücretsiz:** **Ücretsiz**'i seç. Brave'de Chrome'un yerleşik çevirmeni olmayabilir; bir [DeepL API Free](https://www.deepl.com/pro-api) anahtarı ekle.
-
-Claude ya da Ollama bir cümlede hata verirse o cümleyi yedek çeviri devralır; cümle kaybolmaz.
-
-**Anahtarları test et** düğmesine bas; yeşil yazı çıkarsa tamamdır.
-
-Toplantıyı yapacağın bilgisayar, kendi sunucularınla aynı ağda (örneğin Tailscale'de) olmalı. Hem ses sunucusu hem Ollama açıkken görüşmenin hiçbir parçası senin bilgisayarlarının dışına çıkmaz ve ücret yazmaz.
-
-## 5. Mikrofon, diller, ses
+## 6. Mikrofon ve ses
 
 - **Mikrofon iznini ver** düğmesine bas ve tarayıcının sorusuna izin ver. Teams'te kullandığın mikrofonu seç ya da "Görüşmeyle aynı" bırak.
-- **Diller:** kendi dilini ve karşı tarafın dilini seç; ilk açılışta tarayıcının dili senin dilin olarak gelir. **Video ve radyo sekmelerinin dili** sen seçmedikçe **Otomatik algıla**dır.
-- **Benim sesim (isteğe bağlı):** ElevenLabs'te 1–2 dakika okuyarak kendi ses klonunu oluştur ya da hazır bir ses seç. Kendi ses sunucunda `local-1` ya da `local-2`'yi seç.
-- **Ses:** "Konuşma bitti sayılması için sessizlik" ayarını **0,5 sn** yaparsan çeviri daha erken başlar. Kulaklık yoksa **Hoparlör modu**nu aç.
+- "Cümle bitti sayılması için sessizlik" ayarını **0,5 sn** yaparsan çeviri daha erken başlar. Kulaklık yoksa **Hoparlör modu**nu aç.
 
 ---
 
-## 6. Teams görüşmesinde
+## 7. Teams görüşmesinde
 
 1. Toplantı bağlantısını aç. Teams uygulamayı açmayı önerirse **Bu tarayıcıda devam et** seç.
 2. Kulaklığı tak, toplantıya katıl.
@@ -118,7 +128,7 @@ Sayfanın sol altında küçük bir **Canlı Tercüman** düğmesi çıkar. Tık
 
 Toplantı bitince çeviri, bağlantı kalmadıktan 30 saniye sonra kendiliğinden durur. Hemen durdurmak için açılır pencereyi ya da `Alt+Shift+T` kısayolunu kullan.
 
-## 7. Video ve radyo sekmelerinde (YouTube, X, çevrimiçi radyo)
+## 8. Video ve radyo sekmelerinde (YouTube, X, çevrimiçi radyo)
 
 1. Videoyu ya da radyoyu aç ve çalmaya başlat.
 2. O sekmedeyken eklenti simgesine tıkla. Pencerede "Bu sekmedeki ses" seçeneği görünür.
@@ -152,7 +162,8 @@ Aynı bilgisayardan iki katılımcı birbirinin sesini bozar; ikinci bir cihaz k
 | "Eklentinin mikrofon izni yok" | Ayarlar → **Mikrofon iznini ver** |
 | Karşı taraf beni duymuyor | Teams'te mikrofonun açık mı? Paneldeki uyarıyı oku; **Test sesi gönder** ile dene |
 | Karşı taraf anlamsız sesler ya da kendi sözlerini geri duyuyor | Çevirin hoparlörden mikrofona giriyor: kulaklık kullan ya da **Hoparlör modu**nu aç |
-| "Ollama sunucusu ... adresine ulaşılamadı" | Sunucu açık mı, bu bilgisayar Tailscale'de mi? Ayarlarda **Test et ve izin ver** |
+| "Ollama sunucusu ... adresine ulaşılamadı" | Sunucu açık mı, bu bilgisayar Tailscale'de mi? Ayarlarda Çeviri bölümündeki **Test et** |
+| "Anthropic API anahtarı geçersiz" (ya da OpenAI, OpenRouter) | Anthropic, ayarlarda kayıtlı anahtarı reddediyor: anahtar değiştirilmiş, iptal edilmiş ya da eksik yapıştırılmış. Çeviri bölümünde anahtarı yeniden yapıştır ve **Test et** düğmesine bas |
 | "Yerel ses sunucusu anahtarı kabul etmedi" | Sunucudaki `/etc/live-interpreter-speech.env` dosyasındaki `SPEECH_KEY`'i gir |
 | "Yedek çeviri henüz hazır değil" | Brave'de Chrome'un çevirmeni yok: bir DeepL Free anahtarı ya da ikinci bir Ollama sunucusu ekle |
 | Gecikme fazla | Ollama ya da **Claude Haiku 5.5** seç, sessizlik ayarını **0,5 sn** yap, kısa cümlelerle konuş |

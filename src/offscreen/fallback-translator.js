@@ -13,7 +13,9 @@
 export class FallbackTranslator {
   // requirePrimary: the call does not start without the primary (Claude: a bad key must
   // show at once). An Ollama server that is down only rests, and the backup starts.
-  constructor({ primary, backup, restFor = () => 0, log, now, name = 'Claude', requirePrimary = true } = {}) {
+  // onOff(name, err): the primary is out for the rest of the call (a refused key, a model
+  // that is gone), so the engine can say so once instead of on every sentence.
+  constructor({ primary, backup, restFor = () => 0, log, now, name = 'Claude', requirePrimary = true, onOff } = {}) {
     this.primary = primary;
     this.backup = backup;
     this.restFor = restFor;
@@ -21,6 +23,7 @@ export class FallbackTranslator {
     this.now = now || (() => Date.now());
     this.name = name;
     this.requirePrimary = requirePrimary;
+    this.onOff = onOff || (() => {});
     this.primaryRestUntil = 0;
   }
 
@@ -49,6 +52,7 @@ export class FallbackTranslator {
     if (backup.status === 'rejected') throw primary.reason;
     const rest = this.restFor(primary.reason);
     this.primaryRestUntil = this.now() + (rest > 0 ? rest : 15_000);
+    if (rest === Infinity) this.onOff(this.name, primary.reason);
     const message = primary.reason?.message || String(primary.reason);
     this.log('warn', `${this.name} is not available (${message}), starting with the backup`);
     return [...(backup.value || []), { id: `down-${this.name}`, key: 'warn.serverDown', params: { name: this.name, message } }];
@@ -78,6 +82,7 @@ export class FallbackTranslator {
       if (spoke || job.signal?.aborted || isAbort(err)) throw err;
       const rest = this.restFor(err);
       if (rest > 0) this.primaryRestUntil = this.now() + rest;
+      if (rest === Infinity) this.onOff(this.name, err);
       this.log('warn', `${this.name} failed (${err?.message || err}), using the backup${rest > 0 ? ` for ${rest === Infinity ? 'the rest of the call' : `${Math.round(rest / 1000)} s`}` : ''}`);
       try {
         yield* this.backup.translate(job);

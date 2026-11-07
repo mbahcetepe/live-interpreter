@@ -232,3 +232,30 @@ function clean(text, last) {
   const out = String(text || '').replace(/<\/?utterance>/g, '');
   return last ? out.trim() : out;
 }
+
+// The models a server has that can write text: embedding-only models (bge-m3,
+// nomic-embed-text) are left out, by what Ollama says each one can do.
+export async function listOllamaModels(url, { fetchImpl = (...a) => fetch(...a) } = {}) {
+  const base = serverBase(url);
+  let res;
+  try {
+    res = await fetchImpl(`${base}/api/tags`);
+  } catch {
+    throw new OllamaError(t('ollama.network', { name: base, url: base }), { kind: 'network' });
+  }
+  if (!res.ok) throw new OllamaError(t('ollama.http', { name: base, status: res.status, detail: '' }), { status: res.status });
+  const { models = [] } = await res.json();
+  const checked = await Promise.all(
+    models.map(async (m) => {
+      try {
+        const info = await fetchImpl(`${base}/api/show`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: m.name }) });
+        const caps = info.ok ? (await info.json()).capabilities : null;
+        if (Array.isArray(caps) && !caps.includes('completion')) return null;
+      } catch {
+        // an older Ollama without capabilities: keep the model
+      }
+      return { id: m.name, size: m.size || 0, params: m.details?.parameter_size || '', quant: m.details?.quantization_level || '' };
+    }),
+  );
+  return checked.filter(Boolean).sort((a, b) => a.id.localeCompare(b.id));
+}

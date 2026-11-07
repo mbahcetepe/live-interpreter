@@ -6,7 +6,8 @@ import path from 'node:path';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const src = path.join(root, 'src');
-const dist = path.join(root, 'dist');
+// A test build goes to its own folder, so the dist/ loaded in a browser is never a test build.
+const dist = path.join(root, process.argv.includes('--test') ? 'dist-test' : 'dist');
 const watch = process.argv.includes('--watch');
 // `--debug` compiles in the opt-in local debug copy (src/offscreen/debug-sink.js).
 const debug = process.argv.includes('--debug');
@@ -51,16 +52,17 @@ const scripts = {
 
 async function copyStatic() {
   await mkdir(dist, { recursive: true });
-  await cp(path.join(src, 'manifest.json'), path.join(dist, 'manifest.json'));
+  // The version lives in package.json only; the manifest gets it here.
+  const manifest = JSON.parse(await readFile(path.join(src, 'manifest.json'), 'utf8'));
+  manifest.version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
   if (testBuild) {
     // The stand-in Ollama and speech servers of the automated tests run on 127.0.0.1;
     // a real install asks for each server's address from the settings page instead.
-    const manifest = JSON.parse(await readFile(path.join(dist, 'manifest.json'), 'utf8'));
     manifest.host_permissions.push('http://127.0.0.1/*');
     // The stand-in video page; a real install reaches such a tab through the click (activeTab).
     manifest.host_permissions.push('https://media.test/*');
-    await writeFile(path.join(dist, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   }
+  await writeFile(path.join(dist, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   await cp(path.join(src, 'offscreen/offscreen.html'), path.join(dist, 'offscreen.html'));
   for (const page of ['popup', 'options', 'recording']) {
     await cp(path.join(src, `${page}/${page}.html`), path.join(dist, `${page}.html`));

@@ -8,6 +8,8 @@
 // from its own: the rule names this extension as the initiator, so a web page's request
 // to the same server still carries its origin and is refused.
 
+import { translationProvider } from './settings.js';
+
 const OLLAMA_PORT = '11434';
 
 // "100.65.147.84" or "http://100.65.147.84:11434/" -> "http://100.65.147.84:11434"
@@ -53,10 +55,13 @@ export function configuredServers(settings) {
     const base = serverBase(url, { defaultPort });
     if (base) out.push({ base, kind });
   };
-  if (settings?.claudeModel === 'ollama') {
+  const provider = translationProvider(settings);
+  if (provider === 'ollama') {
     add(settings.ollamaUrl, 'ollama');
     add(settings.ollamaBackupUrl, 'ollama');
   }
+  // A server of one's own with OpenAI's API (LM Studio, vLLM); OpenAI itself needs no entry.
+  if (provider === 'openai' && String(settings.openaiUrl || '').trim()) add(settings.openaiUrl, 'openai', '');
   if (settings?.speechProvider === 'local') add(settings.localSpeechUrl, 'speech', '8765');
   return out;
 }

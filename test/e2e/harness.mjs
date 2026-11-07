@@ -13,7 +13,8 @@ import { API_HOSTS, startMockApi } from './mock-api.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const root = path.resolve(here, '../..');
-export const dist = path.join(root, 'dist');
+// The test build (npm run build:test) has its own folder; dist/ stays the one a browser loads.
+export const dist = path.join(root, 'dist-test');
 export const fixtures = path.join(here, 'fixtures');
 export const outDir = path.join(here, 'out');
 

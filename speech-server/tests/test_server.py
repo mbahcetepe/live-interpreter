@@ -223,3 +223,23 @@ def test_the_realtime_socket_refuses_web_pages(client):
     with pytest.raises(Exception):
         with client.websocket_connect(f'/v1/speech-to-text/realtime?token={token(client)}', headers={'origin': 'https://evil.example'}) as ws:
             ws.receive_text()
+
+
+def test_health_names_the_version_and_protocol(client):
+    health = client.get('/health').json()
+    assert health['version'] and health['protocol'] >= 2
+
+
+def test_models_list_the_recognizers_and_voices_per_language(client):
+    models = client.get('/v1/models', headers={**EXT, 'xi-api-key': KEY}).json()
+    assert 'tiny' in models['recognition']['models']
+    assert models['recognition']['default'] == 'fake'
+    assert models['voices'] == {'en': ['en_US-fake'], 'tr': ['tr_TR-fake']}
+    voices = client.get('/v1/voices', headers={**EXT, 'xi-api-key': KEY}).json()['voices']
+    assert {'voice_id': 'tr_TR-fake', 'name': 'tr_TR-fake', 'category': 'premade', 'labels': {'language': 'tr'}} in voices
+
+
+def test_a_session_can_ask_for_another_recognition_model(client):
+    t = token(client)
+    with client.websocket_connect(f'/v1/speech-to-text/realtime?token={t}&language_code=tr&whisper_model=tiny', headers=EXT) as ws:
+        assert json.loads(ws.receive_text())['message_type'] == 'session_started'

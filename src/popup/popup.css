@@ -86,6 +86,12 @@ button:disabled {
 }
 
 .lang {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
   display: flex;
   padding: 2px;
   gap: 2px;
@@ -259,4 +265,15 @@ kbd {
 
 [hidden] {
   display: none !important;
+}
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.version {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
 }

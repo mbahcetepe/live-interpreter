@@ -279,7 +279,7 @@ async function cloneScenario() {
 }
 
 if (!existsSync(path.join(dist, 'manifest.json'))) {
-  console.error('dist/ is missing: run npm run build:test first');
+  console.error('dist-test/ is missing: run npm run build:test first');
   process.exit(1);
 }
 await mkdir(fixtures, { recursive: true });

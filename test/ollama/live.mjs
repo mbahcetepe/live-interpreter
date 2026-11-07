@@ -1,5 +1,5 @@
 // Live check of translation on real Ollama servers, through the extension's own
-// settings page ("Test and allow"): the header rule, access and the translation.
+// settings page (Translation, "Test"): the model list, the header rule and the translation.
 //
 //   npm run build && node test/ollama/live.mjs <server> <model> [<second server> <model>]
 //   node test/ollama/live.mjs 100.65.147.84 gemma4:12b 100.77.37.21 gemma4:26b-uncensored
@@ -46,7 +46,7 @@ try {
       const { settings } = await chrome.storage.local.get('settings');
       await chrome.storage.local.set({ settings: { ...(settings || {}), ...patch } });
     },
-    { claudeModel: 'ollama', ollamaUrl: url, ollamaModel: model, ollamaBackupUrl: backupUrl, ollamaBackupModel: backupModel, uiLanguage: 'en' },
+    { translationProvider: 'ollama', ollamaUrl: url, ollamaModel: model, ollamaBackupUrl: backupUrl, ollamaBackupModel: backupModel, uiLanguage: 'en' },
   );
   await page.reload();
   // The service worker sets the header rule when the settings change.
@@ -54,11 +54,14 @@ try {
   console.log('header rule for:', rules.map((r) => r.condition.requestDomains.join(', ')).join(' | ') || 'none');
   if (!rules.length) failed = true;
 
-  await page.click('#testOllama');
+  const listed = await page.waitForFunction(() => document.getElementById('ollamaModel').options.length > 1, null, { timeout: 20_000 }).then(() => true, () => false);
+  console.log(listed ? 'PASS' : 'FAIL', 'the model list is filled:', await page.evaluate(() => document.getElementById('ollamaModel').options.length), 'models');
+  if (!listed) failed = true;
+  await page.click('#testTranslation');
   const text = await page.waitForFunction(
     () => {
-      const el = document.getElementById('ollamaResult');
-      return el.textContent && !/^Testing/.test(el.textContent) ? `${el.className}|${el.textContent}` : null;
+      const el = document.getElementById('translationResult');
+      return el.textContent && !/^Testing|found\.$/.test(el.textContent) ? `${el.className}|${el.textContent}` : null;
     },
     null,
     { timeout: 120_000 },

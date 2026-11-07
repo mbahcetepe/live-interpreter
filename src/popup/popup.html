@@ -13,10 +13,7 @@
         <strong data-i18n="app.name">Live Interpreter</strong>
         <span id="pair">English ↔ Turkish</span>
       </div>
-      <div class="lang" id="uiLanguage" role="radiogroup" data-i18n-title="lang.switch">
-        <button data-value="en" role="radio">EN</button>
-        <button data-value="tr" role="radio">TR</button>
-      </div>
+      <select class="lang" id="uiLanguage" data-i18n-title="lang.switch"></select>
       <button id="settings" class="ghost" data-i18n="popup.settings">Settings</button>
     </header>
 
@@ -68,7 +65,7 @@
       <div class="live-row"><span data-i18n="popup.thisCall">This call</span><b id="liveUsage">-</b></div>
     </section>
 
-    <footer><span data-i18n="popup.shortcut">Shortcut:</span> <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>T</kbd></footer>
+    <footer><span><span data-i18n="popup.shortcut">Shortcut:</span> <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>T</kbd></span><span id="version" class="version"></span></footer>
     <script type="module" src="popup.js"></script>
   </body>
 </html>

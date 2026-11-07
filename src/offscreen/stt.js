@@ -34,7 +34,8 @@ export class SttFatalError extends Error {
 // own (with a new single-use token each time) and keeps up to five seconds of audio
 // while it is reconnecting, so nothing said in the gap is lost.
 export class ScribeRealtime {
-  constructor({ name, apiKey, languageCode, vadSilenceSecs = 0.7, stallExtraSecs = STALL_EXTRA_SECS, tokenTimeoutMs = TOKEN_TIMEOUT_MS, keyterms = [], onPartial, onCommitted, onServerMessage, onStatus, onFatal, log }) {
+  // extraParams: more query parameters for the connection (the local server's whisper_model).
+  constructor({ name, apiKey, languageCode, vadSilenceSecs = 0.7, stallExtraSecs = STALL_EXTRA_SECS, tokenTimeoutMs = TOKEN_TIMEOUT_MS, keyterms = [], extraParams = {}, onPartial, onCommitted, onServerMessage, onStatus, onFatal, log }) {
     this.name = name;
     this.tokenTimeoutMs = tokenTimeoutMs;
     this.apiKey = apiKey;
@@ -42,6 +43,7 @@ export class ScribeRealtime {
     this.vadSilenceSecs = vadSilenceSecs;
     this.stallExtraSecs = stallExtraSecs;
     this.keyterms = keyterms;
+    this.extraParams = extraParams;
     this.onPartial = onPartial;
     this.onCommitted = onCommitted;
     this.onServerMessage = onServerMessage;
@@ -104,6 +106,7 @@ export class ScribeRealtime {
       vad_silence_threshold_secs: String(this.vadSilenceSecs),
     });
     if (this.languageCode) params.set('language_code', this.languageCode);
+    for (const [key, value] of Object.entries(this.extraParams)) if (value) params.set(key, value);
     // The optional extras are dropped if the server keeps refusing the session with them.
     if (!this.minimal) {
       params.set('no_verbatim', 'true');

@@ -39,6 +39,9 @@ from segmenter import Segmenter
 
 log = logging.getLogger('speech-server')
 
+VERSION = '2.0.0'
+# Raised when the extension needs something an older server cannot do.
+PROTOCOL = 2
 TOKEN_TTL = 60
 
 
@@ -47,7 +50,7 @@ def allowed_origin(origin: str | None) -> bool:
 
 
 def create_app(recognizer, speaker, key: str = '') -> FastAPI:
-    app = FastAPI(title='Live Interpreter speech server', docs_url=None, redoc_url=None)
+    app = FastAPI(title='Live Interpreter speech server', version=VERSION, docs_url=None, redoc_url=None)
     tokens: dict[str, float] = {}
 
     def refuse(status: int, message: str) -> JSONResponse:
@@ -63,7 +66,27 @@ def create_app(recognizer, speaker, key: str = '') -> FastAPI:
 
     @app.get('/health')
     async def health():
-        return {'ok': True, 'recognizer': type(recognizer).__name__, 'speaker': type(speaker).__name__, 'voices': [v.id for v in speaker.voices()], 'speech_languages': speaker.languages()}
+        return {
+            'ok': True,
+            'version': VERSION,
+            'protocol': PROTOCOL,
+            'recognizer': type(recognizer).__name__,
+            'speaker': type(speaker).__name__,
+            'voices': [v.id for v in speaker.voices()],
+            'speech_languages': speaker.languages(),
+        }
+
+    # What can be chosen in the extension: the recognition model and a voice per language.
+    @app.get('/v1/models')
+    async def models():
+        voices: dict[str, list[str]] = {}
+        for v in speaker.voices():
+            if v.language:
+                voices.setdefault(v.language, []).append(v.id)
+        return {
+            'recognition': {'models': recognizer.available(), 'default': recognizer.default, 'loaded': recognizer.loaded()},
+            'voices': voices,
+        }
 
     @app.post('/v1/single-use-token/realtime_scribe')
     async def token():
@@ -77,7 +100,7 @@ def create_app(recognizer, speaker, key: str = '') -> FastAPI:
 
     @app.get('/v1/voices')
     async def voices():
-        return {'voices': [{'voice_id': v.id, 'name': v.name, 'category': 'premade', 'labels': {}} for v in speaker.voices()]}
+        return {'voices': [{'voice_id': v.id, 'name': v.name, 'category': 'premade', 'labels': {'language': v.language} if v.language else {}} for v in speaker.voices()]}
 
     @app.post('/v1/voices/add')
     async def no_clone():
@@ -125,7 +148,8 @@ def create_app(recognizer, speaker, key: str = '') -> FastAPI:
         language = params.get('language_code') or None
         silence = float(params.get('vad_silence_threshold_secs') or 0.7)
         keyterms = params.getlist('keyterms')
-        await RealtimeSession(ws, recognizer, language, silence, keyterms).run()
+        model = params.get('whisper_model') or None
+        await RealtimeSession(ws, recognizer, language, silence, keyterms, model).run()
 
     return app
 
@@ -133,8 +157,9 @@ def create_app(recognizer, speaker, key: str = '') -> FastAPI:
 class RealtimeSession:
     """One direction of a call: audio in, partial and committed transcripts out."""
 
-    def __init__(self, ws: WebSocket, recognizer, language, silence, keyterms):
+    def __init__(self, ws: WebSocket, recognizer, language, silence, keyterms, model=None):
         self.ws = ws
+        self.model = model
         self.recognizer = recognizer
         self.language = language
         self.keyterms = keyterms
@@ -175,7 +200,7 @@ class RealtimeSession:
 
     async def partial(self, audio, utterance):
         try:
-            text = await asyncio.to_thread(self.recognizer.transcribe, audio, self.language, self.keyterms)
+            text = await asyncio.to_thread(self.recognizer.transcribe, audio, self.language, self.keyterms, self.model)
             if text and utterance == self.utterance:
                 await self.send('partial_transcript', text)
         except Exception:  # noqa: BLE001 - a failed partial only costs a preview
@@ -187,7 +212,7 @@ class RealtimeSession:
         while True:
             audio = await self.finals.get()
             try:
-                text = await asyncio.to_thread(self.recognizer.transcribe, audio, self.language, self.keyterms)
+                text = await asyncio.to_thread(self.recognizer.transcribe, audio, self.language, self.keyterms, self.model)
             except Exception:  # noqa: BLE001
                 log.exception('transcription failed')
                 await self.send('transcriber_error', error='transcription failed')

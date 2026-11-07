@@ -26,7 +26,7 @@ import { startMockApi } from '../e2e/mock-api.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../..');
-const dist = path.join(root, 'dist');
+const dist = path.join(root, 'dist-test'); // npm run build:test
 const out = path.join(here, 'out');
 const fixtures = path.join(root, 'test/e2e/fixtures');
 // Accepts meet.google.com/abc-defg-hij and meet.google.com/meet/abc-defg-hij.

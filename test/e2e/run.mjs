@@ -13,6 +13,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { startMockApi } from './mock-api.mjs';
 import { startMockOllama } from './mock-ollama.mjs';
+import { startMockOpenAI } from './mock-openai.mjs';
 import {
   root, dist, fixtures, outDir, check, sleep, loadEnv, makeFixtures, launch, send, sessionState, maxLevel, waitFor, readCaptions, done, summary,
 } from './harness.mjs';
@@ -439,6 +440,45 @@ async function mediaTest() {
   }
 }
 
+// Translation on a server with OpenAI's API of one's own (like LM Studio), on 127.0.0.1.
+async function openaiTranslationTest() {
+  console.log('\n== Translation on a local OpenAI-compatible server (no Claude key) ==');
+  const mock = await startMockApi({
+    cert: readFileSync(path.join(fixtures, 'mock-cert.pem')),
+    key: readFileSync(path.join(fixtures, 'mock-key.pem')),
+  });
+  const server = await startMockOpenAI();
+  const env = await launch({ micWav: path.join(fixtures, 'turkish.wav'), remoteWav: path.join(fixtures, 'english.wav'), proxyPort: mock.port });
+  const { control, meet, tabId } = env;
+  const setSettings = (patch) =>
+    control.evaluate(async (p) => {
+      const { settings } = await chrome.storage.local.get('settings');
+      await chrome.storage.local.set({ settings: { ...(settings || {}), ...p } });
+    }, patch);
+  try {
+    await setSettings({ elevenLabsKey: 'mock-el', anthropicKey: '', translationProvider: 'openai', openaiUrl: server.url, openaiKey: server.key, openaiModel: '' });
+    const bare = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('without a model chosen it does not start and says so', bare?.ok === false && /model/i.test(bare?.error || ''), bare?.error);
+    await setSettings({ openaiModel: 'mock-llm' });
+    const start = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('translation on an OpenAI-compatible server starts', start?.ok === true, start?.error);
+    if (!start?.ok) return;
+    const incoming = await waitFor(async () => done((await readCaptions(meet)).incoming), 30000, 300);
+    check('the counterpart is translated by that server', incoming?.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.', JSON.stringify(incoming));
+    const outgoing = await waitFor(async () => done((await readCaptions(meet)).outgoing), 30000, 300);
+    check('my Turkish is translated by that server', outgoing?.translation === 'Friday at three works for us.', JSON.stringify(outgoing));
+    check('the chosen model is asked, streamed, with the key', server.stats.chats.length > 0 && server.stats.chats.every((c) => c.model === 'mock-llm' && c.stream === true) && server.stats.refused === 0, JSON.stringify(server.stats.chats[0]));
+    check('no Claude request was made', mock.stats.claude.length === 0, String(mock.stats.claude.length));
+    await send(control, { type: 'stop' });
+    check('no script errors on the Meet page', env.pageErrors.length === 0, env.pageErrors.join(' | '));
+  } finally {
+    await env.context.close();
+    await rm(env.userDataDir, { recursive: true, force: true });
+    mock.close();
+    server.close();
+  }
+}
+
 // Everything on the person's own servers: the real speech server (speech-server/, with
 // its stand-in engines) for recognition and speech, and a stand-in Ollama for translation.
 async function startSpeechServer() {
@@ -630,7 +670,7 @@ async function translationTest(keys) {
 }
 
 if (!existsSync(path.join(dist, 'manifest.json'))) {
-  console.error('dist/ is missing: run npm run build:test first');
+  console.error('dist-test/ is missing: run npm run build:test first');
   process.exit(1);
 }
 await mkdir(fixtures, { recursive: true });
@@ -640,6 +680,7 @@ await recordingTest();
 await mockTranslationTest();
 await freeTranslationTest();
 await ollamaTranslationTest();
+await openaiTranslationTest();
 await localServersTest();
 await mediaTest();
 const env = loadEnv();

@@ -372,3 +372,92 @@ audio {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+/* ---- v2 layout ---- */
+.version {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-left: 6px;
+}
+
+.ui-lang select {
+  width: auto;
+  padding: 5px 8px;
+  font-size: 13px;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.card.status {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.box {
+  border-left: 3px solid var(--accent);
+  padding: 4px 0 2px 14px;
+  margin: 4px 0 8px;
+}
+
+.box[hidden] {
+  display: none;
+}
+
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0 14px;
+}
+
+@media (max-width: 640px) {
+  .grid3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.picker {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.picker .field {
+  flex: 1;
+  min-width: 0;
+}
+
+button.refresh {
+  margin-bottom: 10px;
+  padding: 8px 11px;
+  line-height: 1.2;
+}
+
+button.link {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  padding: 2px 0;
+  font-size: 13px;
+}
+
+details {
+  border-top: 1px solid var(--border);
+  padding: 8px 0 2px;
+  margin-top: 6px;
+}
+
+details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 6px;
+}

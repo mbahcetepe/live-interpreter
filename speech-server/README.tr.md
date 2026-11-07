@@ -9,7 +9,7 @@ Live Interpreter'ın (Canlı Tercüman) ses tanıma ve seslendirme işini Eleven
 
 Sunucu, eklentinin zaten kullandığı ElevenLabs arayüzünün aynısını konuşur. Eklentide yalnızca adres değişir. Ücret ve kota yoktur, ses ağınızın dışına çıkmaz.
 
-Çeviri için aynı bilgisayardaki **Ollama** kullanılabilir (eklenti ayarları, 6. Çeviri, "Ollama"). İkisi birlikte açıldığında çeviri hattının hiçbir parçası dış servise gitmez.
+Çeviri için aynı bilgisayardaki **Ollama** kullanılabilir (eklenti ayarları, Çeviri, "Ollama"). İkisi birlikte açıldığında çeviri hattının hiçbir parçası dış servise gitmez.
 
 ## Sınırlar
 
@@ -58,9 +58,9 @@ Ayarlar `/etc/live-interpreter-speech.env` dosyasındadır:
 
 ## Eklentide
 
-1. Ayarlar, **1. API anahtarları**, **Ses tanıma ve sesler** alanında **Kendi ses sunucum**'u seçin.
+1. Ayarlar, **Ses tanıma ve sesler**, **Servis**: **Kendi ses sunucum**'u seçin.
 2. Adresi (örneğin `100.65.147.84`; port yazılmazsa 8765 eklenir) ve anahtarı girin.
-3. **Test et ve izin ver** düğmesine basın. Tarayıcı bu adrese erişim izni ister; izin verin. Sonuç satırında ses sayısı, seslendirme süresi ve "canlı ses tanıma hazır" yazmalı.
+3. **Test et** düğmesine basın; tarayıcı bu adrese erişim izni ister, izin verin. Sonuç satırı sunucunun sürümünü yazar ve "canlı ses tanıma hazır" ile biter. Ardından **Ses tanıma modeli**ni ve sesleri seçin; **↻** sunucunun listelerini yeniden getirir.
 
 ## Güvenlik
 

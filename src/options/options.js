@@ -1,43 +1,58 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { loadSettings, saveSettings, isFreeTranslation, isOllamaTranslation, isLocalSpeech, TRANSLATION_MODELS, TTS_MODELS } from '../shared/settings.js';
-import { OllamaTranslator } from '../offscreen/ollama-translator.js';
-import { serverBase, originPattern, originRules } from '../shared/servers.js';
+import {
+  loadSettings,
+  saveSettings,
+  translationProvider,
+  claudeModelOf,
+  isLocalSpeech,
+  missingKeys,
+  missingServers,
+  PROVIDERS,
+  CLAUDE_MODELS,
+  TTS_MODELS,
+  OPENAI_URL,
+  OPENROUTER_URL,
+} from '../shared/settings.js';
 import { LANGUAGES, AUTO_LANGUAGE } from '../shared/languages.js';
-import { setLanguage, t, applyI18n, languageLabel } from '../shared/i18n.js';
-import { listVoices, createVoiceClone, deleteVoice, speechStream, describeElevenLabsError, speechAccount, fetchScribeToken, realtimeUrl } from '../shared/elevenlabs.js';
-import { describeClaudeError } from '../offscreen/translator.js';
-import { checkFreeKey, FREE_KEY_NAMES } from '../offscreen/free-translator.js';
+import { setLanguage, t, applyI18n, languageLabel, UI_LANGUAGES } from '../shared/i18n.js';
+import { listVoices, createVoiceClone, deleteVoice, speechStream, describeElevenLabsError, speechAccount, fetchScribeToken, realtimeUrl, speechHealth, speechModels, SPEECH_PROTOCOL } from '../shared/elevenlabs.js';
+import { Translator, describeClaudeError } from '../offscreen/translator.js';
+import { FreeTranslator, checkFreeKey, freeKeys, FREE_KEY_NAMES } from '../offscreen/free-translator.js';
+import { OllamaTranslator, listOllamaModels } from '../offscreen/ollama-translator.js';
+import { OpenAITranslator, listOpenAIModels } from '../offscreen/openai-translator.js';
+import { serverBase, originPattern, originRules } from '../shared/servers.js';
 import { localPairs, localTranslationState, prepareLocalTranslation } from '../shared/local-translation.js';
 import { PcmByteAligner, encodeWav, float32ToInt16 } from '../shared/pcm.js';
 import { PcmScheduler } from '../shared/scheduler.js';
 
 const $ = (id) => document.getElementById(id);
 
-// The text to read for a voice clone is in the language the person speaks.
-const READING_TEXTS = {};
-READING_TEXTS.tr =
-  'Merhaba, bu kaydı sesimi tanıtmak için yapıyorum. Günlük hayatta insanlarla konuşmayı, yeni fikirleri tartışmayı ve birlikte bir şeyler üretmeyi seviyorum. ' +
-  'Toplantılarda genellikle sakin ve anlaşılır konuşurum, ama heyecanlandığımda biraz hızlanırım. Bugün hava oldukça güzel; akşam arkadaşlarımla buluşup bir şeyler yemeyi düşünüyorum. ' +
-  'Bazen bir soru sorarım, değil mi? Bazen de bir şeyi net bir şekilde açıklarım. Sayıları ve tarihleri de söyleyeyim: on iki Mart, saat on dört otuz, yüz yirmi beş lira. ' +
-  'İstanbul, Ankara ve İzmir arasında sık sık yolculuk ederim. Teknoloji, yazılım ve tasarım üzerine çalışıyorum; yeni araçları denemek ve onları gerçek işlerde kullanmak hoşuma gidiyor. ' +
-  'Bir projeyi anlatırken önce amacını, sonra nasıl çalıştığını ve en son neden önemli olduğunu söylerim. Son olarak, bu kaydı sessiz bir odada, her zamanki konuşma sesimle yapıyorum. Teşekkür ederim.';
-READING_TEXTS.en =
-  "Hello, I'm making this recording so my voice can be recognized. In everyday life I enjoy talking with people, discussing new ideas and building things together. " +
-  'In meetings I usually speak calmly and clearly, but I speed up a little when I get excited. The weather is quite nice today; this evening I plan to meet my friends for dinner. ' +
-  "Sometimes I ask a question, don't I? Other times I explain something plainly. Let me say some numbers and dates too: the twelfth of March, half past two in the afternoon, one hundred and twenty-five dollars. " +
-  'I often travel between London, New York and Istanbul. I work on technology, software and design, and I like trying new tools and using them in real work. ' +
-  'When I describe a project, I first explain its goal, then how it works, and finally why it matters. Finally, I am recording this in a quiet room with my usual speaking voice. Thank you.';
+// The text to read for a voice clone, in the language the person speaks (English otherwise).
+const READING_TEXTS = {
+  tr:
+    'Merhaba, bu kaydı sesimi tanıtmak için yapıyorum. Günlük hayatta insanlarla konuşmayı, yeni fikirleri tartışmayı ve birlikte bir şeyler üretmeyi seviyorum. ' +
+    'Toplantılarda genellikle sakin ve anlaşılır konuşurum, ama heyecanlandığımda biraz hızlanırım. Bazen bir soru sorarım, değil mi? Bazen de bir şeyi net bir şekilde açıklarım. ' +
+    'Sayıları ve tarihleri de söyleyeyim: on iki Mart, saat on dört otuz, yüz yirmi beş lira. Bir projeyi anlatırken önce amacını, sonra nasıl çalıştığını söylerim. Teşekkür ederim.',
+  en:
+    "Hello, I'm making this recording so my voice can be recognized. In everyday life I enjoy talking with people, discussing new ideas and building things together. " +
+    "In meetings I usually speak calmly and clearly, but I speed up a little when I get excited. Sometimes I ask a question, don't I? Other times I explain something plainly. " +
+    'Let me say some numbers and dates too: the twelfth of March, half past two in the afternoon, one hundred and twenty-five dollars. When I describe a project, I first explain its goal, then how it works. Thank you.',
+};
 
+// A sentence to translate in the tests, and to hear a voice say.
+const SAMPLE = { text: 'Good morning, everyone. Shall we begin?', from: 'en' };
 const PREVIEW_TEXT = {
-  tr: 'Merhaba! Görüşme boyunca çeviriyi bu sesle duyacaksınız.',
-  en: 'Hello! This is how the translated voice will sound during our call.',
-  de: 'Hallo! So klingt die übersetzte Stimme während unseres Gesprächs.',
-  fr: 'Bonjour ! Voici la voix traduite pendant notre appel.',
-  es: '¡Hola! Así sonará la voz traducida durante nuestra llamada.',
+  tr: 'Merhaba! Çeviriyi bu sesle duyacaksınız.',
+  en: 'Hello! This is how the translated voice will sound.',
+  de: 'Hallo! So klingt die übersetzte Stimme.',
+  fr: 'Bonjour ! Voici la voix traduite.',
+  es: '¡Hola! Así sonará la voz traducida.',
+  zh: '你好！这就是翻译语音的声音。',
 };
 
 let settings;
 let voices = [];
+let localState = 'unknown';
+let localSpeechInfo = null; // what the local speech server offers (/v1/models)
 
 // ---- small helpers ---------------------------------------------------------------------
 
@@ -61,31 +76,40 @@ function save(patch, { quiet = false } = {}) {
   Object.assign(settings, patch);
   pending = { ...pending, ...patch };
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(async () => {
-    const batch = pending;
-    pending = {};
+  saveTimer = setTimeout(flushSave, 300);
+  if (!quiet) refreshStatus();
+}
+
+async function flushSave() {
+  clearTimeout(saveTimer);
+  const batch = pending;
+  pending = {};
+  if (Object.keys(batch).length) {
     await saveSettings(batch);
-    if (!quiet) toast(t('opt.saved'));
-    refreshChecklist();
-  }, 300);
+    toast(t('opt.saved'));
+  }
 }
 
 function fillSelect(select, items, value) {
   select.replaceChildren(...items.map(([v, label]) => new Option(label, v, false, v === value)));
+  if (value !== undefined) select.value = value;
 }
 
-// ---- fields ----------------------------------------------------------------------------
-
-function bindText(id) {
+function bindText(id, onChange) {
   const el = $(id);
   el.value = settings[id] ?? '';
-  el.addEventListener('input', () => save({ [id]: el.value.trim() }));
+  el.addEventListener('input', () => {
+    save({ [id]: el.value.trim() });
+    onChange?.();
+  });
 }
 
-function bindSelect(id, parse = (v) => v) {
+function bindSelect(id, { parse = (v) => v, onChange } = {}) {
   const el = $(id);
-  el.value = String(settings[id]);
-  el.addEventListener('change', () => save({ [id]: parse(el.value) }));
+  el.addEventListener('change', () => {
+    save({ [id]: parse(el.value) });
+    onChange?.();
+  });
 }
 
 function bindCheck(id) {
@@ -106,76 +130,158 @@ function bindSlider(id) {
   });
 }
 
-// ---- setup checklist -------------------------------------------------------------------
+// Access to a server typed into the settings is asked for on a click.
+async function allow(base) {
+  const origins = [originPattern(base)];
+  if (await chrome.permissions.contains({ origins })) return true;
+  return chrome.permissions.request({ origins }).catch(() => false);
+}
+
+// ---- status ----------------------------------------------------------------------------
 
 async function micGranted() {
   try {
-    const status = await navigator.permissions.query({ name: 'microphone' });
-    return status.state;
+    return (await navigator.permissions.query({ name: 'microphone' })).state;
   } catch {
     return 'prompt';
   }
 }
 
-async function refreshChecklist() {
-  const free = isFreeTranslation(settings);
-  const ollama = isOllamaTranslation(settings);
-  $('check-elevenlabs').textContent = isLocalSpeech(settings) ? t('opt.check.localSpeech') : t('opt.check.elevenlabs');
-  $('check-elevenlabs').classList.toggle('done', speechReady());
-  $('check-anthropic').textContent = ollama ? t('opt.check.anthropicOllama') : free ? t('opt.check.anthropicFree') : t('opt.check.anthropic');
-  const translationReady = ollama
-    ? Boolean(serverBase(settings.ollamaUrl) && settings.ollamaModel)
-    : free
-      ? localState === 'ready' || FREE_KEY_NAMES.some((k) => settings[k])
-      : Boolean(settings.anthropicKey);
-  $('check-anthropic').classList.toggle('done', translationReady);
+async function refreshStatus() {
+  const provider = translationProvider(settings);
+  const missing = [...missingKeys(settings), ...missingServers(settings)];
+  const speechOk = isLocalSpeech(settings) ? !missing.includes('speech') : !missing.includes('ElevenLabs');
+  const translationOk =
+    provider === 'free' ? localState === 'ready' || FREE_KEY_NAMES.some((k) => settings[k]) : !missing.some((m) => m !== 'ElevenLabs' && m !== 'speech');
+  $('check-speech').textContent = `${t('opt.speech.title')}: ${isLocalSpeech(settings) ? t('opt.speech.local') : 'ElevenLabs'}`;
+  $('check-translation').textContent = `${t('opt.tr.title')}: ${t(PROVIDERS.find((p) => p.id === provider).labelKey)}`;
+  $('check-speech').classList.toggle('done', speechOk);
+  $('check-translation').classList.toggle('done', translationOk);
   $('check-mic').classList.toggle('done', (await micGranted()) === 'granted');
-  $('check-voice').classList.toggle('done', Boolean(settings.myVoiceId));
 }
 
-// ---- keys ------------------------------------------------------------------------------
+// ---- translation -----------------------------------------------------------------------
 
-async function testKeys() {
-  const parts = [];
+function renderProvider() {
+  const provider = translationProvider(settings);
+  $('translationProvider').value = provider;
+  for (const box of document.querySelectorAll('[data-provider]')) box.hidden = box.dataset.provider !== provider;
+  result('translationResult', '');
+  if (provider === 'free') renderFree();
+  else loadModels(provider, { quiet: true });
+}
+
+// The model lists: what each server offers, filled into its select. The chosen model
+// stays in the list even before the server has answered.
+const PICKERS = {
+  openai: { select: 'openaiModel', setting: 'openaiModel' },
+  openrouter: { select: 'openrouterModel', setting: 'openrouterModel' },
+  ollama: { select: 'ollamaModel', setting: 'ollamaModel', url: 'ollamaUrl' },
+  ollamaBackup: { select: 'ollamaBackupModel', setting: 'ollamaBackupModel', url: 'ollamaBackupUrl' },
+};
+
+function fillModels(kind, models) {
+  const { select, setting } = PICKERS[kind];
+  const current = settings[setting] || '';
+  const items = models.map((m) => [m.id, describeModel(m)]);
+  if (current && !items.some(([id]) => id === current)) items.unshift([current, current]);
+  if (!current) items.unshift(['', t('opt.models.pick')]);
+  fillSelect($(select), items, current);
+}
+
+function describeModel(m) {
+  const extra = [m.name, m.params, m.size ? `${(m.size / 1e9).toFixed(1)} GB` : ''].filter(Boolean).join(', ');
+  return extra ? `${m.id} (${extra})` : m.id;
+}
+
+// quiet: on opening the page, without asking for access or showing errors.
+async function loadModels(kind, { quiet = false } = {}) {
+  if (!PICKERS[kind]) return;
+  fillModels(kind, []);
+  try {
+    let models;
+    if (kind === 'openrouter') {
+      models = await listOpenAIModels({ base: OPENROUTER_URL });
+    } else if (kind === 'openai') {
+      const base = serverBase(settings.openaiUrl, { defaultPort: '' }) || OPENAI_URL;
+      if (base !== OPENAI_URL && !(quiet ? await chrome.permissions.contains({ origins: [originPattern(base)] }) : await allow(base))) return;
+      if (base === OPENAI_URL && !settings.openaiKey) return;
+      models = await listOpenAIModels({ base, key: settings.openaiKey });
+    } else {
+      const base = serverBase(settings[PICKERS[kind].url]);
+      if (!base) return;
+      if (!(quiet ? await chrome.permissions.contains({ origins: [originPattern(base)] }) : await allow(base))) return;
+      await applyOriginRules();
+      models = await listOllamaModels(base);
+    }
+    fillModels(kind, models);
+    if (!quiet) result('translationResult', t('opt.models.found', { n: models.length }), 'ok');
+  } catch (err) {
+    if (!quiet) result('translationResult', err?.message || String(err), 'bad');
+  }
+}
+
+// Ollama refuses POSTs with an Origin it does not know; the rule normally follows the
+// saved settings, but a test from this page must not wait for that.
+async function applyOriginRules() {
+  await flushSave();
+  await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [100], addRules: originRules(settings, chrome.runtime.id) }).catch(() => {});
+}
+
+function sampleTarget() {
+  return settings.myLanguage === 'en' ? settings.theirLanguage : settings.myLanguage;
+}
+
+// One sentence through the chosen service, timed.
+async function testTranslation() {
+  const provider = translationProvider(settings);
+  const missing = [...missingKeys(settings), ...missingServers(settings)].filter((m) => m !== 'ElevenLabs' && m !== 'speech');
+  if (missing.length) return result('translationResult', t('opt.test.missing'), 'bad');
+  result('translationResult', t('opt.testing'));
+  const common = { myLanguage: settings.myLanguage, theirLanguage: settings.theirLanguage };
+  const job = { ...SAMPLE, to: sampleTarget(), history: [] };
+  const lines = [];
   let ok = true;
-  if (isLocalSpeech(settings)) {
-    parts.push(t('opt.speech.useTest'));
-  } else if (settings.elevenLabsKey) {
+  const run = async (label, translator) => {
     try {
-      voices = await listVoices(settings.elevenLabsKey);
-      parts.push(t('opt.keys.elOk', { n: voices.length }));
-      renderVoices();
+      await translator.verify();
+      const started = performance.now();
+      const pieces = [];
+      for await (const piece of translator.translate(job)) pieces.push(piece);
+      lines.push(t('opt.test.ok', { name: label, ms: Math.round(performance.now() - started), sample: pieces.join(' ') }));
     } catch (err) {
       ok = false;
-      parts.push(`ElevenLabs: ${describeElevenLabsError(err)}`);
+      lines.push(`${label}: ${describeClaudeError(err)}`);
     }
+  };
+  if (provider === 'claude') {
+    await run('Claude', new Translator({ ...common, apiKey: settings.anthropicKey, model: claudeModelOf(settings), maxRetries: 1 }));
+  } else if (provider === 'openai' || provider === 'openrouter') {
+    const openrouter = provider === 'openrouter';
+    const base = openrouter ? OPENROUTER_URL : serverBase(settings.openaiUrl, { defaultPort: '' }) || OPENAI_URL;
+    if (base !== OPENAI_URL && base !== OPENROUTER_URL && !(await allow(base))) return result('translationResult', t('opt.denied', { url: base }), 'bad');
+    const label = t(openrouter ? 'provider.openrouter' : 'provider.openai');
+    await run(label, new OpenAITranslator({ ...common, base, key: openrouter ? settings.openrouterKey : settings.openaiKey, model: openrouter ? settings.openrouterModel : settings.openaiModel, label }));
+  } else if (provider === 'ollama') {
+    const servers = [
+      [t('server.ollama'), settings.ollamaUrl, settings.ollamaModel],
+      [t('server.ollamaBackup'), settings.ollamaBackupUrl, settings.ollamaBackupModel],
+    ].filter(([, url, model]) => serverBase(url) && model);
+    for (const [, url] of servers) if (!(await allow(serverBase(url)))) return result('translationResult', t('opt.denied', { url: serverBase(url) }), 'bad');
+    await applyOriginRules();
+    for (const [label, url, model] of servers) await run(label, new OllamaTranslator({ ...common, url, model, label }));
   } else {
-    ok = false;
-    parts.push(t('opt.keys.elMissing'));
-  }
-  if (isFreeTranslation(settings)) {
-    parts.push(t('opt.keys.freeNoAnthropic'));
-  } else if (isOllamaTranslation(settings) && !settings.anthropicKey) {
-    parts.push(t('opt.keys.ollamaNoAnthropic'));
-  } else if (settings.anthropicKey) {
-    try {
-      const client = new Anthropic({ apiKey: settings.anthropicKey, dangerouslyAllowBrowser: true, maxRetries: 1 });
-      await client.models.retrieve(isOllamaTranslation(settings) ? 'claude-haiku-5-5' : settings.claudeModel);
-      parts.push(t('opt.keys.anOk'));
-    } catch (err) {
-      ok = false;
-      parts.push(`Anthropic: ${describeClaudeError(err)}`);
+    const checks = await Promise.all(FREE_KEY_NAMES.filter((n) => settings[n]).map((n) => checkFreeKey(n, settings[n])));
+    for (const c of checks) {
+      lines.push(c.message);
+      ok &&= c.ok;
     }
-  } else {
-    ok = false;
-    parts.push(t('opt.keys.anMissing'));
+    await run(t('provider.free'), new FreeTranslator({ ...common, keys: freeKeys(settings) }));
   }
-  result('keyResult', parts.join(' '), ok ? 'ok' : 'bad');
+  result('translationResult', lines.join(' '), ok ? 'ok' : 'bad');
 }
 
 // ---- free translation ------------------------------------------------------------------
-
-let localState = 'unknown';
 
 const LOCAL_STATE_TEXT = {
   ready: ['local.ready', 'ok'],
@@ -187,25 +293,19 @@ const LOCAL_STATE_TEXT = {
 function showLocalState(state) {
   localState = state;
   const [key, kind] = LOCAL_STATE_TEXT[state] || ['', ''];
-  const text = key ? t(key) : '';
-  $('freeState').textContent = text;
+  $('freeState').textContent = key ? t(key) : '';
   $('freeState').className = `pill ${kind}`;
   $('prepareFree').hidden = state !== 'download';
-  refreshChecklist();
+  refreshStatus();
 }
 
 async function renderFree() {
-  const free = isFreeTranslation(settings);
-  const ollama = isOllamaTranslation(settings);
-  $('freeBox').hidden = !free;
-  $('ollamaBox').hidden = !ollama;
-  $('claudeHint').hidden = free || ollama;
-  if (free) showLocalState(await localTranslationState(localPairs(settings)));
+  if (translationProvider(settings) !== 'free') return;
+  showLocalState(await localTranslationState(localPairs(settings)));
 }
 
-// Runs from a click or a change, which Chrome needs before it downloads language packs.
+// Runs from a click: Chrome downloads language packs only after one.
 async function prepareFree() {
-  if (!isFreeTranslation(settings)) return;
   $('prepareFree').disabled = true;
   $('freeState').className = 'pill';
   $('freeState').textContent = t('local.preparing');
@@ -213,47 +313,108 @@ async function prepareFree() {
   const prepared = prepareLocalTranslation(pairs, {
     onProgress: (loaded) => ($('freeState').textContent = t('local.preparingPct', { n: Math.round(loaded * 100) })),
   });
-  // A stalled download (offline, for example) must not leave the page waiting forever.
   const state = await Promise.race([prepared, new Promise((resolve) => setTimeout(() => resolve(localTranslationState(pairs)), 60000))]);
   $('prepareFree').disabled = false;
   showLocalState(state);
 }
 
-async function testFreeKeys() {
-  const names = FREE_KEY_NAMES.filter((name) => settings[name]);
-  if (!names.length) return result('freeKeyResult', t('opt.tr.noFreeKeys'));
-  result('freeKeyResult', t('opt.testing'));
-  const checks = await Promise.all(names.map((name) => checkFreeKey(name, settings[name])));
-  result('freeKeyResult', checks.map((c) => c.message).join(' '), checks.every((c) => c.ok) ? 'ok' : 'bad');
-}
-
-// ---- local speech server ---------------------------------------------------------------
-
-function speechReady() {
-  return isLocalSpeech(settings) ? Boolean(serverBase(settings.localSpeechUrl, { defaultPort: '8765' })) : Boolean(settings.elevenLabsKey);
-}
+// ---- speech ----------------------------------------------------------------------------
 
 function renderSpeech() {
-  $('localSpeechBox').hidden = !isLocalSpeech(settings);
+  const local = isLocalSpeech(settings);
+  $('speechProvider').value = local ? 'local' : 'elevenlabs';
+  for (const box of document.querySelectorAll('[data-speech]')) box.hidden = box.dataset.speech !== (local ? 'local' : 'elevenlabs');
+  result('speechResult', '');
+  if (local) loadLocalSpeech({ quiet: true });
+  else loadVoices();
 }
 
-// Runs from the click, like the Ollama test: access to the server is asked for first.
+function voiceOptions(placeholder) {
+  const own = voices.filter((v) => v.category !== 'premade');
+  const premade = voices.filter((v) => v.category === 'premade');
+  const gender = (g) => (g === 'male' ? t('opt.voice.male') : g === 'female' ? t('opt.voice.female') : g);
+  return [
+    ['', placeholder],
+    ...own.map((v) => [v.voice_id, t('opt.voice.yours', { name: v.name })]),
+    ...premade.map((v) => [v.voice_id, `${v.name}${v.labels?.gender ? `, ${gender(v.labels.gender)}` : ''}`]),
+  ];
+}
+
+function renderVoices() {
+  const hint = settings.elevenLabsKey ? t('opt.voice.pickPlaceholder') : t('opt.voice.needKey');
+  fillSelect($('myVoiceSelect'), voiceOptions(hint), settings.myVoiceId);
+  fillSelect($('theirVoiceSelect'), voiceOptions(t('opt.their.auto')), settings.theirVoiceId);
+}
+
+async function loadVoices() {
+  renderVoices();
+  if (isLocalSpeech(settings) || !settings.elevenLabsKey) return;
+  try {
+    voices = await listVoices(settings.elevenLabsKey);
+    renderVoices();
+  } catch (err) {
+    result('speechResult', describeElevenLabsError(err), 'bad');
+  }
+}
+
+// The local server's models and voices. My voice speaks their language and theirs mine,
+// so each list holds the voices of that language.
+function renderLocalSpeech() {
+  const info = localSpeechInfo;
+  const models = info?.recognition?.models || [];
+  const current = settings.localWhisperModel;
+  const modelItems = [['', t('opt.speech.serverDefault', { model: info?.recognition?.default || '...' })], ...models.map((m) => [m, m])];
+  if (current && !models.includes(current)) modelItems.push([current, current]);
+  fillSelect($('localWhisperModel'), modelItems, current);
+  const voiceList = (language) => [['', t('opt.voice.auto')], ...(info?.voices?.[language] || []).map((v) => [v, v])];
+  fillSelect($('localMyVoice'), voiceList(settings.theirLanguage), settings.localMyVoice);
+  fillSelect($('localTheirVoice'), voiceList(settings.myLanguage), settings.localTheirVoice);
+  $('localMyVoiceLabel').textContent = t('opt.voice.mineIn', { language: languageLabel(settings.theirLanguage) });
+  $('localTheirVoiceLabel').textContent = t('opt.voice.theirsIn', { language: languageLabel(settings.myLanguage) });
+}
+
+async function loadLocalSpeech({ quiet = false } = {}) {
+  renderLocalSpeech();
+  const account = speechAccount(settings);
+  if (!account.base) return quiet ? undefined : result('speechResult', t('opt.speech.noUrl'), 'bad');
+  if (!(quiet ? await chrome.permissions.contains({ origins: [originPattern(account.base)] }) : await allow(account.base))) {
+    return quiet ? undefined : result('speechResult', t('opt.denied', { url: account.base }), 'bad');
+  }
+  try {
+    localSpeechInfo = await speechModels(account);
+    renderLocalSpeech();
+  } catch (err) {
+    if (!quiet) result('speechResult', describeElevenLabsError(err, account), 'bad');
+  }
+}
+
 async function testSpeech() {
+  result('speechResult', t('opt.testing'));
+  if (!isLocalSpeech(settings)) {
+    if (!settings.elevenLabsKey) return result('speechResult', t('opt.keys.elMissing'), 'bad');
+    try {
+      voices = await listVoices(settings.elevenLabsKey);
+      renderVoices();
+      return result('speechResult', t('opt.keys.elOk', { n: voices.length }), 'ok');
+    } catch (err) {
+      return result('speechResult', describeElevenLabsError(err), 'bad');
+    }
+  }
   const account = speechAccount(settings);
   if (!account.base) return result('speechResult', t('opt.speech.noUrl'), 'bad');
-  const granted = await chrome.permissions.request({ origins: [originPattern(account.base)] }).catch(() => false);
-  if (!granted) return result('speechResult', t('opt.ollama.denied', { url: account.base }), 'bad');
-  result('speechResult', t('opt.testing'));
+  if (!(await allow(account.base))) return result('speechResult', t('opt.denied', { url: account.base }), 'bad');
   try {
-    voices = await listVoices(account);
-    renderVoices();
+    const health = await speechHealth(account);
+    localSpeechInfo = await speechModels(account).catch(() => null);
+    renderLocalSpeech();
     const started = performance.now();
-    const response = await speechStream(account, { voiceId: voices[0]?.voice_id || 'local-1', text: PREVIEW_TEXT.tr, languageCode: 'tr' });
+    const language = settings.theirLanguage;
+    const response = await speechStream(account, { voiceId: settings.localMyVoice || 'local-1', text: PREVIEW_TEXT[language] || PREVIEW_TEXT.en, languageCode: language });
     const bytes = (await response.arrayBuffer()).byteLength;
     const speechMs = Math.round(performance.now() - started);
     const token = await fetchScribeToken(account);
     await new Promise((resolve, reject) => {
-      const ws = new WebSocket(`${realtimeUrl(account)}?token=${encodeURIComponent(token)}&audio_format=pcm_16000&language_code=tr`);
+      const ws = new WebSocket(`${realtimeUrl(account)}?token=${encodeURIComponent(token)}&audio_format=pcm_16000`);
       const timer = setTimeout(() => {
         ws.close();
         reject(new Error(t('opt.speech.noSocket')));
@@ -270,139 +431,25 @@ async function testSpeech() {
         reject(new Error(t('opt.speech.noSocket')));
       };
     });
-    result('speechResult', t('opt.speech.ok', { voices: voices.length, ms: speechMs, seconds: (bytes / 48000).toFixed(1) }), 'ok');
+    const old = !(health.protocol >= SPEECH_PROTOCOL);
+    const text = t('opt.speech.ok', { version: health.version || '?', ms: speechMs, seconds: (bytes / 48000).toFixed(1) });
+    result('speechResult', old ? `${text} ${t('lsp.old')}` : text, old ? 'bad' : 'ok');
   } catch (err) {
     result('speechResult', describeElevenLabsError(err, account), 'bad');
   }
 }
 
-// ---- Ollama ----------------------------------------------------------------------------
-
-const OLLAMA_SAMPLE = { text: 'Good morning, everyone. Shall we begin?', from: 'en', to: 'tr' };
-
-function ollamaServers() {
-  const list = [{ name: t('server.ollama'), url: settings.ollamaUrl, model: settings.ollamaModel }];
-  if (settings.ollamaBackupUrl) list.push({ name: t('server.ollamaBackup'), url: settings.ollamaBackupUrl, model: settings.ollamaBackupModel });
-  return list.map((s) => ({ ...s, base: serverBase(s.url) })).filter((s) => s.base);
-}
-
-// Runs from the click: the browser asks for access to the servers only after one.
-async function testOllama() {
-  const servers = ollamaServers();
-  if (!servers.length) return result('ollamaResult', t('opt.ollama.noUrl'), 'bad');
-  const origins = [...new Set(servers.map((s) => originPattern(s.base)))];
-  const granted = await chrome.permissions.request({ origins }).catch(() => false);
-  if (!granted) return result('ollamaResult', t('opt.ollama.denied', { url: origins.join(', ') }), 'bad');
-  result('ollamaResult', t('opt.testing'));
-  // The header rule normally follows the saved settings; here it must be in place now.
-  clearTimeout(saveTimer);
-  if (Object.keys(pending).length) {
-    await saveSettings(pending);
-    pending = {};
-  }
-  await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [100], addRules: originRules(settings, chrome.runtime.id) }).catch(() => {});
-  const lines = [];
-  let ok = true;
-  const names = new Set();
-  for (const server of servers) {
-    try {
-      const res = await fetch(`${server.base}/api/tags`);
-      const models = (await res.json()).models || [];
-      for (const m of models) names.add(m.name);
-      if (!server.model) {
-        ok = false;
-        lines.push(t('opt.ollama.models', { name: server.name, list: models.map((m) => m.name).slice(0, 12).join(', ') }));
-        continue;
-      }
-      const translator = new OllamaTranslator({ url: server.base, model: server.model, label: server.name, myLanguage: 'tr', theirLanguage: 'en' });
-      await translator.verify();
-      const started = performance.now();
-      const pieces = [];
-      for await (const piece of translator.translate({ ...OLLAMA_SAMPLE, history: [] })) pieces.push(piece);
-      lines.push(t('opt.ollama.ok', { name: server.name, model: server.model, ms: Math.round(performance.now() - started), sample: pieces.join(' ') }));
-    } catch (err) {
-      ok = false;
-      lines.push(err?.message || String(err));
-    }
-  }
-  $('ollamaModels').replaceChildren(...[...names].sort().map((n) => new Option(n, n)));
-  result('ollamaResult', lines.join(' '), ok ? 'ok' : 'bad');
-}
-
-// ---- microphone and devices ------------------------------------------------------------
-
-async function grantMic() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach((t) => t.stop());
-  } catch (err) {
-    $('micState').textContent = t('opt.mic.denied', { name: err.name });
-    $('micState').className = 'pill bad';
-    return;
-  }
-  await refreshMic();
-  await refreshDevices();
-}
-
-async function refreshMic() {
-  const state = await micGranted();
-  const el = $('micState');
-  el.textContent = state === 'granted' ? t('opt.mic.granted') : state === 'denied' ? t('opt.mic.blocked') : t('opt.mic.notYet');
-  el.className = `pill ${state === 'granted' ? 'ok' : state === 'denied' ? 'bad' : ''}`;
-  $('grantMic').hidden = state === 'granted';
-  refreshChecklist();
-}
-
-async function refreshDevices() {
-  if ((await micGranted()) !== 'granted') return;
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  const named = (kind) =>
-    [...new Map(devices.filter((d) => d.kind === kind && d.label && d.deviceId !== 'default' && d.deviceId !== 'communications').map((d) => [d.label, d])).values()];
-  fillSelect($('micDeviceLabel'), [['', t('opt.mic.sameAsMeet')], ...named('audioinput').map((d) => [d.label, d.label])], settings.micDeviceLabel);
-  fillSelect($('outputDeviceLabel'), [['', t('opt.mic.systemDefault')], ...named('audiooutput').map((d) => [d.label, d.label])], settings.outputDeviceLabel);
-}
-
-// ---- voices ----------------------------------------------------------------------------
-
-function voiceOptions(placeholder) {
-  const own = voices.filter((v) => v.category !== 'premade');
-  const premade = voices.filter((v) => v.category === 'premade');
-  const options = [['', placeholder]];
-  const gender = (g) => (g === 'male' ? t('opt.voice.male') : g === 'female' ? t('opt.voice.female') : g);
-  for (const v of own) options.push([v.voice_id, t('opt.voice.yours', { name: v.name })]);
-  for (const v of premade) options.push([v.voice_id, `${v.name}${v.labels?.gender ? `, ${gender(v.labels.gender)}` : ''}`]);
-  return options;
-}
-
-function renderVoices() {
-  $('myVoiceName').textContent = settings.myVoiceName || t('opt.voice.none');
-  if (!voices.length) return; // keep the "enter the key first" placeholders
-  fillSelect($('myVoiceSelect'), voiceOptions(t('opt.voice.pickPlaceholder')), settings.myVoiceId);
-  fillSelect($('theirVoiceSelect'), voiceOptions(t('opt.their.auto')), settings.theirVoiceId);
-}
-
-async function loadVoices() {
-  if (!speechReady()) return;
-  const account = speechAccount(settings);
-  try {
-    voices = await listVoices(account);
-    renderVoices();
-  } catch (err) {
-    result('myVoiceResult', describeElevenLabsError(err, account), 'bad');
-  }
-}
-
 let previewCtx;
 async function preview(voiceId, languageCode) {
-  if (!speechReady()) return toast(t('opt.voice.needKey'));
-  if (!voiceId) return toast(t('opt.voice.needVoice'));
   const account = speechAccount(settings);
+  if (!account.key && !account.local) return toast(t('opt.voice.needKey'));
+  if (!voiceId && !account.local) return toast(t('opt.voice.needVoice'));
   try {
     previewCtx ||= new AudioContext();
     await previewCtx.resume();
     const player = new PcmScheduler(previewCtx, previewCtx.destination);
     const response = await speechStream(account, {
-      voiceId,
+      voiceId: voiceId || 'local-1',
       text: PREVIEW_TEXT[languageCode] || PREVIEW_TEXT.en,
       modelId: settings.ttsModel,
       languageCode,
@@ -422,8 +469,9 @@ async function preview(voiceId, languageCode) {
   }
 }
 
+// ---- my own voice (ElevenLabs clone) ---------------------------------------------------
+
 async function createMyVoice(files) {
-  if (isLocalSpeech(settings)) return result('myVoiceResult', t('lsp.noClone'), 'bad');
   if (!settings.elevenLabsKey) return result('myVoiceResult', t('opt.voice.needKey'), 'bad');
   result('myVoiceResult', t('opt.voice.creating'));
   const name = t('opt.voice.cloneName');
@@ -442,8 +490,6 @@ async function createMyVoice(files) {
     result('myVoiceResult', describeElevenLabsError(err), 'bad');
   }
 }
-
-// ---- recording -------------------------------------------------------------------------
 
 let recorder = null;
 let recordedWav = null;
@@ -472,7 +518,7 @@ async function toggleRecording() {
   }, 250);
   recorder.onstop = async () => {
     clearInterval(timer);
-    stream.getTracks().forEach((t) => t.stop());
+    stream.getTracks().forEach((track) => track.stop());
     recorder = null;
     recordLabel = 'opt.voice.rerecord';
     $('recordBtn').textContent = t(recordLabel);
@@ -484,11 +530,7 @@ async function toggleRecording() {
     recordedWav = await toWav(blob);
     const enough = seconds >= 30;
     $('cloneRecording').disabled = !enough || !recordedWav;
-    result(
-      'myVoiceResult',
-      enough ? t('opt.voice.recordDone') : t('opt.voice.tooShort'),
-      enough ? '' : 'bad',
-    );
+    result('myVoiceResult', enough ? t('opt.voice.recordDone') : t('opt.voice.tooShort'), enough ? '' : 'bad');
   };
   recorder.start(1000);
   recordLabel = 'opt.voice.stopRecord';
@@ -514,134 +556,177 @@ async function toWav(blob) {
   }
 }
 
+// ---- microphone and devices ------------------------------------------------------------
+
+async function grantMic() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((track) => track.stop());
+  } catch (err) {
+    $('micState').textContent = t('opt.mic.denied', { name: err.name });
+    $('micState').className = 'pill bad';
+    return;
+  }
+  await refreshMic();
+  await refreshDevices();
+}
+
+async function refreshMic() {
+  const state = await micGranted();
+  const el = $('micState');
+  el.textContent = state === 'granted' ? t('opt.mic.granted') : state === 'denied' ? t('opt.mic.blocked') : t('opt.mic.notYet');
+  el.className = `pill ${state === 'granted' ? 'ok' : state === 'denied' ? 'bad' : ''}`;
+  $('grantMic').hidden = state === 'granted';
+  refreshStatus();
+}
+
+async function refreshDevices() {
+  const named = async (kind) => {
+    if ((await micGranted()) !== 'granted') return [];
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return [...new Map(devices.filter((d) => d.kind === kind && d.label && d.deviceId !== 'default' && d.deviceId !== 'communications').map((d) => [d.label, d])).values()];
+  };
+  fillSelect($('micDeviceLabel'), [['', t('opt.mic.sameAsMeet')], ...(await named('audioinput')).map((d) => [d.label, d.label])], settings.micDeviceLabel);
+  fillSelect($('outputDeviceLabel'), [['', t('opt.mic.systemDefault')], ...(await named('audiooutput')).map((d) => [d.label, d.label])], settings.outputDeviceLabel);
+}
+
 // ---- start -----------------------------------------------------------------------------
 
 // Everything on the page that depends on the interface language.
 function renderTexts() {
   setLanguage(settings.uiLanguage);
   applyI18n();
+  document.documentElement.lang = settings.uiLanguage;
   document.title = t('opt.title');
-  for (const button of $('uiLanguage').querySelectorAll('button')) {
-    button.setAttribute('aria-checked', String(button.dataset.value === settings.uiLanguage));
-  }
-  $('readingText').textContent = READING_TEXTS[settings.myLanguage] || READING_TEXTS.en;
+  $('version').textContent = `v${chrome.runtime.getManifest().version}`;
+  fillSelect($('uiLanguage'), UI_LANGUAGES.map((l) => [l.code, l.name]), settings.uiLanguage);
   const languages = LANGUAGES.map((l) => [l.code, languageLabel(l.code)]);
   fillSelect($('myLanguage'), languages, settings.myLanguage);
   fillSelect($('theirLanguage'), languages, settings.theirLanguage);
   fillSelect($('mediaLanguage'), [[AUTO_LANGUAGE, languageLabel(AUTO_LANGUAGE)], ...languages], settings.mediaLanguage);
-  fillSelect($('claudeModel'), TRANSLATION_MODELS.map((m) => [m.id, t(m.labelKey)]), settings.claudeModel);
+  fillSelect($('translationProvider'), PROVIDERS.map((p) => [p.id, t(p.labelKey)]), translationProvider(settings));
+  fillSelect($('claudeModel'), CLAUDE_MODELS.map((m) => [m.id, t(m.labelKey)]), claudeModelOf(settings));
   fillSelect($('ttsModel'), TTS_MODELS.map((m) => [m.id, t(m.labelKey)]), settings.ttsModel);
   fillSelect($('cloneSeconds'), [30, 45, 60, 90].map((n) => [String(n), t('opt.their.secondsOption', { n })]), String(settings.cloneSeconds));
   $('vadSilenceSecs').value = String(settings.vadSilenceSecs);
-  $('showKeys').textContent = t($('elevenLabsKey').type === 'password' ? 'opt.keys.show' : 'opt.keys.hide');
+  $('readingText').textContent = READING_TEXTS[settings.myLanguage] || READING_TEXTS.en;
+  $('showKeys').textContent = t(document.querySelector('.key')?.type === 'password' ? 'opt.keys.show' : 'opt.keys.hide');
   $('recordBtn').textContent = t(recordLabel);
+  for (const kind of Object.keys(PICKERS)) if (!$(PICKERS[kind].select).options.length) fillModels(kind, []);
   renderVoices();
+  renderLocalSpeech();
   showLocalState(localState);
   refreshMic();
   refreshDevices();
-  refreshChecklist();
 }
 
 async function init() {
   settings = await loadSettings();
   renderTexts();
-  for (const button of $('uiLanguage').querySelectorAll('button')) {
-    button.addEventListener('click', async () => {
-      settings = await saveSettings({ uiLanguage: button.dataset.value });
-      renderTexts();
-    });
-  }
 
-  bindText('elevenLabsKey');
-  bindText('anthropicKey');
-  for (const id of FREE_KEY_NAMES) bindText(id);
-  bindText('meetingContext');
-  for (const id of ['ollamaUrl', 'ollamaModel', 'ollamaBackupUrl', 'ollamaBackupModel', 'localSpeechUrl', 'localSpeechKey']) bindText(id);
-  bindSelect('speechProvider');
-  renderSpeech();
-  $('speechProvider').addEventListener('change', () => {
-    renderSpeech();
-    refreshChecklist();
+  $('uiLanguage').addEventListener('change', async () => {
+    settings = await saveSettings({ uiLanguage: $('uiLanguage').value });
+    renderTexts();
+    renderProvider();
   });
-  $('testSpeech').addEventListener('click', async () => {
-    $('testSpeech').disabled = true;
-    await testSpeech();
-    $('testSpeech').disabled = false;
-  });
-  if (settings.ollamaBackupUrl) $('ollamaBackup').open = true;
-  $('testOllama').addEventListener('click', async () => {
-    $('testOllama').disabled = true;
-    await testOllama();
-    $('testOllama').disabled = false;
-  });
-  bindText('keyterms');
-  for (const id of ['myLanguage', 'theirLanguage', 'mediaLanguage', 'claudeModel', 'ttsModel', 'micDeviceLabel', 'outputDeviceLabel']) bindSelect(id);
-  bindSelect('vadSilenceSecs', Number);
-  bindSelect('cloneSeconds', Number);
-  for (const id of ['offerTheirClone', 'deleteCloneAfter', 'halfDuplex', 'showOverlay', 'subtitleBar']) bindCheck(id);
-  for (const id of ['translationVolume', 'originalVolume', 'duckVolume', 'monitorVolume', 'stability', 'similarity']) bindSlider(id);
-
-  $('elevenLabsKey').addEventListener('change', loadVoices);
   $('showKeys').addEventListener('click', () => {
-    const show = $('elevenLabsKey').type === 'password';
-    for (const id of ['elevenLabsKey', 'anthropicKey', 'localSpeechKey', ...FREE_KEY_NAMES]) $(id).type = show ? 'text' : 'password';
-    $('showKeys').textContent = show ? t('opt.keys.hide') : t('opt.keys.show');
+    const show = document.querySelector('.key').type === 'password';
+    for (const el of document.querySelectorAll('.key')) el.type = show ? 'text' : 'password';
+    $('showKeys').textContent = t(show ? 'opt.keys.hide' : 'opt.keys.show');
   });
-  $('claudeModel').addEventListener('change', async () => {
-    await renderFree();
-    if (localState === 'download') prepareFree();
-  });
-  for (const id of ['myLanguage', 'theirLanguage']) {
-    $(id).addEventListener('change', async () => {
-      $('readingText').textContent = READING_TEXTS[settings.myLanguage] || READING_TEXTS.en;
-      await renderFree();
-      if (localState === 'download') prepareFree();
+
+  // Languages: the local voices and the free translation follow them.
+  for (const id of ['myLanguage', 'theirLanguage', 'mediaLanguage']) {
+    bindSelect(id, {
+      onChange: () => {
+        $('readingText').textContent = READING_TEXTS[settings.myLanguage] || READING_TEXTS.en;
+        renderLocalSpeech();
+        renderFree();
+      },
     });
   }
-  $('prepareFree').addEventListener('click', prepareFree);
-  $('testFreeKeys').addEventListener('click', async () => {
-    $('testFreeKeys').disabled = true;
-    await testFreeKeys();
-    $('testFreeKeys').disabled = false;
-  });
-  if (FREE_KEY_NAMES.some((id) => settings[id])) $('freeKeys').open = true;
-  $('testKeys').addEventListener('click', async () => {
-    $('testKeys').disabled = true;
-    result('keyResult', t('opt.testing'));
-    await testKeys();
-    $('testKeys').disabled = false;
-  });
-  $('grantMic').addEventListener('click', grantMic);
 
+  // Translation.
+  bindSelect('translationProvider', {
+    onChange: () => {
+      // A Claude model left over from before the providers existed.
+      if (translationProvider(settings) === 'claude' && claudeModelOf(settings) !== settings.claudeModel) save({ claudeModel: claudeModelOf(settings) });
+      renderProvider();
+    },
+  });
+  bindSelect('claudeModel');
+  for (const id of ['anthropicKey', 'openaiUrl', 'openaiKey', 'openrouterKey', 'ollamaUrl', 'ollamaBackupUrl', ...FREE_KEY_NAMES, 'meetingContext', 'keyterms']) bindText(id);
+  for (const kind of Object.keys(PICKERS)) bindSelect(PICKERS[kind].select);
+  for (const button of document.querySelectorAll('[data-models]')) {
+    if (button.dataset.models === 'speech') continue;
+    button.addEventListener('click', () => loadModels(button.dataset.models));
+  }
+  // A new address or key brings that server's list once typing stops.
+  let reload;
+  const later = (kind) => {
+    clearTimeout(reload);
+    reload = setTimeout(() => loadModels(kind, { quiet: true }), 900);
+  };
+  $('openaiUrl').addEventListener('input', () => later('openai'));
+  $('openaiKey').addEventListener('input', () => later('openai'));
+  $('ollamaUrl').addEventListener('change', () => loadModels('ollama'));
+  $('ollamaBackupUrl').addEventListener('change', () => loadModels('ollamaBackup'));
+  if (settings.ollamaBackupUrl) $('ollamaBackup').open = true;
+  if (FREE_KEY_NAMES.some((id) => settings[id])) $('freeKeys').open = true;
+  $('prepareFree').addEventListener('click', prepareFree);
+  $('testTranslation').addEventListener('click', async () => {
+    $('testTranslation').disabled = true;
+    await testTranslation();
+    $('testTranslation').disabled = false;
+  });
+
+  // Speech.
+  bindSelect('speechProvider', { onChange: renderSpeech });
+  for (const id of ['elevenLabsKey', 'localSpeechUrl', 'localSpeechKey']) bindText(id);
+  $('elevenLabsKey').addEventListener('change', loadVoices);
+  $('localSpeechUrl').addEventListener('change', () => loadLocalSpeech());
+  bindSelect('ttsModel');
+  for (const id of ['localWhisperModel', 'localMyVoice', 'localTheirVoice']) bindSelect(id);
+  document.querySelector('[data-models="speech"]').addEventListener('click', () => loadLocalSpeech());
   $('myVoiceSelect').addEventListener('change', () => {
     const voice = voices.find((v) => v.voice_id === $('myVoiceSelect').value);
     save({ myVoiceId: voice?.voice_id || '', myVoiceName: voice?.name || '' });
-    renderVoices();
   });
   $('theirVoiceSelect').addEventListener('change', () => {
     const voice = voices.find((v) => v.voice_id === $('theirVoiceSelect').value);
     save({ theirVoiceId: voice?.voice_id || '', theirVoiceName: voice?.name || '' });
   });
   $('previewMine').addEventListener('click', () => preview(settings.myVoiceId, settings.theirLanguage));
-  $('previewTheirs').addEventListener('click', () => {
-    const id = settings.theirVoiceId || voices.find((v) => v.category === 'premade')?.voice_id;
-    preview(id, settings.myLanguage);
-  });
+  $('previewTheirs').addEventListener('click', () => preview(settings.theirVoiceId || voices.find((v) => v.category === 'premade')?.voice_id, settings.myLanguage));
+  $('previewLocalMine').addEventListener('click', () => preview(settings.localMyVoice || 'local-1', settings.theirLanguage));
+  $('previewLocalTheirs').addEventListener('click', () => preview(settings.localTheirVoice || 'local-2', settings.myLanguage));
   $('recordBtn').addEventListener('click', toggleRecording);
   $('cloneRecording').addEventListener('click', () => {
-    if (recordedWav) createMyVoice([{ blob: recordedWav, filename: 'benim-sesim.wav' }]);
+    if (recordedWav) createMyVoice([{ blob: recordedWav, filename: 'my-voice.wav' }]);
   });
   $('voiceFiles').addEventListener('change', () => {
     const files = [...$('voiceFiles').files].map((f) => ({ blob: f, filename: f.name }));
     if (files.length) createMyVoice(files);
   });
+  bindSelect('cloneSeconds', { parse: Number });
+  for (const id of ['offerTheirClone', 'deleteCloneAfter']) bindCheck(id);
+  $('testSpeech').addEventListener('click', async () => {
+    $('testSpeech').disabled = true;
+    await testSpeech();
+    $('testSpeech').disabled = false;
+  });
 
-  renderVoices();
-  await renderFree();
-  await refreshMic();
-  await refreshDevices();
+  // Microphone and sound.
+  $('grantMic').addEventListener('click', grantMic);
+  for (const id of ['micDeviceLabel', 'outputDeviceLabel']) bindSelect(id);
+  bindSelect('vadSilenceSecs', { parse: Number });
+  for (const id of ['halfDuplex', 'showOverlay', 'subtitleBar']) bindCheck(id);
+  for (const id of ['translationVolume', 'originalVolume', 'duckVolume', 'monitorVolume', 'stability', 'similarity']) bindSlider(id);
   navigator.mediaDevices.addEventListener('devicechange', refreshDevices);
-  loadVoices();
+
+  renderProvider();
+  renderSpeech();
+  refreshStatus();
 }
 
 init();

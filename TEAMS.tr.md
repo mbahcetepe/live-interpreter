@@ -6,7 +6,7 @@ Live Interpreter (Türkçe arayüzde Canlı Tercüman), Google Meet'e ek olarak 
 
 > **Durum:** Brave'de gerçek bir iş hesabı Teams görüşmesinde iki yönlü çeviri denendi; çeviriler karşıya ulaştı. Aşağıdaki "Doğrulanmamış noktalar" henüz kontrol ediliyor. Önemli bir toplantıdan önce deneme görüşmesi yapın.
 >
-> Teams görüşmelerinde de çeviri Ollama'da, ses tanıma ve seslendirme kendi ses sunucunuzda yapılabilir; kurulum için [SETUP.tr.md](SETUP.tr.md), 3. ve 4. adımlar. Video ve radyo sekmeleri için 7. adım.
+> Teams görüşmelerinde de çeviri Ollama'da, ses tanıma ve seslendirme kendi ses sunucunuzda yapılabilir; kurulum için [SETUP.tr.md](SETUP.tr.md), 4. ve 5. adımlar. Video ve radyo sekmeleri için 8. adım.
 
 ## Desteklenen adresler
 

@@ -9,7 +9,7 @@ Runs Live Interpreter's speech recognition and speech on **your own computer** i
 
 The server speaks the part of the ElevenLabs API the extension already uses, so only the address changes in the extension. No fees, no quotas, and the audio stays on your network.
 
-For translation, **Ollama** on the same computer can be used (extension settings, 6. Translation, "Ollama"). With both, no part of the pipeline goes to an outside service.
+For translation, **Ollama** on the same computer can be used (extension settings, Translation, "Ollama"). With both, no part of the pipeline goes to an outside service.
 
 ## Limits
 
@@ -58,9 +58,9 @@ Settings live in `/etc/live-interpreter-speech.env`:
 
 ## In the extension
 
-1. Settings, **1. API keys**, **Speech recognition and voices**: choose **My own speech server**.
+1. Settings, **Speech recognition and voices**, **Service**: choose **My own speech server**.
 2. Enter the address (for example `100.65.147.84`; port 8765 is added when none is given) and the key.
-3. Press **Test and allow** and accept the browser's prompt for that address. The result should list the voices, the time to make a sample and "live recognition ready".
+3. Press **Test** and accept the browser's prompt for that address. The result names the server's version and ends with "live recognition ready". Then choose the **Recognition model** and the voices; **↻** fetches the server's lists again.
 
 ## Security
 

@@ -15,7 +15,7 @@ import { matchCase } from '../../src/offscreen/free-translator.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const root = path.resolve(here, '../..');
-export const dist = path.join(root, 'dist');
+export const dist = path.join(root, 'dist-test'); // npm run build:test
 export const out = path.join(here, 'out');
 export const fixtures = path.join(root, 'test/e2e/fixtures');
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -10,19 +10,39 @@ export const CLAUDE_MODELS = [
   { id: 'claude-sonnet-5-5', labelKey: 'model.sonnet' },
   { id: 'claude-haiku-5-5', labelKey: 'model.haiku' },
 ];
+const CLAUDE_IDS = new Set(CLAUDE_MODELS.map((m) => m.id));
 
-// Free translation needs no Claude key (see offscreen/free-translator.js).
-export const FREE_MODEL = 'free';
-// Translation on the person's own Ollama server (see offscreen/ollama-translator.js).
-export const OLLAMA_MODEL = 'ollama';
+// Who translates. 'openai' is OpenAI itself or any server with the same API (LM Studio,
+// vLLM, a company gateway); 'openrouter' reaches hundreds of models with one key.
+export const PROVIDERS = [
+  { id: 'claude', labelKey: 'provider.claude' },
+  { id: 'openai', labelKey: 'provider.openai' },
+  { id: 'openrouter', labelKey: 'provider.openrouter' },
+  { id: 'ollama', labelKey: 'provider.ollama' },
+  { id: 'free', labelKey: 'provider.free' },
+];
 
-export const TRANSLATION_MODELS = [{ id: OLLAMA_MODEL, labelKey: 'model.ollama' }, ...CLAUDE_MODELS, { id: FREE_MODEL, labelKey: 'model.free' }];
+// Before translationProvider existed, claudeModel held 'free' or 'ollama' as well.
+export function translationProvider(settings) {
+  const chosen = settings?.translationProvider;
+  if (PROVIDERS.some((p) => p.id === chosen)) return chosen;
+  if (settings?.claudeModel === 'free') return 'free';
+  if (settings?.claudeModel === 'ollama') return 'ollama';
+  return 'claude';
+}
 
-export const isFreeTranslation = (settings) => settings.claudeModel === FREE_MODEL;
-export const isOllamaTranslation = (settings) => settings.claudeModel === OLLAMA_MODEL;
-export const isClaudeTranslation = (settings) => !isFreeTranslation(settings) && !isOllamaTranslation(settings);
+// The Claude model to use: the chosen one, or Haiku when the field still holds an old value.
+export const claudeModelOf = (settings) => (CLAUDE_IDS.has(settings?.claudeModel) ? settings.claudeModel : 'claude-haiku-5-5');
+
+export const isFreeTranslation = (settings) => translationProvider(settings) === 'free';
+export const isOllamaTranslation = (settings) => translationProvider(settings) === 'ollama';
+export const isClaudeTranslation = (settings) => translationProvider(settings) === 'claude';
+export const isOpenAITranslation = (settings) => ['openai', 'openrouter'].includes(translationProvider(settings));
 // Speech recognition and speech on the local speech server instead of ElevenLabs.
 export const isLocalSpeech = (settings) => settings.speechProvider === 'local';
+
+export const OPENAI_URL = 'https://api.openai.com/v1';
+export const OPENROUTER_URL = 'https://openrouter.ai/api/v1';
 
 export const TTS_MODELS = [
   { id: 'eleven_flash_v2_5', labelKey: 'tts.flash' },
@@ -30,7 +50,7 @@ export const TTS_MODELS = [
 ];
 
 export const DEFAULT_SETTINGS = {
-  uiLanguage: 'en', // interface language: 'en' | 'tr'
+  uiLanguage: 'en', // interface language: one of UI_LANGUAGES (shared/i18n.js)
 
   elevenLabsKey: '',
   anthropicKey: '',
@@ -63,9 +83,17 @@ export const DEFAULT_SETTINGS = {
   cloneSeconds: 45,
   deleteCloneAfter: true,
 
+  // '' until chosen: then it follows claudeModel's old meaning (translationProvider()).
+  translationProvider: '',
   claudeModel: 'claude-opus-5-5',
-  // When Claude fails on a sentence, free translation (free-translator.js) translates it.
+  // When the chosen translation fails on a sentence, the ones behind it translate it.
   translationFallback: true,
+  // OpenAI or a server with the same API.
+  openaiUrl: '',
+  openaiKey: '',
+  openaiModel: '',
+  openrouterKey: '',
+  openrouterModel: '',
   // Ollama: the main server and an optional second one (another computer) behind it.
   ollamaUrl: '',
   ollamaModel: 'gemma4:12b',
@@ -75,6 +103,11 @@ export const DEFAULT_SETTINGS = {
   speechProvider: 'elevenlabs',
   localSpeechUrl: '',
   localSpeechKey: '',
+  // On the local speech server: the recognition model ('' = the server's own) and the
+  // voices ('' = its first and second voice for the language).
+  localWhisperModel: '',
+  localMyVoice: '',
+  localTheirVoice: '',
   ttsModel: 'eleven_flash_v2_5',
   meetingContext: '',
   keyterms: '',
@@ -104,16 +137,16 @@ export async function loadSettings() {
   return migrateSettings(settings);
 }
 
-// Before version 2 voice mode kept their original voice at 0.3 (0.08 under a
-// translation) by default. Settings still on those defaults move to the silent ones.
-// The first start speaks the browser's language: the interface (English or Turkish), my
-// language, and theirs (English, or Spanish for someone who speaks English).
+// The interface starts in English. My language starts as the browser's, theirs as English
+// (or Spanish for someone who speaks English).
 export function firstRunDefaults(locale = globalThis.navigator?.language || 'en') {
   const code = String(locale).toLowerCase().split('-')[0];
   const mine = LANGUAGES.some((l) => l.code === code) ? code : 'en';
-  return { uiLanguage: code === 'tr' ? 'tr' : 'en', myLanguage: mine, theirLanguage: mine === 'en' ? 'es' : 'en' };
+  return { myLanguage: mine, theirLanguage: mine === 'en' ? 'es' : 'en' };
 }
 
+// Before version 2 voice mode kept their original voice at 0.3 (0.08 under a
+// translation) by default. Settings still on those defaults move to the silent ones.
 export function migrateSettings(stored) {
   const merged = { ...DEFAULT_SETTINGS, ...(stored ? {} : firstRunDefaults()), ...(stored || {}) };
   if ((stored?.settingsVersion ?? 1) < 2 && merged.originalVolume === 0.3 && merged.duckVolume === 0.08) {
@@ -130,17 +163,25 @@ export async function saveSettings(patch) {
   return next;
 }
 
+// Keys the chosen setup needs but does not have.
 export function missingKeys(settings) {
   const missing = [];
+  const provider = translationProvider(settings);
   if (!settings.elevenLabsKey && !isLocalSpeech(settings)) missing.push('ElevenLabs');
-  if (!settings.anthropicKey && isClaudeTranslation(settings)) missing.push('Anthropic');
+  if (provider === 'claude' && !settings.anthropicKey) missing.push('Anthropic');
+  if (provider === 'openrouter' && !String(settings.openrouterKey || '').trim()) missing.push('OpenRouter');
+  // OpenAI itself needs a key; a server of one's own with the same API may not.
+  if (provider === 'openai' && !String(settings.openaiUrl || '').trim() && !String(settings.openaiKey || '').trim()) missing.push('OpenAI');
   return missing;
 }
 
-// Servers the chosen setup needs but has no address (or model) for: 'ollama', 'speech'.
+// What else the chosen setup needs: a server address or a model ('ollama', 'speech', 'model').
 export function missingServers(settings) {
   const missing = [];
-  if (isOllamaTranslation(settings) && !(String(settings.ollamaUrl || '').trim() && String(settings.ollamaModel || '').trim())) missing.push('ollama');
+  const provider = translationProvider(settings);
+  if (provider === 'ollama' && !(String(settings.ollamaUrl || '').trim() && String(settings.ollamaModel || '').trim())) missing.push('ollama');
+  if (provider === 'openai' && !String(settings.openaiModel || '').trim()) missing.push('model');
+  if (provider === 'openrouter' && !String(settings.openrouterModel || '').trim()) missing.push('model');
   if (isLocalSpeech(settings) && !String(settings.localSpeechUrl || '').trim()) missing.push('speech');
   return missing;
 }

@@ -1,0 +1,11 @@
+{
+  "extName": {
+    "message": "Live Interpreter"
+  },
+  "extDescription": {
+    "message": "为 Microsoft Teams（网页版）和 Google Meet 通话提供双向实时翻译，并为任何视频或电台标签页提供字幕或语音翻译。"
+  },
+  "cmdToggle": {
+    "message": "开始或停止翻译"
+  }
+}

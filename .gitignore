@@ -1,6 +1,7 @@
 node_modules/
 dist/
-live-interpreter.zip
+dist-test/
+live-interpreter*.zip
 .env
 test/e2e/fixtures/
 test/e2e/out/

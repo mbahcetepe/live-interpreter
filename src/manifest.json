@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extName__",
-  "version": "1.0.0.1",
+  "version": "0.0.0",
   "description": "__MSG_extDescription__",
   "default_locale": "en",
   "minimum_chrome_version": "116",
@@ -36,7 +36,9 @@
     "https://api-free.deepl.com/*",
     "https://api.deepl.com/*",
     "https://api.mistral.ai/*",
-    "https://api.groq.com/*"
+    "https://api.groq.com/*",
+    "https://api.openai.com/*",
+    "https://openrouter.ai/*"
   ],
   "content_scripts": [
     {

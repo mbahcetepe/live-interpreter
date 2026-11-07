@@ -1,8 +1,9 @@
 import { loadSettings, saveSettings, missingKeys, missingServers, isFreeTranslation, isLocalSpeech } from '../shared/settings.js';
 import { localPairs, localTranslationState, prepareLocalTranslation } from '../shared/local-translation.js';
 import { formatUsage } from '../shared/usage.js';
-import { setLanguage, t, applyI18n, languageLabel, joinNames, locale } from '../shared/i18n.js';
+import { setLanguage, t, applyI18n, languageLabel, joinNames, locale, UI_LANGUAGES } from '../shared/i18n.js';
 import { isSupportedUrl, isMediaUrl } from '../shared/platforms.js';
+import { describeMissingServers } from '../shared/setup-messages.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -54,7 +55,7 @@ function render() {
   if (state.status === 'error' && state.error) notice(state.error, { bad: true });
   else if (!canStart()) notice(t('popup.openMeet'));
   else if (missing.length && !running) notice(t('popup.keysMissing', { names: joinNames(missing) }), { action: toSettings });
-  else if (servers.length && !running) notice(t('err.serverMissing', { names: joinNames(servers.map((id) => t(`server.${id}`))) }), { action: toSettings });
+  else if (servers.length && !running) notice(describeMissingServers(servers), { action: toSettings });
   else if (elsewhere) notice(t('popup.elsewhere'));
   else if (isMedia() && !running) notice(t('popup.mediaHint'));
   else notice('');
@@ -132,9 +133,8 @@ async function start(mode) {
 function applyLanguage(code) {
   setLanguage(code);
   applyI18n();
-  for (const button of $('uiLanguage').querySelectorAll('button')) {
-    button.setAttribute('aria-checked', String(button.dataset.value === code));
-  }
+  $('version').textContent = `v${chrome.runtime.getManifest().version}`;
+  $('uiLanguage').replaceChildren(...UI_LANGUAGES.map((l) => new Option(l.code.toUpperCase(), l.code, false, l.code === code)));
   const mine = languageLabel(settings.myLanguage);
   const theirs = languageLabel(settings.theirLanguage);
   $('pair').textContent = `${theirs} ↔ ${mine}`;
@@ -166,13 +166,11 @@ async function init() {
 
   applyLanguage(settings.uiLanguage);
   $('consent').checked = Boolean(state.status === 'running' && state.engine?.cloneConsent);
-  for (const button of $('uiLanguage').querySelectorAll('button')) {
-    button.addEventListener('click', async () => {
-      settings = await saveSettings({ uiLanguage: button.dataset.value });
-      applyLanguage(settings.uiLanguage);
-      render();
-    });
-  }
+  $('uiLanguage').addEventListener('change', async () => {
+    settings = await saveSettings({ uiLanguage: $('uiLanguage').value });
+    applyLanguage(settings.uiLanguage);
+    render();
+  });
   for (const button of $('incoming').querySelectorAll('button')) {
     button.addEventListener('click', () => changeMode('incomingMode', button.dataset.value));
   }

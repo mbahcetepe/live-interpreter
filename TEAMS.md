@@ -6,7 +6,7 @@ Live Interpreter works with **Microsoft Teams in the browser** as well as Google
 
 > **Status:** two-way translation worked in a real work-account Teams call in Brave; the translations reached the other side. The "Unverified points" below are still being checked. Run a test call before an important meeting.
 >
-> In Teams calls too, translation can run on Ollama and speech recognition and speech on your own speech server: [SETUP.md](SETUP.md), steps 3 and 4. Video and radio tabs: step 7.
+> In Teams calls too, translation can run on Ollama and speech recognition and speech on your own speech server: [SETUP.md](SETUP.md), steps 4 and 5. Video and radio tabs: step 8.
 
 ## Supported addresses
 
