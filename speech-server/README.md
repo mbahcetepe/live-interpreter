@@ -12,7 +12,8 @@ Sunucu, eklentinin zaten kullandığı ElevenLabs arayüzünün aynısını konu
 ## Sınırlar
 
 - **Ses klonu yok.** Seslerinizi `local-1`, `local-2` ... arasından seçersiniz. Her ses, konuşulan dile göre o dilin Piper sesiyle okunur.
-- **Gecikme biraz daha fazla.** Whisper akış halinde çalışmaz. Sunucu sesi duraklamalarda bölüp yazıya döker; konuşma sürerken her 0,8 saniyede bir taslak gönderir. Bu, ElevenLabs Scribe'a göre yaklaşık 0,3–1 saniye ekler.
+- **Gecikme biraz daha fazla.** Whisper akış halinde çalışmaz. Sunucu sesi cümle sonlarında bölüp yazıya döker; konuşma sürerken her 0,8 saniyede bir taslak gönderir. Ölçülen: cümle bittikten 1,1–1,3 saniye sonra kesin metin (0,7 saniyesi cümle sonunu belirleyen sessizlik), seslendirme 0,2 saniyenin altında.
+- **Gürültü ve filmler.** Konuşmanın nerede başlayıp bittiğini [Silero VAD](https://github.com/snakers4/silero-vad) (faster-whisper ile gelir) belirler; sesi müzikten ve efektlerden ayırır. Konuşmayla aynı yükseklikteki film müziğinde, denemede 16 cümlenin 16'sı doğru ayrıldı; yalnızca ses yüksekliğine bakan önceki yöntem hiçbirini ayıramamıştı. Müzik diyalogu bastırıyorsa Silero konuşmayı duymayabilir: o zaman 6 saniye boyunca yüksek ses sürerse bölüm yine de Whisper'a verilir, yalnızca müzikse geri metin dönmez. Bu durumda bazı cümleler kaçabilir.
 - **Ses kalitesi.** Piper anlaşılır ama ElevenLabs kadar doğal değil.
 - **Lisans.** piper-tts'in yeni sürümleri GPL-3.0 lisanslıdır ve her Piper sesinin kendi lisansı vardır (sesin `.onnx.json` dosyasına ve model kartına bakın). Kendi kullanımınız için sorun değil; ürünleştirmeden önce kontrol edin.
 - **Dil.** Kurulum Türkçe ve İngilizce sesleri indirir. Başka diller için `voices/voices.json` dosyasına [Piper sesleri](https://huggingface.co/rhasspy/piper-voices) eklenir. Whisper 99 dili tanır.

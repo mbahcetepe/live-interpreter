@@ -85,6 +85,49 @@ def test_a_forced_commit_finishes_the_utterance():
     assert seg.force_final() == []
 
 
+class FakeDetector:
+    """Says 'speech' between two times, whatever the sound is."""
+
+    frame = 512
+
+    def __init__(self, start=None, end=None):
+        self.start, self.end, self.t = start, end, 0.0
+
+    def __call__(self, frame):
+        now = self.t
+        self.t += len(frame) / RATE
+        return 0.9 if self.start is not None and self.start <= now < self.end else 0.05
+
+
+def test_a_film_soundtrack_does_not_hold_the_utterance_open():
+    # Loud music all along; the voice only between 1 and 3 s.
+    seg = Segmenter(silence_secs=0.7, speech=FakeDetector(1.0, 3.0))
+    finals = []
+    sent = 0
+    for c in chunks(tone(5.5, level=0.4)):
+        sent += len(c)
+        finals += [sent / RATE for e in seg.push(c) if e.kind == 'final']
+    assert len(finals) == 1
+    assert 3.6 <= finals[0] <= 4.0
+
+
+def test_loud_sound_with_no_speech_found_is_handed_over_anyway():
+    seg = Segmenter(speech=FakeDetector(), blind_secs=6.0)
+    finals = []
+    for c in chunks(tone(7.0, level=0.4)):
+        finals += [e for e in seg.push(c) if e.kind == 'final']
+    assert len(finals) == 1
+    assert 5.9 <= len(finals[0].audio) / RATE <= 6.1
+
+
+def test_quiet_sound_with_no_speech_is_not_handed_over():
+    seg = Segmenter(speech=FakeDetector(), blind_secs=2.0)
+    events = []
+    for c in chunks(tone(5.0, level=0.005)):
+        events += seg.push(c)
+    assert events == []
+
+
 def test_made_up_whisper_lines_are_caught():
     assert HALLUCINATIONS.search('Altyazı M.K.')
     assert HALLUCINATIONS.search('Thanks for watching!')

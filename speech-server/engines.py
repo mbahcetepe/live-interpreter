@@ -65,6 +65,12 @@ class WhisperRecognizer:
         # The first transcription sets the GPU up; done now, not on the call's first sentence.
         self.transcribe(np.zeros(16000, np.float32), 'en')
 
+    def speech_detector(self):
+        """A Silero VAD per stream: it tells speech from music and noise (films)."""
+        from segmenter import SileroSpeech
+
+        return SileroSpeech()
+
     def transcribe(self, audio: np.ndarray, language: str | None, keyterms: list[str] | None = None) -> str:
         if len(audio) < 1600:
             return ''

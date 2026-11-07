@@ -135,7 +135,9 @@ class RealtimeSession:
         self.recognizer = recognizer
         self.language = language
         self.keyterms = keyterms
-        self.segmenter = Segmenter(silence_secs=silence)
+        # Speech is told from music and noise by the recognizer's detector when it has one.
+        detector = getattr(recognizer, 'speech_detector', None)
+        self.segmenter = Segmenter(silence_secs=silence, speech=detector() if detector else None)
         self.finals: asyncio.Queue = asyncio.Queue()
         self.partial_busy = False
         # A partial that comes back after its utterance was finished is dropped.

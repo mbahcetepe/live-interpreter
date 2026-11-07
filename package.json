@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "license": "MIT",
-  "description": "Live two-way speech translation for Microsoft Teams (web) and Google Meet as a Chrome extension",
+  "description": "Live speech translation for Microsoft Teams (web), Google Meet and any video or radio tab, as a browser extension; Claude, Ollama or free translation, ElevenLabs or a self-hosted speech server",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
