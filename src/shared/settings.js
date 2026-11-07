@@ -11,10 +11,16 @@ export const CLAUDE_MODELS = [
 
 // Free translation needs no Claude key (see offscreen/free-translator.js).
 export const FREE_MODEL = 'free';
+// Translation on the person's own Ollama server (see offscreen/ollama-translator.js).
+export const OLLAMA_MODEL = 'ollama';
 
-export const TRANSLATION_MODELS = [...CLAUDE_MODELS, { id: FREE_MODEL, labelKey: 'model.free' }];
+export const TRANSLATION_MODELS = [{ id: OLLAMA_MODEL, labelKey: 'model.ollama' }, ...CLAUDE_MODELS, { id: FREE_MODEL, labelKey: 'model.free' }];
 
 export const isFreeTranslation = (settings) => settings.claudeModel === FREE_MODEL;
+export const isOllamaTranslation = (settings) => settings.claudeModel === OLLAMA_MODEL;
+export const isClaudeTranslation = (settings) => !isFreeTranslation(settings) && !isOllamaTranslation(settings);
+// Speech recognition and speech on the local speech server instead of ElevenLabs.
+export const isLocalSpeech = (settings) => settings.speechProvider === 'local';
 
 export const TTS_MODELS = [
   { id: 'eleven_flash_v2_5', labelKey: 'tts.flash' },
@@ -55,6 +61,15 @@ export const DEFAULT_SETTINGS = {
   claudeModel: 'claude-opus-5-5',
   // When Claude fails on a sentence, free translation (free-translator.js) translates it.
   translationFallback: true,
+  // Ollama: the main server and an optional second one (another computer) behind it.
+  ollamaUrl: '',
+  ollamaModel: 'gemma4:12b',
+  ollamaBackupUrl: '',
+  ollamaBackupModel: '',
+  // 'elevenlabs' or 'local' (speech-server/ on the person's own computer).
+  speechProvider: 'elevenlabs',
+  localSpeechUrl: '',
+  localSpeechKey: '',
   ttsModel: 'eleven_flash_v2_5',
   meetingContext: '',
   keyterms: '',
@@ -104,8 +119,16 @@ export async function saveSettings(patch) {
 
 export function missingKeys(settings) {
   const missing = [];
-  if (!settings.elevenLabsKey) missing.push('ElevenLabs');
-  if (!settings.anthropicKey && !isFreeTranslation(settings)) missing.push('Anthropic');
+  if (!settings.elevenLabsKey && !isLocalSpeech(settings)) missing.push('ElevenLabs');
+  if (!settings.anthropicKey && isClaudeTranslation(settings)) missing.push('Anthropic');
+  return missing;
+}
+
+// Servers the chosen setup needs but has no address (or model) for: 'ollama', 'speech'.
+export function missingServers(settings) {
+  const missing = [];
+  if (isOllamaTranslation(settings) && !(String(settings.ollamaUrl || '').trim() && String(settings.ollamaModel || '').trim())) missing.push('ollama');
+  if (isLocalSpeech(settings) && !String(settings.localSpeechUrl || '').trim()) missing.push('speech');
   return missing;
 }
 

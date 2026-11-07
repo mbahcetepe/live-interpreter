@@ -11,6 +11,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { startMockApi } from './mock-api.mjs';
+import { startMockOllama } from './mock-ollama.mjs';
 import {
   root, dist, fixtures, outDir, check, sleep, loadEnv, makeFixtures, launch, send, sessionState, maxLevel, waitFor, readCaptions, done, summary,
 } from './harness.mjs';
@@ -319,6 +320,61 @@ async function freeTranslationTest() {
   }
 }
 
+// Translation on a stand-in Ollama server (plain HTTP on 127.0.0.1, refusing any Origin
+// header), with DeepL behind it.
+async function ollamaTranslationTest() {
+  console.log('\n== Translation on a local mock Ollama server (no Claude key) ==');
+  const mock = await startMockApi({
+    cert: readFileSync(path.join(fixtures, 'mock-cert.pem')),
+    key: readFileSync(path.join(fixtures, 'mock-key.pem')),
+  });
+  const ollama = await startMockOllama();
+  const env = await launch({ micWav: path.join(fixtures, 'turkish.wav'), remoteWav: path.join(fixtures, 'english.wav'), proxyPort: mock.port });
+  const { control, meet, tabId } = env;
+  const setSettings = (patch) =>
+    control.evaluate(async (p) => {
+      const { settings } = await chrome.storage.local.get('settings');
+      await chrome.storage.local.set({ settings: { ...(settings || {}), ...p } });
+    }, patch);
+  try {
+    await setSettings({ elevenLabsKey: 'mock-el', anthropicKey: '', claudeModel: 'ollama', ollamaUrl: '', ollamaModel: 'mock-gemma:12b', deeplKey: 'mock-deepl:fx' });
+    const bare = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('Ollama without a server address does not start and says so', bare?.ok === false && /address|adres/i.test(bare?.error || ''), bare?.error);
+
+    await setSettings({ ollamaUrl: ollama.url });
+    // The service worker puts the header rule in place when the settings change.
+    const rule = await waitFor(() => env.worker.evaluate(async () => (await chrome.declarativeNetRequest.getDynamicRules()).some((r) => r.condition.requestDomains?.includes('127.0.0.1'))), 5000, 200);
+    check('a header rule is set for the Ollama server', rule);
+    const start = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('translation on Ollama starts without an Anthropic key', start?.ok === true, start?.error);
+    if (!start?.ok) return;
+
+    const incoming = await waitFor(async () => done((await readCaptions(meet)).incoming), 30000, 300);
+    check('the counterpart is translated into Turkish by Ollama', incoming?.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.' && ollama.stats.chats.length > 0, JSON.stringify(incoming));
+    const outgoing = await waitFor(async () => done((await readCaptions(meet)).outgoing), 30000, 300);
+    check('my Turkish is translated into English by Ollama', outgoing?.translation === 'Friday at three works for us.', JSON.stringify(outgoing));
+    check('Ollama is asked with the chosen model and without thinking', ollama.stats.chats.every((c) => c.model === 'mock-gemma:12b' && c.think === false), JSON.stringify(ollama.stats.chats[0]));
+    check('no request reached Ollama with an Origin header', ollama.stats.refused === 0, `${ollama.stats.refused} refused`);
+    check('no free service was needed', mock.stats.free.length === 0, mock.stats.free.map((r) => r.service).join(','));
+
+    // The server goes away: the next sentences are translated by the backup (DeepL).
+    ollama.faults.down = true;
+    const before = mock.stats.free.length;
+    const backup = await waitFor(() => mock.stats.free.slice(before).some((r) => r.service === 'deepl'), 40000, 300);
+    check('when the Ollama server is gone, the backup translates', backup, mock.stats.free.slice(before).map((r) => r.service).join(','));
+    const status = (await sessionState(control))?.engine;
+    check('the call goes on without an error', !status?.error, status?.error || '');
+    check('no Claude request was made', mock.stats.claude.length === 0, `${mock.stats.claude.length}`);
+
+    await send(control, { type: 'stop' });
+    check('no script errors on the Meet page', env.pageErrors.length === 0, env.pageErrors.join(' | '));
+  } finally {
+    await env.context.close();
+    await rm(env.userDataDir, { recursive: true, force: true });
+    mock.close();
+    ollama.close();
+  }
+}
 
 // Real ElevenLabs (speech recognition and speech) through the extension, with Claude
 // mocked unless an Anthropic key is in .env too.
@@ -446,6 +502,7 @@ await connectionTest();
 await recordingTest();
 await mockTranslationTest();
 await freeTranslationTest();
+await ollamaTranslationTest();
 const env = loadEnv();
 // SKIP_REAL=1 runs only the keyless suites (no credits used).
 if (env.ELEVENLABS_API_KEY && !process.env.SKIP_REAL) {

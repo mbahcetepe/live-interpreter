@@ -28,7 +28,7 @@ const TRANSLATED = [
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const translate = (text) => TRANSLATED.find(([re]) => re.test(text))?.[1] || text;
+export const translate = (text) => TRANSLATED.find(([re]) => re.test(text))?.[1] || text;
 
 function readBody(req) {
   return new Promise((resolve) => {

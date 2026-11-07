@@ -2,10 +2,11 @@
 // session state the popup shows, and passes settings to the engine (the offscreen
 // document cannot read chrome.storage itself).
 
-import { loadSettings, saveSettings, missingKeys } from '../shared/settings.js';
+import { loadSettings, saveSettings, missingKeys, missingServers } from '../shared/settings.js';
 import { setLanguage, t, joinNames } from '../shared/i18n.js';
 import { isSupportedUrl } from '../shared/platforms.js';
 import { isAllowed, cleanModes } from './message-policy.js';
+import { originRules } from '../shared/servers.js';
 
 const OFFSCREEN_PATH = 'offscreen.html';
 const IDLE = { status: 'idle', tabId: null, error: null, engine: null };
@@ -68,6 +69,8 @@ async function startSession({ tabId, streamId, options = {} }) {
     if (options.mode !== 'diagnostic') {
       const missing = missingKeys(settings);
       if (missing.length) throw new Error(t('err.keysMissing', { names: joinNames(missing) }));
+      const servers = missingServers(settings);
+      if (servers.length) throw new Error(t('err.serverMissing', { names: joinNames(servers.map((id) => t(`server.${id}`))) }));
     }
 
     // The page hook is injected when Meet loads, so a tab opened before the extension
@@ -110,15 +113,27 @@ async function stopSession(reason = 'user', error = null) {
   if (state.status !== 'error' || reason === 'user') await setState({ ...IDLE });
 }
 
+// The Origin header goes from this extension's own requests to the Ollama servers in the
+// settings (src/shared/servers.js), so Ollama needs no OLLAMA_ORIGINS.
+async function syncOriginRules() {
+  const settings = await loadSettings();
+  const addRules = originRules(settings, chrome.runtime.id);
+  await chrome.declarativeNetRequest
+    .updateDynamicRules({ removeRuleIds: [100], addRules })
+    .catch((err) => console.warn('[tercuman] could not update the Ollama header rule', err));
+}
+
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason === 'install') chrome.runtime.openOptionsPage();
   chrome.storage.session.set({ state: IDLE });
   updateBadge(IDLE);
+  syncOriginRules();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   chrome.storage.session.set({ state: IDLE });
   updateBadge(IDLE);
+  syncOriginRules();
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -193,6 +208,7 @@ function onMessage(msg, sender, sendResponse) {
 // Settings edited while a call is running reach the engine right away.
 chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== 'local' || !changes.settings) return;
+  await syncOriginRules();
   if ((await getState()).status !== 'running' || !(await hasOffscreen())) return;
   toEngine({ type: 'settings', settings: await loadSettings() }).catch(() => {});
 });

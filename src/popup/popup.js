@@ -1,4 +1,4 @@
-import { loadSettings, saveSettings, missingKeys, isFreeTranslation } from '../shared/settings.js';
+import { loadSettings, saveSettings, missingKeys, missingServers, isFreeTranslation } from '../shared/settings.js';
 import { localPairs, localTranslationState, prepareLocalTranslation } from '../shared/local-translation.js';
 import { formatUsage } from '../shared/usage.js';
 import { setLanguage, t, applyI18n, languageLabel, joinNames, locale } from '../shared/i18n.js';
@@ -46,12 +46,12 @@ function render() {
   const diagnostic = running && state.mode === 'diagnostic';
 
   const missing = missingKeys(settings);
+  const servers = missingServers(settings);
+  const toSettings = { label: t('popup.openSettings'), run: () => chrome.runtime.openOptionsPage() };
   if (state.status === 'error' && state.error) notice(state.error, { bad: true });
   else if (!isMeet()) notice(t('popup.openMeet'));
-  else if (missing.length && !running)
-    notice(t('popup.keysMissing', { names: joinNames(missing) }), {
-      action: { label: t('popup.openSettings'), run: () => chrome.runtime.openOptionsPage() },
-    });
+  else if (missing.length && !running) notice(t('popup.keysMissing', { names: joinNames(missing) }), { action: toSettings });
+  else if (servers.length && !running) notice(t('err.serverMissing', { names: joinNames(servers.map((id) => t(`server.${id}`))) }), { action: toSettings });
   else if (elsewhere) notice(t('popup.elsewhere'));
   else notice('');
 
@@ -60,7 +60,7 @@ function render() {
   $('recordRow').hidden = running || busy;
 
   const primary = $('primary');
-  primary.disabled = busy || !isMeet() || (!running && missing.length > 0);
+  primary.disabled = busy || !isMeet() || (!running && (missing.length > 0 || servers.length > 0));
   primary.textContent = busy ? t('popup.starting') : running ? (diagnostic ? t('popup.endTest') : t('popup.stop')) : t('popup.start');
   primary.classList.toggle('stop', running);
   $('test').hidden = running;

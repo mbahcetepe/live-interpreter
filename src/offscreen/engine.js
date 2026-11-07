@@ -9,7 +9,9 @@
 // worker with each message, and everything for the Meet tab goes through a port the
 // tab's content script opens.
 
-import { isFreeTranslation, missingKeys, parseKeyterms } from '../shared/settings.js';
+import { isFreeTranslation, isOllamaTranslation, missingKeys, missingServers, parseKeyterms } from '../shared/settings.js';
+import { serverBase } from '../shared/servers.js';
+import { OllamaTranslator, ollamaRestMs } from './ollama-translator.js';
 import { listVoices, createVoiceClone, deleteVoice, describeElevenLabsError } from '../shared/elevenlabs.js';
 import { PcmScheduler, testChime } from '../shared/scheduler.js';
 import { int16ToBase64 } from '../shared/pcm.js';
@@ -66,6 +68,17 @@ function describeSttFatal(err, cause) {
     default:
       return t('stt.stopped', { message: err.message });
   }
+}
+
+// With Ollama chosen, Claude (when a key is set) stands behind the Ollama servers. The
+// fastest model: it only translates the sentences an Ollama server could not.
+const OLLAMA_BACKUP_CLAUDE = 'claude-haiku-5-5';
+
+// What decides which translators are made; a change rebuilds them mid-call.
+function translationSetup(s) {
+  if (isFreeTranslation(s)) return 'free';
+  if (!isOllamaTranslation(s)) return 'claude';
+  return ['ollama', serverBase(s.ollamaUrl), s.ollamaModel, serverBase(s.ollamaBackupUrl), s.ollamaBackupModel, Boolean(s.anthropicKey)].join('|');
 }
 
 const MUTE_IDLE_MS = 20000;
@@ -168,6 +181,8 @@ class Session {
     if (!this.diagnostic) {
       const missing = missingKeys(s);
       if (missing.length) throw new UserError(t('err.keysMissing', { names: joinNames(missing) }), 'keys');
+      const servers = missingServers(s);
+      if (servers.length) throw new UserError(t('err.serverMissing', { names: joinNames(servers.map((id) => t(`server.${id}`))) }), 'servers');
     }
 
     this.ctx = new AudioContext({ latencyHint: 'interactive', sampleRate: 48000 });
@@ -352,22 +367,43 @@ class Session {
       meetingContext: s.meetingContext,
       keyterms: parseKeyterms(s.keyterms),
     };
-    if (isFreeTranslation(s)) return new FreeTranslator({ ...common, keys: freeKeys(s), log });
+    const free = () => new FreeTranslator({ ...common, keys: freeKeys(s), log });
+    if (isFreeTranslation(s)) return free();
     const fallback = s.translationFallback !== false;
-    const claude = new Translator({
-      ...common,
-      apiKey: s.anthropicKey,
-      model: s.claudeModel,
-      onUsage: (model, usage) => this.usage.addClaude(model, usage),
-      ...(fallback ? { timeoutMs: 10_000, maxRetries: 1 } : {}),
-    });
-    if (!fallback) return claude;
-    return new FallbackTranslator({
-      primary: claude,
-      backup: new FreeTranslator({ ...common, keys: freeKeys(s), log }),
-      restFor: claudeRestMs,
-      log,
-    });
+    const claude = (model) =>
+      new Translator({
+        ...common,
+        apiKey: s.anthropicKey,
+        model,
+        onUsage: (used, usage) => this.usage.addClaude(used, usage),
+        ...(fallback ? { timeoutMs: 10_000, maxRetries: 1 } : {}),
+      });
+    if (isOllamaTranslation(s)) {
+      // Ollama first, then a second Ollama server, then Claude (with a key), then free.
+      let backup = s.anthropicKey
+        ? new FallbackTranslator({ primary: claude(OLLAMA_BACKUP_CLAUDE), backup: free(), restFor: claudeRestMs, log })
+        : free();
+      if (serverBase(s.ollamaBackupUrl) && String(s.ollamaBackupModel || '').trim()) {
+        backup = new FallbackTranslator({
+          primary: new OllamaTranslator({ ...common, url: s.ollamaBackupUrl, model: s.ollamaBackupModel, label: t('server.ollamaBackup'), log }),
+          backup,
+          restFor: ollamaRestMs,
+          name: t('server.ollamaBackup'),
+          requirePrimary: false,
+          log,
+        });
+      }
+      return new FallbackTranslator({
+        primary: new OllamaTranslator({ ...common, url: s.ollamaUrl, model: s.ollamaModel, label: t('server.ollama'), log }),
+        backup,
+        restFor: ollamaRestMs,
+        name: t('server.ollama'),
+        requirePrimary: false,
+        log,
+      });
+    }
+    if (!fallback) return claude(s.claudeModel);
+    return new FallbackTranslator({ primary: claude(s.claudeModel), backup: free(), restFor: claudeRestMs, log });
   }
 
   async verifyTranslator() {
@@ -752,16 +788,18 @@ class Session {
     this.translationGain?.gain.setTargetAtTime(next.translationVolume, this.ctx.currentTime, 0.05);
     this.monitorGain?.gain.setTargetAtTime(next.monitorVolume, this.ctx.currentTime, 0.05);
     this.updateDucking();
-    const switched = isFreeTranslation(next) !== isFreeTranslation(prev);
+    const switched = translationSetup(next) !== translationSetup(prev);
     const newKey = !isFreeTranslation(next) && next.anthropicKey !== prev.anthropicKey;
-    if (this.translator && (switched || newKey) && !missingKeys(next).length) {
-      // Switched between Claude and free translation mid-call, or a new Anthropic key.
+    if (this.translator && (switched || newKey) && !missingKeys(next).length && !missingServers(next).length) {
+      // Switched between Claude, Ollama and free translation mid-call, another Ollama
+      // server or model, or a new Anthropic key.
       this.translator = this.createTranslator(next);
       if (this.incoming) this.incoming.translator = this.translator;
       if (this.outgoing) this.outgoing.translator = this.translator;
     } else {
       this.translator?.update({
-        model: next.claudeModel,
+        // Behind Ollama, Claude keeps its own model (OLLAMA_BACKUP_CLAUDE).
+        model: isOllamaTranslation(next) ? undefined : next.claudeModel,
         myLanguage: next.myLanguage,
         theirLanguage: next.theirLanguage,
         meetingContext: next.meetingContext,

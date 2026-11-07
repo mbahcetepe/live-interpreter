@@ -151,6 +151,38 @@
           <select id="claudeModel"></select>
         </label>
         <p class="hint" id="claudeHint" data-i18n="opt.tr.claudeHint">If the delay feels long, choose Claude Haiku 5.5.</p>
+        <div id="ollamaBox" class="free" hidden>
+          <p class="hint" data-i18n="opt.ollama.hint">Translation runs on your own Ollama server.</p>
+          <div class="grid2">
+            <label class="field">
+              <span data-i18n="opt.ollama.url">Ollama server address</span>
+              <input id="ollamaUrl" autocomplete="off" spellcheck="false" placeholder="100.65.147.84" />
+            </label>
+            <label class="field">
+              <span data-i18n="opt.ollama.model">Model</span>
+              <input id="ollamaModel" list="ollamaModels" autocomplete="off" spellcheck="false" placeholder="gemma4:12b" />
+            </label>
+          </div>
+          <p class="hint" data-i18n="opt.ollama.urlHint">For example 100.65.147.84 (Tailscale).</p>
+          <details class="free-keys" id="ollamaBackup">
+            <summary data-i18n="opt.ollama.backup">Second server (optional)</summary>
+            <div class="grid2">
+              <label class="field">
+                <span data-i18n="opt.ollama.backupUrl">Second server address</span>
+                <input id="ollamaBackupUrl" autocomplete="off" spellcheck="false" placeholder="100.77.37.21" />
+              </label>
+              <label class="field">
+                <span data-i18n="opt.ollama.backupModel">Model on the second server</span>
+                <input id="ollamaBackupModel" list="ollamaModels" autocomplete="off" spellcheck="false" placeholder="gemma4:26b" />
+              </label>
+            </div>
+          </details>
+          <datalist id="ollamaModels"></datalist>
+          <div class="actions">
+            <button id="testOllama" type="button" class="primary" data-i18n="opt.ollama.test">Test and allow</button>
+          </div>
+          <p class="result" id="ollamaResult" role="status"></p>
+        </div>
         <div id="freeBox" class="free" hidden>
           <p class="hint" data-i18n="opt.tr.freeHint">Free translation works without any key.</p>
           <div class="actions">

@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { loadSettings, saveSettings, isFreeTranslation, TRANSLATION_MODELS, TTS_MODELS } from '../shared/settings.js';
+import { loadSettings, saveSettings, isFreeTranslation, isOllamaTranslation, TRANSLATION_MODELS, TTS_MODELS } from '../shared/settings.js';
+import { OllamaTranslator } from '../offscreen/ollama-translator.js';
+import { serverBase, originPattern, originRules } from '../shared/servers.js';
 import { LANGUAGES } from '../shared/languages.js';
 import { setLanguage, t, applyI18n, languageLabel } from '../shared/i18n.js';
 import { listVoices, createVoiceClone, deleteVoice, speechStream, describeElevenLabsError } from '../shared/elevenlabs.js';
@@ -117,9 +119,15 @@ async function micGranted() {
 
 async function refreshChecklist() {
   const free = isFreeTranslation(settings);
+  const ollama = isOllamaTranslation(settings);
   $('check-elevenlabs').classList.toggle('done', Boolean(settings.elevenLabsKey));
-  $('check-anthropic').textContent = free ? t('opt.check.anthropicFree') : t('opt.check.anthropic');
-  $('check-anthropic').classList.toggle('done', free ? localState === 'ready' || FREE_KEY_NAMES.some((k) => settings[k]) : Boolean(settings.anthropicKey));
+  $('check-anthropic').textContent = ollama ? t('opt.check.anthropicOllama') : free ? t('opt.check.anthropicFree') : t('opt.check.anthropic');
+  const translationReady = ollama
+    ? Boolean(serverBase(settings.ollamaUrl) && settings.ollamaModel)
+    : free
+      ? localState === 'ready' || FREE_KEY_NAMES.some((k) => settings[k])
+      : Boolean(settings.anthropicKey);
+  $('check-anthropic').classList.toggle('done', translationReady);
   $('check-mic').classList.toggle('done', (await micGranted()) === 'granted');
   $('check-voice').classList.toggle('done', Boolean(settings.myVoiceId));
 }
@@ -144,10 +152,12 @@ async function testKeys() {
   }
   if (isFreeTranslation(settings)) {
     parts.push(t('opt.keys.freeNoAnthropic'));
+  } else if (isOllamaTranslation(settings) && !settings.anthropicKey) {
+    parts.push(t('opt.keys.ollamaNoAnthropic'));
   } else if (settings.anthropicKey) {
     try {
       const client = new Anthropic({ apiKey: settings.anthropicKey, dangerouslyAllowBrowser: true, maxRetries: 1 });
-      await client.models.retrieve(settings.claudeModel);
+      await client.models.retrieve(isOllamaTranslation(settings) ? 'claude-haiku-5-5' : settings.claudeModel);
       parts.push(t('opt.keys.anOk'));
     } catch (err) {
       ok = false;
@@ -183,8 +193,10 @@ function showLocalState(state) {
 
 async function renderFree() {
   const free = isFreeTranslation(settings);
+  const ollama = isOllamaTranslation(settings);
   $('freeBox').hidden = !free;
-  $('claudeHint').hidden = free;
+  $('ollamaBox').hidden = !ollama;
+  $('claudeHint').hidden = free || ollama;
   if (free) showLocalState(await localTranslationState(localPairs(settings)));
 }
 
@@ -210,6 +222,59 @@ async function testFreeKeys() {
   result('freeKeyResult', t('opt.testing'));
   const checks = await Promise.all(names.map((name) => checkFreeKey(name, settings[name])));
   result('freeKeyResult', checks.map((c) => c.message).join(' '), checks.every((c) => c.ok) ? 'ok' : 'bad');
+}
+
+// ---- Ollama ----------------------------------------------------------------------------
+
+const OLLAMA_SAMPLE = { text: 'Good morning, everyone. Shall we begin?', from: 'en', to: 'tr' };
+
+function ollamaServers() {
+  const list = [{ name: t('server.ollama'), url: settings.ollamaUrl, model: settings.ollamaModel }];
+  if (settings.ollamaBackupUrl) list.push({ name: t('server.ollamaBackup'), url: settings.ollamaBackupUrl, model: settings.ollamaBackupModel });
+  return list.map((s) => ({ ...s, base: serverBase(s.url) })).filter((s) => s.base);
+}
+
+// Runs from the click: the browser asks for access to the servers only after one.
+async function testOllama() {
+  const servers = ollamaServers();
+  if (!servers.length) return result('ollamaResult', t('opt.ollama.noUrl'), 'bad');
+  const origins = [...new Set(servers.map((s) => originPattern(s.base)))];
+  const granted = await chrome.permissions.request({ origins }).catch(() => false);
+  if (!granted) return result('ollamaResult', t('opt.ollama.denied', { url: origins.join(', ') }), 'bad');
+  result('ollamaResult', t('opt.testing'));
+  // The header rule normally follows the saved settings; here it must be in place now.
+  clearTimeout(saveTimer);
+  if (Object.keys(pending).length) {
+    await saveSettings(pending);
+    pending = {};
+  }
+  await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [100], addRules: originRules(settings, chrome.runtime.id) }).catch(() => {});
+  const lines = [];
+  let ok = true;
+  const names = new Set();
+  for (const server of servers) {
+    try {
+      const res = await fetch(`${server.base}/api/tags`);
+      const models = (await res.json()).models || [];
+      for (const m of models) names.add(m.name);
+      if (!server.model) {
+        ok = false;
+        lines.push(t('opt.ollama.models', { name: server.name, list: models.map((m) => m.name).slice(0, 12).join(', ') }));
+        continue;
+      }
+      const translator = new OllamaTranslator({ url: server.base, model: server.model, label: server.name, myLanguage: 'tr', theirLanguage: 'en' });
+      await translator.verify();
+      const started = performance.now();
+      const pieces = [];
+      for await (const piece of translator.translate({ ...OLLAMA_SAMPLE, history: [] })) pieces.push(piece);
+      lines.push(t('opt.ollama.ok', { name: server.name, model: server.model, ms: Math.round(performance.now() - started), sample: pieces.join(' ') }));
+    } catch (err) {
+      ok = false;
+      lines.push(err?.message || String(err));
+    }
+  }
+  $('ollamaModels').replaceChildren(...[...names].sort().map((n) => new Option(n, n)));
+  result('ollamaResult', lines.join(' '), ok ? 'ok' : 'bad');
 }
 
 // ---- microphone and devices ------------------------------------------------------------
@@ -435,6 +500,13 @@ async function init() {
   bindText('anthropicKey');
   for (const id of FREE_KEY_NAMES) bindText(id);
   bindText('meetingContext');
+  for (const id of ['ollamaUrl', 'ollamaModel', 'ollamaBackupUrl', 'ollamaBackupModel']) bindText(id);
+  if (settings.ollamaBackupUrl) $('ollamaBackup').open = true;
+  $('testOllama').addEventListener('click', async () => {
+    $('testOllama').disabled = true;
+    await testOllama();
+    $('testOllama').disabled = false;
+  });
   bindText('keyterms');
   for (const id of ['myLanguage', 'theirLanguage', 'claudeModel', 'ttsModel', 'micDeviceLabel', 'outputDeviceLabel']) bindSelect(id);
   bindSelect('vadSilenceSecs', Number);
