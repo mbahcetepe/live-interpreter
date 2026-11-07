@@ -105,6 +105,20 @@ Toplantı bitince çeviri, bağlantı kalmadıktan 30 saniye sonra kendiliğinde
 
 ---
 
+## Video ve radyo sekmeleri (YouTube, X, çevrimiçi radyo)
+
+Görüşme olmayan bir sekmenin sesini de çevirebilirsin:
+
+1. Videoyu ya da radyoyu aç ve çalmaya başlat.
+2. O sekmedeyken eklenti simgesine tıkla. Pencerede "Bu sekmedeki ses" seçeneği görünür.
+3. **Sadece altyazı** ya da **Sesli çeviri** seç ve **Bu sekmeyi çevir** düğmesine bas (kısayol: Alt + Shift + T).
+
+- Çeviri sayfanın altında film altyazısı gibi çıkar; YouTube tam ekrandayken de görünür.
+- Sesli çeviride asıl ses çeviri konuşurken kısılır, aralarda normal seviyeye döner.
+- Konuşmanın dili ayarlardaki **karşı tarafın dili**, çevirinin dili **benim dilim**dir.
+- Eklenti yalnızca tıkladığın sekmeye erişir; sayfaya hiçbir şey göndermez. Aynı sitede başka bir videoya geçince çeviri devam eder.
+- Çeviri konuşmanın 1–3 saniye gerisinden gelir. Hızlı ve kesintisiz konuşan videolarda sesli çeviri kısaltarak yetişmeye çalışır.
+
 ## Önemli bir toplantıdan önce dene
 
 1. Bilgisayarda Teams toplantısını tarayıcıdan başlat, kulaklığı tak ve çeviriyi başlat.

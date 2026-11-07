@@ -280,6 +280,8 @@ export class Overlay {
       this.outLive,
     );
     this.body.append(this.incomingSection, this.outgoingSection);
+    // A video or radio tab has nothing of mine to translate.
+    if (this.hello.media) this.outgoingSection.hidden = true;
   }
 
   buildDiagnostic() {

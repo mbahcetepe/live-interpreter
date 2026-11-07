@@ -38,6 +38,10 @@ export function platformForUrl(url) {
 
 export const isSupportedUrl = (url) => platformForUrl(url) !== null;
 
+// Any other web page (a video, a radio stream): its sound can be translated into
+// subtitles or speech, with nothing sent back into it.
+export const isMediaUrl = (url) => /^https?:\/\//.test(url || '') && !isSupportedUrl(url);
+
 // chrome.tabs.query patterns for every supported site.
 export const URL_PATTERNS = PLATFORMS.flatMap((p) => p.prefixes.map((prefix) => `${prefix}*`));
 

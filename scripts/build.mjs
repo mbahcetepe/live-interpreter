@@ -57,6 +57,8 @@ async function copyStatic() {
     // a real install asks for each server's address from the settings page instead.
     const manifest = JSON.parse(await readFile(path.join(dist, 'manifest.json'), 'utf8'));
     manifest.host_permissions.push('http://127.0.0.1/*');
+    // The stand-in video page; a real install reaches such a tab through the click (activeTab).
+    manifest.host_permissions.push('https://media.test/*');
     await writeFile(path.join(dist, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   }
   await cp(path.join(src, 'offscreen/offscreen.html'), path.join(dist, 'offscreen.html'));

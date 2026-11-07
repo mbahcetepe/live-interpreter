@@ -2,7 +2,7 @@ import { loadSettings, saveSettings, missingKeys, missingServers, isFreeTranslat
 import { localPairs, localTranslationState, prepareLocalTranslation } from '../shared/local-translation.js';
 import { formatUsage } from '../shared/usage.js';
 import { setLanguage, t, applyI18n, languageLabel, joinNames, locale } from '../shared/i18n.js';
-import { isSupportedUrl } from '../shared/platforms.js';
+import { isSupportedUrl, isMediaUrl } from '../shared/platforms.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -37,6 +37,9 @@ function notice(text, { bad = false, action } = {}) {
 
 // Google Meet or Teams on the web (src/shared/platforms.js).
 const isMeet = () => isSupportedUrl(tab?.url);
+// Any other web page: its sound (a video, a radio) is translated, nothing goes back into it.
+const isMedia = () => isMediaUrl(tab?.url);
+const canStart = () => isMeet() || isMedia();
 
 function render() {
   const running = state.status === 'running' && state.tabId === tab?.id;
@@ -49,22 +52,28 @@ function render() {
   const servers = missingServers(settings);
   const toSettings = { label: t('popup.openSettings'), run: () => chrome.runtime.openOptionsPage() };
   if (state.status === 'error' && state.error) notice(state.error, { bad: true });
-  else if (!isMeet()) notice(t('popup.openMeet'));
+  else if (!canStart()) notice(t('popup.openMeet'));
   else if (missing.length && !running) notice(t('popup.keysMissing', { names: joinNames(missing) }), { action: toSettings });
   else if (servers.length && !running) notice(t('err.serverMissing', { names: joinNames(servers.map((id) => t(`server.${id}`))) }), { action: toSettings });
   else if (elsewhere) notice(t('popup.elsewhere'));
+  else if (isMedia() && !running) notice(t('popup.mediaHint'));
   else notice('');
 
+  // A video tab has only one direction, and no clone, recording or call test.
+  const media = isMedia();
+  $('outgoing').closest('.field').hidden = media;
+  $('incoming').querySelector('[data-value="off"]').hidden = media;
+
   // The local speech server cannot clone a voice.
-  $('consentRow').hidden = !settings.offerTheirClone || settings.incomingMode !== 'voice' || isLocalSpeech(settings);
+  $('consentRow').hidden = media || !settings.offerTheirClone || settings.incomingMode !== 'voice' || isLocalSpeech(settings);
   // A recording has to be chosen before the start: the tab picture is captured then.
-  $('recordRow').hidden = running || busy;
+  $('recordRow').hidden = running || busy || media;
 
   const primary = $('primary');
-  primary.disabled = busy || !isMeet() || (!running && (missing.length > 0 || servers.length > 0));
-  primary.textContent = busy ? t('popup.starting') : running ? (diagnostic ? t('popup.endTest') : t('popup.stop')) : t('popup.start');
+  primary.disabled = busy || !canStart() || (!running && (missing.length > 0 || servers.length > 0));
+  primary.textContent = busy ? t('popup.starting') : running ? (diagnostic ? t('popup.endTest') : t('popup.stop')) : media ? t('popup.startMedia') : t('popup.start');
   primary.classList.toggle('stop', running);
-  $('test').hidden = running;
+  $('test').hidden = running || media;
   $('test').disabled = busy || !isMeet();
   $('chime').hidden = !running;
 
@@ -106,7 +115,9 @@ async function start(mode) {
     const options =
       mode === 'diagnostic'
         ? { mode }
-        : { incomingMode: settings.incomingMode, outgoingMode: settings.outgoingMode, cloneConsent: $('consent').checked, record: $('record').checked };
+        : isMedia()
+          ? { mode: 'media', incomingMode: settings.incomingMode === 'off' ? 'text' : settings.incomingMode }
+          : { incomingMode: settings.incomingMode, outgoingMode: settings.outgoingMode, cloneConsent: $('consent').checked, record: $('record').checked };
     state = { ...state, status: 'starting' };
     render();
     const reply = await chrome.runtime.sendMessage({ type: 'start', tabId: tab.id, streamId, options });
@@ -127,7 +138,7 @@ function applyLanguage(code) {
   const mine = languageLabel(settings.myLanguage);
   const theirs = languageLabel(settings.theirLanguage);
   $('pair').textContent = `${theirs} ↔ ${mine}`;
-  $('inLabel').textContent = t('popup.inLabel', { from: theirs, to: mine });
+  $('inLabel').textContent = isMedia() ? t('popup.mediaLabel', { from: theirs, to: mine }) : t('popup.inLabel', { from: theirs, to: mine });
   $('outLabel').textContent = t('popup.outLabel', { from: mine, to: theirs });
   setSeg('incoming', settings.incomingMode);
   setSeg('outgoing', settings.outgoingMode);

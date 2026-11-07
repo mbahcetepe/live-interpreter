@@ -33,6 +33,7 @@ Any two of 20 languages, both ways. They speak English and you hear Turkish; you
 - Your translated voice goes into the call in place of your microphone. Teams keeps working as usual, and muting in Teams stops everything that would reach the call.
 - If Claude fails on a sentence (overloaded, rate limited, out of credit, unreachable), the free translation chain translates it instead, so the sentence is not lost.
 - Translation on your own **Ollama** server (on this computer, the local network or Tailscale), with an optional second server, then Claude and free translation behind it. See [Your own servers](#your-own-servers).
+- **Any other tab too** (YouTube, X, an online radio): open it, click the extension and press **Translate this tab**. Its sound becomes subtitles low in the page (also in YouTube's full screen), or a spoken translation over the original turned down. Only that tab is reached, and only after your click; nothing is sent back into it.
 - Speech recognition and voices on your own **speech server** instead of ElevenLabs: free, and the audio stays on your network. See [speech-server/README.md](speech-server/README.md).
 - A mode for each direction: spoken translation, subtitles only (no speech credits used) or off, switchable mid-call from the popup or the panel on the page.
 - In voice mode you hear only the translation; their own voice is muted. In subtitles-only mode and with translation off you hear them normally.

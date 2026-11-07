@@ -117,6 +117,13 @@ test('a server that is down rests for a while; a missing model for the whole cal
   assert.equal(ollamaRestMs(new OllamaError('x', { kind: 'http', status: 500 })), 15_000);
 });
 
+test('a working second server hides a warning about the backup behind it', async () => {
+  const ok = { model: 'm', update() {}, async verify() { return []; }, async *translate() {} };
+  const secondWithUnreadyFree = { update() {}, async verify() { return [{ id: 'backup', key: 'warn.noBackup' }]; }, async *translate() {} };
+  const chain = new FallbackTranslator({ primary: ok, backup: secondWithUnreadyFree, requirePrimary: false });
+  assert.deepEqual(await chain.verify(), []);
+});
+
 test('an Ollama server that is down at the start lets the backup carry the call', async () => {
   const down = { model: 'm', update() {}, async verify() { throw new OllamaError('down', { kind: 'network' }); }, async *translate() { throw new Error('should rest'); } };
   const backup = { calls: 0, update() {}, async verify() { return []; }, async *translate() { this.calls += 1; yield 'Selam.'; } };

@@ -24,7 +24,7 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["tabCapture", "offscreen", "storage", "activeTab", "declarativeNetRequestWithHostAccess"],
+  "permissions": ["tabCapture", "offscreen", "storage", "activeTab", "scripting", "declarativeNetRequestWithHostAccess"],
   "optional_host_permissions": ["http://*/*", "https://*/*"],
   "host_permissions": [
     "https://meet.google.com/*",

@@ -105,6 +105,20 @@ When the meeting ends the translation stops by itself 30 seconds after the last 
 
 ---
 
+## Video and radio tabs (YouTube, X, online radio)
+
+The sound of a tab that is not a call can be translated too:
+
+1. Open the video or the radio and start it.
+2. On that tab click the extension icon. The window shows "This tab's sound".
+3. Choose **Subtitles only** or **Voice translation** and press **Translate this tab** (shortcut: Alt + Shift + T).
+
+- The translation shows as subtitles low in the page, also in YouTube's full screen.
+- With voice translation the original is turned down while the translation speaks and comes back up between sentences.
+- The spoken language is **their language** from the settings, the translation goes into **my language**.
+- The extension reaches only the tab you clicked on and sends nothing into it. Moving to another video on the same site keeps translating.
+- The translation comes 1–3 s behind the speech. With fast, continuous speech, voice translation shortens what it says to keep up.
+
 ## Try it before an important meeting
 
 1. Start a Teams meeting in the browser on your computer, put on headphones and start the translation.

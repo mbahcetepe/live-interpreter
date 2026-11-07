@@ -33,7 +33,8 @@ const KEEP = 2;
 const FADE_MS = 8000;
 const PLATFORM = platformForUrl(location.href);
 const ABOVE_CONTROLS = PLATFORM?.subtitleBottom ?? 104;
-const CAPTIONS = (PLATFORM?.captionSelectors ?? ['[role="region"][aria-label*="aption" i]']).join(', ');
+// On other sites (a video tab): a generic caption region, and YouTube's own captions.
+const CAPTIONS = (PLATFORM?.captionSelectors ?? ['[role="region"][aria-label*="aption" i]', '.ytp-caption-window-bottom .captions-text']).join(', ');
 
 export class SubtitleBar {
   // panelBox: where the panel is (its shadow root is closed, so it has to be asked).
@@ -52,6 +53,16 @@ export class SubtitleBar {
     this.lines = [];
     this.enabled = true;
     this.fadeTimer = 0;
+    // In full screen only the full-screen element is shown (YouTube's player, for
+    // example), so the subtitles move into it and back out afterwards. A bare <video>
+    // cannot hold them; they stay where they are then.
+    this.onFullscreen = () => {
+      const full = document.fullscreenElement;
+      const into = full && !(full instanceof HTMLVideoElement) && !(full instanceof HTMLIFrameElement) ? full : document.body;
+      if (this.host.parentNode !== into) into.append(this.host);
+      this.place();
+    };
+    document.addEventListener('fullscreenchange', this.onFullscreen);
   }
 
   setEnabled(on) {
@@ -121,6 +132,7 @@ export class SubtitleBar {
 
   destroy() {
     clearTimeout(this.fadeTimer);
+    document.removeEventListener('fullscreenchange', this.onFullscreen);
     this.host.remove();
   }
 }

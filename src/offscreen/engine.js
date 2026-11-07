@@ -81,6 +81,9 @@ function translationSetup(s) {
   return ['ollama', serverBase(s.ollamaUrl), s.ollamaModel, serverBase(s.ollamaBackupUrl), s.ollamaBackupModel, Boolean(s.anthropicKey)].join('|');
 }
 
+// How loud a video stays while its spoken translation plays.
+const MEDIA_DUCK = 0.2;
+
 const MUTE_IDLE_MS = 20000;
 const START_TIMEOUT_MS = 20000;
 // After the call has been joined, this long without a connected call (left, or kicked
@@ -160,8 +163,11 @@ class Session {
     this.streamId = streamId;
     this.settings = settings;
     this.diagnostic = options.mode === 'diagnostic';
+    // A video, radio or any other tab: only its sound is translated, with no microphone.
+    this.media = options.mode === 'media';
     this.incomingMode = this.diagnostic ? 'off' : options.incomingMode || settings.incomingMode;
-    this.outgoingMode = this.diagnostic ? 'off' : options.outgoingMode || settings.outgoingMode;
+    if (this.media && this.incomingMode === 'off') this.incomingMode = 'text';
+    this.outgoingMode = this.diagnostic || this.media ? 'off' : options.outgoingMode || settings.outgoingMode;
     this.cloneConsent = Boolean(options.cloneConsent);
     this.recordRequested = Boolean(options.record);
     this.tabPort = null;
@@ -220,7 +226,7 @@ class Session {
     this.monitorGain.connect(this.ctx.destination);
     this.monitorPlayer = new PcmScheduler(this.ctx, this.monitorGain);
 
-    await this.openMic();
+    if (!this.media) await this.openMic();
     if (!this.diagnostic) await this.startTranslation();
     if (this.recordRequested) this.startRecording();
 
@@ -450,7 +456,8 @@ class Session {
     if (!pool.length) throw new UserError(t('err.noVoices'), 'voices');
     if (!this.myVoiceId || !exists(this.myVoiceId)) {
       this.myVoiceId = pool[0].voice_id;
-      this.warn('my-voice', 'warn.myVoice');
+      // A video tab never speaks in my voice.
+      if (!this.media) this.warn('my-voice', 'warn.myVoice');
     }
     if (!this.theirVoiceId || !exists(this.theirVoiceId)) this.theirVoiceId = (pool[1] || pool[0]).voice_id;
   }
@@ -619,6 +626,8 @@ class Session {
 
   originalLevel(playing) {
     if (this.incomingMode !== 'voice') return 1;
+    // A video stays audible under its spoken translation, and at full level between.
+    if (this.media) return playing ? MEDIA_DUCK : 1;
     return playing ? this.settings.duckVolume : this.settings.originalVolume;
   }
 
@@ -654,9 +663,10 @@ class Session {
       theirLanguage: this.settings.theirLanguage,
       incomingMode: this.incomingMode,
       outgoingMode: this.outgoingMode,
-      offerClone: this.settings.offerTheirClone && !this.diagnostic && !this.speech.local,
-      subtitleBar: this.settings.subtitleBar && !this.diagnostic,
+      offerClone: this.settings.offerTheirClone && !this.diagnostic && !this.speech.local && !this.media,
+      subtitleBar: (this.settings.subtitleBar || this.media) && !this.diagnostic,
       cloneConsent: this.cloneConsent,
+      media: this.media,
     });
     this.syncPageActivation();
     this.postTab({ type: 'clone', clone: this.clone });

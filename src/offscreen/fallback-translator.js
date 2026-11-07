@@ -41,7 +41,8 @@ export class FallbackTranslator {
     }
     const [primary, backup] = await Promise.allSettled([this.primary.verify(), this.backup.verify()]);
     if (primary.status === 'fulfilled') {
-      const backupNotes = backup.status === 'fulfilled' ? backup.value || [] : [{ id: 'backup', key: 'warn.noBackup' }];
+      // A working backup is enough: whether the one behind it is ready is not worth a warning.
+      const backupNotes = backup.status === 'fulfilled' ? (backup.value || []).filter((n) => n.id !== 'backup') : [{ id: 'backup', key: 'warn.noBackup' }];
       return [...(primary.value || []), ...backupNotes];
     }
     // The primary is down: it rests and the backup carries the call, if it can.

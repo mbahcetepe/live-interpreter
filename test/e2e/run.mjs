@@ -377,6 +377,68 @@ async function ollamaTranslationTest() {
   }
 }
 
+// A video page (not a call): its sound becomes subtitles, or speech over a quieter original.
+async function mediaTest() {
+  console.log('\n== A video tab (not a call): subtitles and voice over ==');
+  const mock = await startMockApi({
+    cert: readFileSync(path.join(fixtures, 'mock-cert.pem')),
+    key: readFileSync(path.join(fixtures, 'mock-key.pem')),
+  });
+  const env = await launch({ micWav: path.join(fixtures, 'turkish.wav'), remoteWav: path.join(fixtures, 'english.wav'), proxyPort: mock.port });
+  const { context, control, worker } = env;
+  const setSettings = (patch) =>
+    control.evaluate(async (p) => {
+      const { settings } = await chrome.storage.local.get('settings');
+      await chrome.storage.local.set({ settings: { ...(settings || {}), ...p } });
+    }, patch);
+  try {
+    await setSettings({ elevenLabsKey: 'mock-el', anthropicKey: 'mock-an', claudeModel: 'claude-opus-5-5', speechProvider: 'elevenlabs', subtitleBar: true, uiLanguage: 'en' });
+    await context.route('https://media.test/**', (route) => {
+      const url = new URL(route.request().url());
+      if (url.pathname === '/talk.wav') return route.fulfill({ path: path.join(fixtures, 'english.wav'), contentType: 'audio/wav' });
+      return route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>A talk</title><body><div id="player"><audio id="a" src="/talk.wav" autoplay loop></audio></div></body>' });
+    });
+    const video = await context.newPage();
+    const pageErrors = [];
+    video.on('pageerror', (err) => pageErrors.push(err.message));
+    await video.goto('https://media.test/watch?v=1');
+    await video.evaluate(() => document.getElementById('a').play().catch(() => {}));
+    await video.bringToFront();
+    const tabId = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://media.test/*' }))[0].id);
+
+    const start = await send(control, { type: 'start', tabId, options: { mode: 'media', incomingMode: 'text' } });
+    check('a video tab can be translated', start?.ok === true, start?.error);
+    if (!start?.ok) return;
+    const subtitles = () => video.evaluate(() => document.getElementById('meet-tercuman-subtitles')?.shadowRoot?.textContent || '');
+    const shown = await waitFor(async () => (await subtitles()).includes('Merhaba, bugün görüşmeye katıldığınız için teşekkürler.'), 30000, 300);
+    check('its sound shows as Turkish subtitles on the page', shown, (await subtitles()).slice(0, 120));
+    const status = (await sessionState(control))?.engine;
+    check('no microphone is opened and nothing of mine is translated', status?.stt?.out === 'off' && status?.outgoingMode === 'off', JSON.stringify(status?.stt));
+    check('subtitles alone ask for no speech', mock.stats.tts.length === 0, `${mock.stats.tts.length} requests`);
+
+    const spokenBefore = mock.stats.tts.length;
+    await send(control, { type: 'options', options: { incomingMode: 'voice' } });
+    const spoken = await waitFor(() => mock.stats.tts.length > spokenBefore, 30000, 300);
+    check('voice translation speaks over it', spoken, `${mock.stats.tts.length - spokenBefore} requests`);
+
+    // A video site moves to the next video without leaving the tab.
+    await video.evaluate(() => history.pushState({}, '', '/watch?v=2'));
+    await sleep(1500);
+    check('moving to another video on the same site keeps translating', (await sessionState(control))?.status === 'running');
+
+    await send(control, { type: 'stop' });
+    const again = await send(control, { type: 'start', tabId, options: { mode: 'media', incomingMode: 'text' } });
+    const hosts = await waitFor(() => video.evaluate(() => document.querySelectorAll('#meet-tercuman-subtitles').length), 10000, 300);
+    check('starting again does not put the subtitles in twice', again?.ok === true && hosts === 1, `ok ${again?.ok}, ${hosts} subtitle bars`);
+    await send(control, { type: 'stop' });
+    check('no script errors on the video page', pageErrors.length === 0, pageErrors.join(' | '));
+  } finally {
+    await env.context.close();
+    await rm(env.userDataDir, { recursive: true, force: true });
+    mock.close();
+  }
+}
+
 // Everything on the person's own servers: the real speech server (speech-server/, with
 // its stand-in engines) for recognition and speech, and a stand-in Ollama for translation.
 async function startSpeechServer() {
@@ -579,6 +641,7 @@ await mockTranslationTest();
 await freeTranslationTest();
 await ollamaTranslationTest();
 await localServersTest();
+await mediaTest();
 const env = loadEnv();
 // SKIP_REAL=1 runs only the keyless suites (no credits used).
 if (env.ELEVENLABS_API_KEY && !process.env.SKIP_REAL) {

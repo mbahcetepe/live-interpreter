@@ -4,7 +4,7 @@
 
 import { loadSettings, saveSettings, missingKeys, missingServers } from '../shared/settings.js';
 import { setLanguage, t, joinNames } from '../shared/i18n.js';
-import { isSupportedUrl } from '../shared/platforms.js';
+import { isSupportedUrl, isMediaUrl } from '../shared/platforms.js';
 import { isAllowed, cleanModes } from './message-policy.js';
 import { originRules } from '../shared/servers.js';
 
@@ -64,7 +64,8 @@ async function startSession({ tabId, streamId, options = {} }) {
     const tab = await chrome.tabs.get(tabId);
     const settings = await loadSettings();
     setLanguage(settings.uiLanguage);
-    if (!isSupportedUrl(tab.url)) throw new Error(t('err.notMeet'));
+    const media = options.mode === 'media';
+    if (media ? !isMediaUrl(tab.url) : !isSupportedUrl(tab.url)) throw new Error(t(media ? 'err.mediaTab' : 'err.notMeet'));
 
     if (options.mode !== 'diagnostic') {
       const missing = missingKeys(settings);
@@ -75,8 +76,12 @@ async function startSession({ tabId, streamId, options = {} }) {
 
     // The page hook is injected when Meet loads, so a tab opened before the extension
     // was installed (or reloaded) needs a refresh.
-    const ping = await chrome.tabs.sendMessage(tabId, { type: 'ping' }).catch(() => null);
-    if (!ping?.hook) throw new Error(t('err.reloadMeet'));
+    if (media) {
+      await ensureBridge(tabId);
+    } else {
+      const ping = await chrome.tabs.sendMessage(tabId, { type: 'ping' }).catch(() => null);
+      if (!ping?.hook) throw new Error(t('err.reloadMeet'));
+    }
 
     const current = await getState();
     if (current.status === 'running' || current.status === 'starting') await stopSession('restart');
@@ -100,6 +105,18 @@ async function startSession({ tabId, streamId, options = {} }) {
     throw err;
   } finally {
     starting = null;
+  }
+}
+
+// A video, radio or any other web page: the panel and the subtitles are put into that tab
+// only now, after the click on the extension (activeTab), and only once.
+async function ensureBridge(tabId) {
+  const ping = await chrome.tabs.sendMessage(tabId, { type: 'ping' }).catch(() => null);
+  if (ping) return;
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['bridge.js'] });
+  } catch (err) {
+    throw new Error(t('err.mediaInject', { message: err?.message || String(err) }));
   }
 }
 
@@ -227,7 +244,8 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 chrome.tabs.onUpdated.addListener(async (tabId, _info, tab) => {
   const state = await getState();
   if (state.tabId !== tabId || state.status !== 'running') return;
-  if (!isSupportedUrl(tab.url)) stopSession('left-meet');
+  // A video site changes its address from one video to the next without leaving the tab.
+  if (state.mode === 'media' ? !/^https?:\/\//.test(tab.url || 'https://') : !isSupportedUrl(tab.url)) stopSession('left-meet');
 });
 
 // Keyboard shortcut: also counts as invoking the extension, which tab capture needs.
@@ -239,5 +257,5 @@ chrome.commands.onCommand.addListener(async (command, tab) => {
     return;
   }
   if (!tab?.id) return;
-  startSession({ tabId: tab.id, options: {} }).catch((err) => console.warn('[tercuman]', err.message));
+  startSession({ tabId: tab.id, options: isMediaUrl(tab.url) ? { mode: 'media' } : {} }).catch((err) => console.warn('[tercuman]', err.message));
 });
