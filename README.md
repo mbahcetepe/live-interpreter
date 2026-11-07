@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/logo.png" alt="" width="112" height="112">
+
 # Live Interpreter
 
 ### Live speech translation for Microsoft Teams on the web, Google Meet and any video or radio tab
