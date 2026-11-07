@@ -21,15 +21,14 @@ const CSS = `
 }
 .line .tr { font-size: 24px; line-height: 1.3; font-weight: 500; }
 .line .src { font-size: 13px; line-height: 1.35; color: #bdc1c6; margin-top: 2px; }
-.line.old { opacity: 0.6; }
-.line.old .tr { font-size: 18px; }
 @media (max-width: 760px) {
   .line .tr { font-size: 18px; }
-  .line.old .tr { font-size: 15px; }
 }
 `;
 
-const KEEP = 2;
+// Only the sentence being said: the earlier ones are in the panel's transcript, and an
+// older line above the new one gets in the way of the picture.
+const KEEP = 1;
 const FADE_MS = 8000;
 const PLATFORM = platformForUrl(location.href);
 const ABOVE_CONTROLS = PLATFORM?.subtitleBottom ?? 104;
@@ -90,7 +89,6 @@ export class SubtitleBar {
     }
     line.tr.textContent = msg.translation;
     line.src.textContent = msg.source || '';
-    this.lines.forEach((l, i) => l.el.classList.toggle('old', i < this.lines.length - 1));
     this.place();
     this.bar.classList.remove('hidden');
     clearTimeout(this.fadeTimer);
