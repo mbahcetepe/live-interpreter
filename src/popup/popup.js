@@ -1,4 +1,4 @@
-import { loadSettings, saveSettings, missingKeys, missingServers, isFreeTranslation } from '../shared/settings.js';
+import { loadSettings, saveSettings, missingKeys, missingServers, isFreeTranslation, isLocalSpeech } from '../shared/settings.js';
 import { localPairs, localTranslationState, prepareLocalTranslation } from '../shared/local-translation.js';
 import { formatUsage } from '../shared/usage.js';
 import { setLanguage, t, applyI18n, languageLabel, joinNames, locale } from '../shared/i18n.js';
@@ -55,7 +55,8 @@ function render() {
   else if (elsewhere) notice(t('popup.elsewhere'));
   else notice('');
 
-  $('consentRow').hidden = !settings.offerTheirClone || settings.incomingMode !== 'voice';
+  // The local speech server cannot clone a voice.
+  $('consentRow').hidden = !settings.offerTheirClone || settings.incomingMode !== 'voice' || isLocalSpeech(settings);
   // A recording has to be chosen before the start: the tab picture is captured then.
   $('recordRow').hidden = running || busy;
 

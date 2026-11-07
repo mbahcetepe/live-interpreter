@@ -12,7 +12,7 @@
 import { isFreeTranslation, isOllamaTranslation, missingKeys, missingServers, parseKeyterms } from '../shared/settings.js';
 import { serverBase } from '../shared/servers.js';
 import { OllamaTranslator, ollamaRestMs } from './ollama-translator.js';
-import { listVoices, createVoiceClone, deleteVoice, describeElevenLabsError } from '../shared/elevenlabs.js';
+import { listVoices, createVoiceClone, deleteVoice, describeElevenLabsError, speechAccount } from '../shared/elevenlabs.js';
 import { PcmScheduler, testChime } from '../shared/scheduler.js';
 import { int16ToBase64 } from '../shared/pcm.js';
 import { EchoGuard, EarlySentences, isOnlyPunctuation } from '../shared/text.js';
@@ -168,7 +168,9 @@ class Session {
     this.page = { muted: true, senders: 0, micLabel: '', ctxState: 'unknown', backlog: 0, playing: false };
     this.levels = { tab: 0, mic: 0 };
     this.stt = { in: 'off', out: 'off' };
-    this.usage = new Usage();
+    // ElevenLabs, or the person's own local speech server (speech-server/).
+    this.speech = speechAccount(settings);
+    this.usage = new Usage({ freeSpeech: this.speech.local });
     this.latencies = [];
     this.warnings = new Map();
     this.clone = { state: 'off' };
@@ -438,9 +440,9 @@ class Session {
     this.theirVoiceId = s.theirVoiceId;
     let voices;
     try {
-      voices = await listVoices(s.elevenLabsKey);
+      voices = await listVoices(this.speech);
     } catch (err) {
-      throw new UserError(describeElevenLabsError(err), 'elevenlabs');
+      throw new UserError(describeElevenLabsError(err, this.speech), 'elevenlabs');
     }
     const exists = (id) => voices.some((v) => v.voice_id === id);
     const premade = voices.filter((v) => v.category === 'premade');
@@ -456,7 +458,7 @@ class Session {
   createStt(dir, languageCode, keyterms) {
     return new ScribeRealtime({
       name: dir === 'in' ? 'stt-in' : 'stt-out',
-      apiKey: this.settings.elevenLabsKey,
+      apiKey: this.speech,
       languageCode,
       vadSilenceSecs: this.settings.vadSilenceSecs,
       keyterms,
@@ -553,7 +555,7 @@ class Session {
     const speed = backlog > 5 ? 1.2 : backlog > 2.5 ? 1.1 : 1;
     this.usage.addTts(item.text.length, s.ttsModel);
     return synthesize({
-      apiKey: s.elevenLabsKey,
+      apiKey: this.speech,
       voiceId,
       text: item.text,
       modelId: s.ttsModel,
@@ -607,7 +609,7 @@ class Session {
   // The translation stays readable; the line only says it could not be spoken.
   onSpeechError(dir, item, err) {
     log('error', `speech ${dir}`, err);
-    this.caption(dir, { id: item.segment.id, phase: 'speech-error', error: t('speech.failed', { error: describeElevenLabsError(err) }) });
+    this.caption(dir, { id: item.segment.id, phase: 'speech-error', error: t('speech.failed', { error: describeElevenLabsError(err, this.speech) }) });
   }
 
   caption(dir, event) {
@@ -652,7 +654,7 @@ class Session {
       theirLanguage: this.settings.theirLanguage,
       incomingMode: this.incomingMode,
       outgoingMode: this.outgoingMode,
-      offerClone: this.settings.offerTheirClone && !this.diagnostic,
+      offerClone: this.settings.offerTheirClone && !this.diagnostic && !this.speech.local,
       subtitleBar: this.settings.subtitleBar && !this.diagnostic,
       cloneConsent: this.cloneConsent,
     });
@@ -683,7 +685,7 @@ class Session {
       const url = debugSinkUrl(m.port);
       if (url && !this.debugSink) {
         this.debugSink = new DebugSink(url);
-        this.debugSink.event({ kind: 'start', settings: { ...this.settings, elevenLabsKey: undefined, anthropicKey: undefined, deeplKey: undefined, mistralKey: undefined, groqKey: undefined }, recording: Boolean(this.recorder) });
+        this.debugSink.event({ kind: 'start', settings: { ...this.settings, elevenLabsKey: undefined, anthropicKey: undefined, deeplKey: undefined, mistralKey: undefined, groqKey: undefined, localSpeechKey: undefined }, recording: Boolean(this.recorder) });
         log('info', `debug copies go to ${url}`);
         // A recording that began before this carries its file header in the chunks already saved.
         const rec = this.recording;
@@ -808,7 +810,10 @@ class Session {
       });
     }
     // A new ElevenLabs key is used from the next connection on (speech takes it right away).
-    for (const stt of [this.sttIn, this.sttOut]) if (stt) stt.apiKey = next.elevenLabsKey;
+    const speechBefore = this.speech;
+    this.speech = speechAccount(next);
+    this.usage.freeSpeech = this.speech.local;
+    for (const stt of [this.sttIn, this.sttOut]) if (stt) stt.apiKey = this.speech;
     const pairChanged = next.myLanguage !== prev.myLanguage || next.theirLanguage !== prev.theirLanguage;
     if (pairChanged && this.incoming) {
       // A new language pair mid-call: both sides are heard and translated in it from now on.
@@ -816,7 +821,7 @@ class Session {
       Object.assign(this.outgoing, { from: next.myLanguage, to: next.theirLanguage });
       this.postTab({ type: 'pair', myLanguage: next.myLanguage, theirLanguage: next.theirLanguage });
     }
-    if (this.sttIn && (pairChanged || next.vadSilenceSecs !== prev.vadSilenceSecs || next.keyterms !== prev.keyterms)) {
+    if (this.sttIn && (pairChanged || speechBefore.base !== this.speech.base || next.vadSilenceSecs !== prev.vadSilenceSecs || next.keyterms !== prev.keyterms)) {
       // Speech recognition takes these when it connects. Typing in the glossary saves on
       // every pause, so the new connections wait until the typing is over.
       clearTimeout(this.sttRestartTimer);
@@ -836,7 +841,7 @@ class Session {
 
   startClone() {
     if (this.diagnostic || this.incomingMode !== 'voice' || this.theirCloneId || this.collector) return;
-    if (!this.settings.offerTheirClone || this.clone.state === 'creating') return;
+    if (!this.settings.offerTheirClone || this.speech.local || this.clone.state === 'creating') return;
     this.collector = new CloneCollector({ targetSeconds: this.settings.cloneSeconds });
     this.tabNode.port.postMessage({ type: 'collect-raw', on: true });
     this.clone = { state: 'collecting', seconds: 0, target: this.settings.cloneSeconds };
@@ -869,13 +874,13 @@ class Session {
     this.postTab({ type: 'clone', clone: this.clone });
     try {
       const stamp = new Date().toLocaleString(locale());
-      const result = await createVoiceClone(this.settings.elevenLabsKey, {
+      const result = await createVoiceClone(this.speech, {
         name: t('clone.name', { stamp }),
         files: [{ blob: collector.toWavBlob(), filename: 'meet-sample.wav' }],
         description: "Instant clone made by Meet Tercüman during a call, with the participant's consent.",
       });
       if (this.stopped) {
-        if (this.settings.deleteCloneAfter) deleteVoice(this.settings.elevenLabsKey, result.voice_id).catch(() => {});
+        if (this.settings.deleteCloneAfter) deleteVoice(this.speech, result.voice_id).catch(() => {});
         return;
       }
       this.theirCloneId = result.voice_id;
@@ -1035,7 +1040,7 @@ class Session {
     this.monitorPlayer?.flush();
     await this.ctx?.close().catch(() => {});
     if (this.theirCloneId && this.settings.deleteCloneAfter) {
-      await withTimeout(deleteVoice(this.settings.elevenLabsKey, this.theirCloneId), 4000).catch((err) => log('warn', 'clone delete', err));
+      await withTimeout(deleteVoice(this.speech, this.theirCloneId), 4000).catch((err) => log('warn', 'clone delete', err));
     }
     if (recording) chrome.runtime.sendMessage({ type: 'recording-ready', id: recording.id }).catch(() => {});
   }

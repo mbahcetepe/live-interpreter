@@ -60,6 +60,13 @@ The settings page opens by itself. Pin the extension (puzzle piece → pin).
 
 Click **Test keys**; green text means you are set.
 
+### Optional: your own servers
+
+- **Ollama for translation.** Choose **Ollama** as the translation model. Enter the server's address (for example `100.65.147.84`; port 11434 is added when none is given) and a model (for example `gemma4:12b`), then press **Test and allow** and accept the browser's prompt for that address. No `OLLAMA_ORIGINS` setting is needed on the server. A **second server** on another computer can be added. If Ollama does not answer, the second server, then Claude (Haiku, if a key is set) and then free translation take over. The computer you join the meeting from must be on the same network as the server (Tailscale, for example).
+- **Your own speech server instead of ElevenLabs.** On an Ubuntu computer with an NVIDIA GPU run `cd speech-server && sudo ./install-ubuntu.sh` ([details](speech-server/README.md)); it prints the address and the key at the end. In the settings, under **1. API keys**, set **Speech recognition and voices** to **My own speech server**, enter the address and key, and press **Test and allow**. No ElevenLabs key is needed. There is no voice cloning in this mode, and the delay is a little longer.
+
+With both, nothing of the call leaves your own computers.
+
 ## 5. Microphone, languages, voice
 
 - Click **Allow microphone** and accept the browser's prompt. Pick the microphone you use in Teams, or leave "Same as the call".

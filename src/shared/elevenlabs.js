@@ -1,10 +1,29 @@
 import { t } from './i18n.js';
+import { serverBase } from './servers.js';
 
 // Thin client for the ElevenLabs REST endpoints the extension uses. Extension pages
 // hold host permission for api.elevenlabs.io, so the API key travels in a header
 // straight from this browser to ElevenLabs and nowhere else.
 
 export const ELEVENLABS_API = 'https://api.elevenlabs.io';
+
+// Where speech recognition and speech come from: ElevenLabs, or the person's own local
+// speech server (speech-server/), which speaks the same API. Every function here takes
+// either such an account or a plain ElevenLabs key.
+export function speechAccount(settings) {
+  if (settings?.speechProvider === 'local') {
+    return { key: String(settings.localSpeechKey || '').trim(), base: serverBase(settings.localSpeechUrl, { defaultPort: '8765' }), local: true };
+  }
+  return { key: settings?.elevenLabsKey || '', base: ELEVENLABS_API, local: false };
+}
+
+function accountOf(apiKey) {
+  return typeof apiKey === 'string' || !apiKey ? { key: apiKey || '', base: ELEVENLABS_API, local: false } : apiKey;
+}
+
+export function realtimeUrl(apiKey) {
+  return `${accountOf(apiKey).base.replace(/^http/, 'ws')}/v1/speech-to-text/realtime`;
+}
 
 export class ElevenLabsError extends Error {
   constructor(status, body) {
@@ -41,9 +60,10 @@ export function isNetworkError(err) {
 }
 
 async function request(apiKey, path, init = {}) {
-  const res = await fetch(ELEVENLABS_API + path, {
+  const account = accountOf(apiKey);
+  const res = await fetch(account.base + path, {
     ...init,
-    headers: { 'xi-api-key': apiKey, ...(init.headers || {}) },
+    headers: { 'xi-api-key': account.key, ...(init.headers || {}) },
   });
   if (!res.ok) {
     let body = '';
@@ -99,7 +119,12 @@ export async function speechStream(
   });
 }
 
-export function describeElevenLabsError(err) {
+export function describeElevenLabsError(err, { local = false } = {}) {
+  if (local) {
+    if (isNetworkError(err)) return t('lsp.network');
+    if (err instanceof ElevenLabsError && err.status === 401) return t('lsp.key');
+    if (err instanceof ElevenLabsError && err.status === 501) return t('lsp.noClone');
+  }
   if (isNetworkError(err)) return t('el.network');
   if (err?.name === 'TimeoutError') return t('el.stalled');
   if (!(err instanceof ElevenLabsError)) return err?.message || String(err);

@@ -60,6 +60,13 @@ Ayarlar sayfası kendiliğinden açılır. Eklentiyi araç çubuğuna sabitle (y
 
 **Anahtarları test et** düğmesine bas; yeşil yazı çıkarsa tamamdır.
 
+### İsteğe bağlı: kendi sunucularınız
+
+- **Çeviri için Ollama.** **Çeviri modeli** olarak **Ollama**'yı seç. Sunucunun adresini (örneğin `100.65.147.84`; port yazılmazsa 11434 eklenir) ve modeli (örneğin `gemma4:12b`) gir, **Test et ve izin ver** düğmesine bas. Tarayıcı bu adrese erişim izni ister; izin ver. Sunucuda `OLLAMA_ORIGINS` ayarı gerekmez. İstersen **İkinci sunucu** alanına başka bir bilgisayardaki Ollama'yı ekle. Ollama yanıt vermezse sırayla ikinci sunucu, Claude (anahtar varsa Haiku) ve ücretsiz çeviri devralır. Toplantıyı yapacağın bilgisayar sunucuyla aynı ağda (örneğin Tailscale'de) olmalı.
+- **ElevenLabs yerine kendi ses sunucun.** NVIDIA ekran kartlı bir Ubuntu bilgisayarda `cd speech-server && sudo ./install-ubuntu.sh` çalıştır ([ayrıntılar](speech-server/README.md)). Betik sonunda adresi ve anahtarı yazar. Ayarlarda **1. API anahtarları** bölümünde **Ses tanıma ve sesler** alanını **Kendi ses sunucum** yap, adresi ve anahtarı gir, **Test et ve izin ver** düğmesine bas. ElevenLabs anahtarı gerekmez. Ses klonu bu modda yoktur, gecikme biraz artar.
+
+İkisi birlikte açıldığında görüşmenin hiçbir parçası senin bilgisayarlarının dışına çıkmaz.
+
 ## 5. Mikrofon, diller, ses
 
 - **Mikrofon iznini ver** düğmesine bas ve tarayıcının sorusuna izin ver. Teams'te kullandığın mikrofonu seç ya da "Görüşmeyle aynı" bırak.

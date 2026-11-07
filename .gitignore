@@ -8,3 +8,6 @@ test/api/out/
 .DS_Store
 test/meet/out/
 .claude/
+speech-server/**/__pycache__/
+speech-server/.pytest_cache/
+speech-server/voices/

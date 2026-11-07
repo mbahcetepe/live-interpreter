@@ -10,6 +10,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { startMockApi } from './mock-api.mjs';
 import { startMockOllama } from './mock-ollama.mjs';
 import {
@@ -376,6 +377,80 @@ async function ollamaTranslationTest() {
   }
 }
 
+// Everything on the person's own servers: the real speech server (speech-server/, with
+// its stand-in engines) for recognition and speech, and a stand-in Ollama for translation.
+async function startSpeechServer() {
+  const port = 18000 + Math.floor(Math.random() * 2000);
+  const python = process.platform === 'win32' ? 'python' : 'python3';
+  const child = spawn(python, [path.join(root, 'speech-server', 'server.py'), '--engine', 'fake', '--host', '127.0.0.1', '--port', String(port), '--key', 'e2e-key'], { stdio: 'ignore' });
+  const url = `http://127.0.0.1:${port}`;
+  const up = await waitFor(() => fetch(`${url}/health`).then((r) => r.ok, () => false), 20000, 250);
+  if (!up) {
+    child.kill();
+    throw new Error('the speech server did not start (is Python with fastapi and uvicorn installed?)');
+  }
+  return { url, close: () => child.kill() };
+}
+
+async function localServersTest() {
+  console.log('\n== Everything local: the speech server and a mock Ollama (no ElevenLabs, no Claude) ==');
+  const mock = await startMockApi({
+    cert: readFileSync(path.join(fixtures, 'mock-cert.pem')),
+    key: readFileSync(path.join(fixtures, 'mock-key.pem')),
+  });
+  const ollama = await startMockOllama();
+  let speech;
+  try {
+    speech = await startSpeechServer();
+  } catch (err) {
+    check('the local speech server starts', false, err.message);
+    mock.close();
+    ollama.close();
+    return;
+  }
+  const env = await launch({ micWav: path.join(fixtures, 'turkish.wav'), remoteWav: path.join(fixtures, 'english.wav'), proxyPort: mock.port });
+  const { control, meet, tabId } = env;
+  const setSettings = (patch) =>
+    control.evaluate(async (p) => {
+      const { settings } = await chrome.storage.local.get('settings');
+      await chrome.storage.local.set({ settings: { ...(settings || {}), ...p } });
+    }, patch);
+  try {
+    await setSettings({
+      elevenLabsKey: '', anthropicKey: '', deeplKey: '', mistralKey: '', groqKey: '',
+      claudeModel: 'ollama', ollamaUrl: ollama.url, ollamaModel: 'mock-gemma:12b',
+      speechProvider: 'local', localSpeechUrl: speech.url, localSpeechKey: 'wrong-key', myVoiceId: '', theirVoiceId: '',
+    });
+    const refused = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('a wrong speech server key stops the start with a clear reason', refused?.ok === false && /key|anahtar/i.test(refused?.error || ''), refused?.error);
+
+    await setSettings({ localSpeechKey: 'e2e-key' });
+    const start = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('translation starts with no ElevenLabs and no Anthropic key', start?.ok === true, start?.error);
+    if (!start?.ok) return;
+
+    const incoming = await waitFor(async () => done((await readCaptions(meet)).incoming), 40000, 300);
+    check('the local server hears the counterpart and Ollama translates it', incoming?.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.', JSON.stringify(incoming));
+    const outgoing = await waitFor(async () => done((await readCaptions(meet)).outgoing), 40000, 300);
+    check('the local server hears me and Ollama translates it', outgoing?.translation === 'Friday at three works for us.', JSON.stringify(outgoing));
+    const heard = await maxLevel(meet, 5000);
+    check('the far end receives my translated voice from the local server', heard > 0.01, `level ${heard.toFixed(3)}`);
+    const status = (await sessionState(control))?.engine;
+    check('the engine reported no error', !status?.error, status?.error || '');
+    check('nothing went to ElevenLabs or Claude', !mock.stats.requests.some((r) => /elevenlabs|anthropic/.test(r)), mock.stats.requests.slice(0, 5).join(', '));
+    check('the call costs nothing', status?.usage?.usd === 0, JSON.stringify(status?.usage));
+
+    await send(control, { type: 'stop' });
+    check('no script errors on the Meet page', env.pageErrors.length === 0, env.pageErrors.join(' | '));
+  } finally {
+    await env.context.close();
+    await rm(env.userDataDir, { recursive: true, force: true });
+    mock.close();
+    ollama.close();
+    speech.close();
+  }
+}
+
 // Real ElevenLabs (speech recognition and speech) through the extension, with Claude
 // mocked unless an Anthropic key is in .env too.
 async function realElevenLabsTest(keys) {
@@ -503,6 +578,7 @@ await recordingTest();
 await mockTranslationTest();
 await freeTranslationTest();
 await ollamaTranslationTest();
+await localServersTest();
 const env = loadEnv();
 // SKIP_REAL=1 runs only the keyless suites (no credits used).
 if (env.ELEVENLABS_API_KEY && !process.env.SKIP_REAL) {

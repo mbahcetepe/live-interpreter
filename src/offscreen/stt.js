@@ -1,8 +1,6 @@
-import { fetchScribeToken, ElevenLabsError } from '../shared/elevenlabs.js';
+import { fetchScribeToken, ElevenLabsError, realtimeUrl } from '../shared/elevenlabs.js';
 import { int16ToBase64 } from '../shared/pcm.js';
 import { words, lcsLength } from '../shared/text.js';
-
-const REALTIME_URL = 'wss://api.elevenlabs.io/v1/speech-to-text/realtime';
 
 // Server messages that end the session for good, need a fresh connection, or are only worth a log line.
 const FATAL = new Set(['auth_error', 'quota_exceeded', 'unaccepted_terms']);
@@ -112,7 +110,8 @@ export class ScribeRealtime {
       for (const term of this.keyterms) params.append('keyterms', term);
     }
 
-    const ws = new WebSocket(`${REALTIME_URL}?${params}`);
+    // apiKey is an ElevenLabs key or a speech account (ElevenLabs or the local server).
+    const ws = new WebSocket(`${realtimeUrl(this.apiKey)}?${params}`);
     this.ws = ws;
     this.ready = false;
     ws.onmessage = (event) => {

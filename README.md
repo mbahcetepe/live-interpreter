@@ -12,7 +12,9 @@ Any two of 20 languages, both ways. They speak English and you hear Turkish; you
   <tr><td><b>Languages</b></td><td>20, any two of them; English and Turkish by default</td></tr>
   <tr><td><b>Modes</b></td><td>Voice, subtitles only or off, for each direction</td></tr>
   <tr><td><b>Delay</b></td><td>About 2–3 s after each sentence ends</td></tr>
-  <tr><td><b>Backend</b></td><td>None</td></tr>
+  <tr><td><b>Translation</b></td><td>Claude, your own Ollama server, or free services</td></tr>
+  <tr><td><b>Speech</b></td><td>ElevenLabs, or your own speech server (faster-whisper + Piper)</td></tr>
+  <tr><td><b>Backend</b></td><td>None (your own servers, if you choose them)</td></tr>
   <tr><td><b>Interface</b></td><td>English or Turkish</td></tr>
 </table>
 
@@ -30,6 +32,8 @@ Any two of 20 languages, both ways. They speak English and you hear Turkish; you
 - Listens to the call through tab capture and to you through your microphone, transcribes both sides with ElevenLabs Scribe v2 Realtime, translates with Claude (or for free, see below) and speaks the result with ElevenLabs text to speech.
 - Your translated voice goes into the call in place of your microphone. Teams keeps working as usual, and muting in Teams stops everything that would reach the call.
 - If Claude fails on a sentence (overloaded, rate limited, out of credit, unreachable), the free translation chain translates it instead, so the sentence is not lost.
+- Translation on your own **Ollama** server (on this computer, the local network or Tailscale), with an optional second server, then Claude and free translation behind it. See [Your own servers](#your-own-servers).
+- Speech recognition and voices on your own **speech server** instead of ElevenLabs: free, and the audio stays on your network. See [speech-server/README.md](speech-server/README.md).
 - A mode for each direction: spoken translation, subtitles only (no speech credits used) or off, switchable mid-call from the popup or the panel on the page.
 - In voice mode you hear only the translation; their own voice is muted. In subtitles-only mode and with translation off you hear them normally.
 - Subtitles low in the call window, with the translation in large type and the original under it.
@@ -62,9 +66,28 @@ your microphone -> Scribe (your language)  -> Claude or free -> ElevenLabs -> th
 | `src/content/bridge.js` | Content script | Connects the page with the engine, shows the panel and the subtitle bar |
 | `src/offscreen/engine.js` | Offscreen document | Tab capture, microphone, speech recognition, translation, speech, voice clone, recording |
 | `src/offscreen/stt.js` | Offscreen document | Scribe v2 Realtime client: reconnects, keeps audio while reconnecting |
-| `src/offscreen/fallback-translator.js` | Offscreen document | Claude first, free translation when Claude fails |
+| `src/offscreen/fallback-translator.js` | Offscreen document | One translator in front of another: Ollama, a second Ollama, Claude, free |
+| `src/offscreen/ollama-translator.js` | Offscreen document | Translation on an Ollama server, streamed sentence by sentence |
+| `src/shared/servers.js` | Everywhere | Your own servers: addresses, access, the Origin header rule for Ollama |
+| `speech-server/` | Your computer (Python) | Local speech server: faster-whisper and Piper behind the ElevenLabs API the extension uses |
 | `src/offscreen/free-translator.js` | Offscreen document | Free translation: tries free services from the best down |
 | `src/background/service-worker.js` | Service worker | Starts and stops sessions, keeps state for the popup |
+
+---
+
+## Your own servers
+
+**Ollama for translation.** Choose **Ollama** as the translation model, enter the server's address (for example `100.65.147.84`; port 11434 is added) and a model, and press **Test and allow**: the browser asks once for access to that address. Measured on a desktop NVIDIA GPU over Tailscale, `gemma4:12b` and `gemma4:26b` translate a sentence in 0.3–0.6 s, faster than Claude. A second server (another computer) can stand behind it; then Claude Haiku (if a key is set) and free translation.
+
+Ollama refuses requests whose `Origin` header it does not know, and browsers send one with every POST. The extension removes that header from its own requests to the servers in its settings (a `declarativeNetRequest` rule limited to this extension as the initiator), so **no `OLLAMA_ORIGINS` setting is needed**. A web page's request to the same server still carries its origin and is refused.
+
+**Speech server instead of ElevenLabs.** On a computer with an NVIDIA GPU, `cd speech-server && sudo ./install-ubuntu.sh` installs faster-whisper (`large-v3-turbo`) and Piper with Turkish and English voices as a service on port 8765 and prints the key. In the settings choose **My own speech server**, enter the address and key, and press **Test and allow**. No voice cloning there; latency is a little higher than ElevenLabs. Details: [speech-server/README.md](speech-server/README.md).
+
+With both, nothing of the call leaves your own computers.
+
+```bash
+node test/ollama/live.mjs 100.65.147.84 gemma4:12b   # live check of an Ollama server through the extension
+```
 
 ---
 
@@ -81,7 +104,7 @@ Choose **Free** as the translation model in the settings and no Anthropic key is
 | 5 | Chrome's built-in translator | No limit, runs on your computer | Chrome 138 or newer on desktop (Brave and some other Chromium browsers may not have it) |
 
 - In Brave, add a free DeepL key: Chrome's built-in translator may be missing there.
-- Speech recognition and speech always use ElevenLabs, so an ElevenLabs key is always needed.
+- Speech recognition and speech use ElevenLabs (an ElevenLabs key) unless you run your own speech server.
 
 ---
 
@@ -89,7 +112,8 @@ Choose **Free** as the translation model in the settings and no Anthropic key is
 
 - Chrome 116 or newer, Edge or Brave
 - Node.js 18 or newer, to build the extension
-- An ElevenLabs API key (voice cloning needs a paid plan), and an Anthropic API key unless you choose free translation
+- An ElevenLabs API key (voice cloning needs a paid plan), or your own speech server instead
+- An Anthropic API key, unless you translate on your own Ollama server or for free
 - Headphones
 
 ---
@@ -131,7 +155,7 @@ npm run test:free        # live check of DeepL, Mistral and Groq free plans (key
 ## Security
 
 - No backend, no analytics and no remote code: everything ships inside the extension.
-- No API key is in the source code. Keys are typed into the settings page, kept in `chrome.storage.local` and sent only to the service they belong to: `api.elevenlabs.io`, `api.anthropic.com`, and DeepL, Mistral or Groq when you add their keys.
+- No API key is in the source code. Keys are typed into the settings page, kept in `chrome.storage.local` and sent only to the service they belong to: `api.elevenlabs.io`, `api.anthropic.com`, and DeepL, Mistral or Groq when you add their keys. Your own servers (Ollama, the speech server) are reached only at the addresses you enter, after the browser has asked you for access to each one.
 - The script inside the call page makes no network requests. Audio reaches it through a private `MessagePort`, offered only to the page's own origin and only until the hook answers.
 - What the call page reports (muted or not, its microphone) is reduced to known fields of the right type; anything unclear counts as muted.
 - The service worker and the engine check who sends each message: a content script may only greet and stop its own session, mode values are checked against a list.

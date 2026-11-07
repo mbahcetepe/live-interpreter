@@ -35,6 +35,30 @@
         <h2 data-i18n="opt.keys.title">1. API keys</h2>
         <p class="hint" data-i18n="opt.keys.hint">Keys are stored only in this browser and are sent straight to the service they belong to. There is no server in between.</p>
         <label class="field">
+          <span data-i18n="opt.speech.provider">Speech recognition and voices</span>
+          <select id="speechProvider">
+            <option value="elevenlabs" data-i18n="opt.speech.elevenlabs">ElevenLabs</option>
+            <option value="local" data-i18n="opt.speech.local">My own speech server (free)</option>
+          </select>
+        </label>
+        <div id="localSpeechBox" class="free" hidden>
+          <p class="hint" data-i18n="opt.speech.hint">The speech server from the project's speech-server folder, on your own computer.</p>
+          <div class="grid2">
+            <label class="field">
+              <span data-i18n="opt.speech.url">Speech server address</span>
+              <input id="localSpeechUrl" autocomplete="off" spellcheck="false" placeholder="100.65.147.84" />
+            </label>
+            <label class="field">
+              <span data-i18n="opt.speech.key">Speech server key</span>
+              <input type="password" id="localSpeechKey" autocomplete="off" spellcheck="false" />
+            </label>
+          </div>
+          <div class="actions">
+            <button id="testSpeech" type="button" class="primary" data-i18n="opt.ollama.test">Test and allow</button>
+          </div>
+          <p class="result" id="speechResult" role="status"></p>
+        </div>
+        <label class="field">
           <span data-i18n="opt.keys.elevenlabs">ElevenLabs API key</span>
           <input type="password" id="elevenLabsKey" autocomplete="off" spellcheck="false" />
         </label>

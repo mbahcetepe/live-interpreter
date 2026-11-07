@@ -15,7 +15,9 @@ export const LIST_PRICES = {
 };
 
 export class Usage {
-  constructor() {
+  // freeSpeech: recognition and speech run on the local speech server and cost nothing.
+  constructor({ freeSpeech = false } = {}) {
+    this.freeSpeech = freeSpeech;
     this.sttSeconds = 0;
     this.ttsChars = {};
     this.claude = {};
@@ -36,9 +38,12 @@ export class Usage {
   }
 
   costUsd() {
-    let usd = (this.sttSeconds / 3600) * LIST_PRICES.sttRealtimePerHour;
-    for (const [model, chars] of Object.entries(this.ttsChars)) {
-      usd += (chars / 1000) * (LIST_PRICES.ttsPer1kChars[model] ?? 0.04);
+    let usd = 0;
+    if (!this.freeSpeech) {
+      usd += (this.sttSeconds / 3600) * LIST_PRICES.sttRealtimePerHour;
+      for (const [model, chars] of Object.entries(this.ttsChars)) {
+        usd += (chars / 1000) * (LIST_PRICES.ttsPer1kChars[model] ?? 0.04);
+      }
     }
     for (const [model, t] of Object.entries(this.claude)) {
       const price = LIST_PRICES.claudePerMTok[model];

@@ -1,0 +1,7 @@
+# Enough to run the server with --engine fake and the tests (no models, no GPU).
+fastapi>=0.110
+uvicorn[standard]>=0.29
+numpy>=1.26
+scipy>=1.11
+httpx>=0.27
+pytest>=8

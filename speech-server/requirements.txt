@@ -1,0 +1,9 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+numpy>=1.26
+scipy>=1.11
+faster-whisper>=1.1
+piper-tts>=1.2
+# GPU libraries for faster-whisper (CTranslate2 needs cuBLAS and cuDNN 9 for CUDA 12)
+nvidia-cublas-cu12; platform_system == "Linux"
+nvidia-cudnn-cu12==9.*; platform_system == "Linux"

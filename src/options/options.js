@@ -1,10 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { loadSettings, saveSettings, isFreeTranslation, isOllamaTranslation, TRANSLATION_MODELS, TTS_MODELS } from '../shared/settings.js';
+import { loadSettings, saveSettings, isFreeTranslation, isOllamaTranslation, isLocalSpeech, TRANSLATION_MODELS, TTS_MODELS } from '../shared/settings.js';
 import { OllamaTranslator } from '../offscreen/ollama-translator.js';
 import { serverBase, originPattern, originRules } from '../shared/servers.js';
 import { LANGUAGES } from '../shared/languages.js';
 import { setLanguage, t, applyI18n, languageLabel } from '../shared/i18n.js';
-import { listVoices, createVoiceClone, deleteVoice, speechStream, describeElevenLabsError } from '../shared/elevenlabs.js';
+import { listVoices, createVoiceClone, deleteVoice, speechStream, describeElevenLabsError, speechAccount, fetchScribeToken, realtimeUrl } from '../shared/elevenlabs.js';
 import { describeClaudeError } from '../offscreen/translator.js';
 import { checkFreeKey, FREE_KEY_NAMES } from '../offscreen/free-translator.js';
 import { localPairs, localTranslationState, prepareLocalTranslation } from '../shared/local-translation.js';
@@ -120,7 +120,8 @@ async function micGranted() {
 async function refreshChecklist() {
   const free = isFreeTranslation(settings);
   const ollama = isOllamaTranslation(settings);
-  $('check-elevenlabs').classList.toggle('done', Boolean(settings.elevenLabsKey));
+  $('check-elevenlabs').textContent = isLocalSpeech(settings) ? t('opt.check.localSpeech') : t('opt.check.elevenlabs');
+  $('check-elevenlabs').classList.toggle('done', speechReady());
   $('check-anthropic').textContent = ollama ? t('opt.check.anthropicOllama') : free ? t('opt.check.anthropicFree') : t('opt.check.anthropic');
   const translationReady = ollama
     ? Boolean(serverBase(settings.ollamaUrl) && settings.ollamaModel)
@@ -137,7 +138,9 @@ async function refreshChecklist() {
 async function testKeys() {
   const parts = [];
   let ok = true;
-  if (settings.elevenLabsKey) {
+  if (isLocalSpeech(settings)) {
+    parts.push(t('opt.speech.useTest'));
+  } else if (settings.elevenLabsKey) {
     try {
       voices = await listVoices(settings.elevenLabsKey);
       parts.push(t('opt.keys.elOk', { n: voices.length }));
@@ -222,6 +225,55 @@ async function testFreeKeys() {
   result('freeKeyResult', t('opt.testing'));
   const checks = await Promise.all(names.map((name) => checkFreeKey(name, settings[name])));
   result('freeKeyResult', checks.map((c) => c.message).join(' '), checks.every((c) => c.ok) ? 'ok' : 'bad');
+}
+
+// ---- local speech server ---------------------------------------------------------------
+
+function speechReady() {
+  return isLocalSpeech(settings) ? Boolean(serverBase(settings.localSpeechUrl, { defaultPort: '8765' })) : Boolean(settings.elevenLabsKey);
+}
+
+function renderSpeech() {
+  $('localSpeechBox').hidden = !isLocalSpeech(settings);
+}
+
+// Runs from the click, like the Ollama test: access to the server is asked for first.
+async function testSpeech() {
+  const account = speechAccount(settings);
+  if (!account.base) return result('speechResult', t('opt.speech.noUrl'), 'bad');
+  const granted = await chrome.permissions.request({ origins: [originPattern(account.base)] }).catch(() => false);
+  if (!granted) return result('speechResult', t('opt.ollama.denied', { url: account.base }), 'bad');
+  result('speechResult', t('opt.testing'));
+  try {
+    voices = await listVoices(account);
+    renderVoices();
+    const started = performance.now();
+    const response = await speechStream(account, { voiceId: voices[0]?.voice_id || 'local-1', text: PREVIEW_TEXT.tr, languageCode: 'tr' });
+    const bytes = (await response.arrayBuffer()).byteLength;
+    const speechMs = Math.round(performance.now() - started);
+    const token = await fetchScribeToken(account);
+    await new Promise((resolve, reject) => {
+      const ws = new WebSocket(`${realtimeUrl(account)}?token=${encodeURIComponent(token)}&audio_format=pcm_16000&language_code=tr`);
+      const timer = setTimeout(() => {
+        ws.close();
+        reject(new Error(t('opt.speech.noSocket')));
+      }, 6000);
+      ws.onmessage = (event) => {
+        const type = JSON.parse(event.data).message_type;
+        clearTimeout(timer);
+        ws.close();
+        if (type === 'session_started') resolve();
+        else reject(new Error(type));
+      };
+      ws.onerror = () => {
+        clearTimeout(timer);
+        reject(new Error(t('opt.speech.noSocket')));
+      };
+    });
+    result('speechResult', t('opt.speech.ok', { voices: voices.length, ms: speechMs, seconds: (bytes / 48000).toFixed(1) }), 'ok');
+  } catch (err) {
+    result('speechResult', describeElevenLabsError(err, account), 'bad');
+  }
 }
 
 // ---- Ollama ----------------------------------------------------------------------------
@@ -330,24 +382,26 @@ function renderVoices() {
 }
 
 async function loadVoices() {
-  if (!settings.elevenLabsKey) return;
+  if (!speechReady()) return;
+  const account = speechAccount(settings);
   try {
-    voices = await listVoices(settings.elevenLabsKey);
+    voices = await listVoices(account);
     renderVoices();
   } catch (err) {
-    result('myVoiceResult', describeElevenLabsError(err), 'bad');
+    result('myVoiceResult', describeElevenLabsError(err, account), 'bad');
   }
 }
 
 let previewCtx;
 async function preview(voiceId, languageCode) {
-  if (!settings.elevenLabsKey) return toast(t('opt.voice.needKey'));
+  if (!speechReady()) return toast(t('opt.voice.needKey'));
   if (!voiceId) return toast(t('opt.voice.needVoice'));
+  const account = speechAccount(settings);
   try {
     previewCtx ||= new AudioContext();
     await previewCtx.resume();
     const player = new PcmScheduler(previewCtx, previewCtx.destination);
-    const response = await speechStream(settings.elevenLabsKey, {
+    const response = await speechStream(account, {
       voiceId,
       text: PREVIEW_TEXT[languageCode] || PREVIEW_TEXT.en,
       modelId: settings.ttsModel,
@@ -364,11 +418,12 @@ async function preview(voiceId, languageCode) {
     }
     player.end(id);
   } catch (err) {
-    toast(describeElevenLabsError(err));
+    toast(describeElevenLabsError(err, account));
   }
 }
 
 async function createMyVoice(files) {
+  if (isLocalSpeech(settings)) return result('myVoiceResult', t('lsp.noClone'), 'bad');
   if (!settings.elevenLabsKey) return result('myVoiceResult', t('opt.voice.needKey'), 'bad');
   result('myVoiceResult', t('opt.voice.creating'));
   const name = t('opt.voice.cloneName');
@@ -500,7 +555,18 @@ async function init() {
   bindText('anthropicKey');
   for (const id of FREE_KEY_NAMES) bindText(id);
   bindText('meetingContext');
-  for (const id of ['ollamaUrl', 'ollamaModel', 'ollamaBackupUrl', 'ollamaBackupModel']) bindText(id);
+  for (const id of ['ollamaUrl', 'ollamaModel', 'ollamaBackupUrl', 'ollamaBackupModel', 'localSpeechUrl', 'localSpeechKey']) bindText(id);
+  bindSelect('speechProvider');
+  renderSpeech();
+  $('speechProvider').addEventListener('change', () => {
+    renderSpeech();
+    refreshChecklist();
+  });
+  $('testSpeech').addEventListener('click', async () => {
+    $('testSpeech').disabled = true;
+    await testSpeech();
+    $('testSpeech').disabled = false;
+  });
   if (settings.ollamaBackupUrl) $('ollamaBackup').open = true;
   $('testOllama').addEventListener('click', async () => {
     $('testOllama').disabled = true;
@@ -517,7 +583,7 @@ async function init() {
   $('elevenLabsKey').addEventListener('change', loadVoices);
   $('showKeys').addEventListener('click', () => {
     const show = $('elevenLabsKey').type === 'password';
-    for (const id of ['elevenLabsKey', 'anthropicKey', ...FREE_KEY_NAMES]) $(id).type = show ? 'text' : 'password';
+    for (const id of ['elevenLabsKey', 'anthropicKey', 'localSpeechKey', ...FREE_KEY_NAMES]) $(id).type = show ? 'text' : 'password';
     $('showKeys').textContent = show ? t('opt.keys.hide') : t('opt.keys.show');
   });
   $('claudeModel').addEventListener('change', async () => {
