@@ -146,6 +146,15 @@ When the meeting ends the translation stops by itself 30 seconds after the last 
 - The translation comes 1.5–3 s behind the speech. With fast, continuous speech, voice translation shortens what it says to keep up.
 - **Films and noisy sound:** your own speech server finds speech with a voice detector (Silero VAD) that tells a voice from music and effects. When the music drowns the dialogue, some sentences can still be missed.
 
+## 9. Transcripts
+
+Every translation, of a call or a video, keeps a transcript: each sentence with its time, who said it (you or them; on a video, the speaker) and its translation. It is saved every few seconds while the translation runs and once more when it stops.
+
+- **During the translation:** the **Transcript** button at the bottom of the panel saves what was said so far and opens it in a tab.
+- **Later:** the popup's **Recordings and transcripts** button lists them. **Show** displays one, **Text (.txt)** saves it as a text file, **Subtitles (.srt)** saves the translation as subtitles for a video player, **Delete** removes it.
+- Transcripts stay on this computer, in the extension's storage. The last 50 are kept; older ones are removed by themselves.
+- To keep none, clear **Keep each translation's transcript on this computer** under Settings, Microphone and sound.
+
 ---
 
 ## Try it before an important meeting

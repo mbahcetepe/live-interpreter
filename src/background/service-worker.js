@@ -90,7 +90,8 @@ async function startSession({ tabId, streamId, options = {} }) {
     await setState({ status: 'starting', tabId, error: null, engine: null });
     if (!streamId) streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tabId });
     await ensureOffscreen();
-    const response = await toEngine({ type: 'start', tabId, streamId, settings, options });
+    // The tab's title and address go into the transcript.
+    const response = await toEngine({ type: 'start', tabId, streamId, settings, options, tab: { title: tab.title || '', url: tab.url || '' } });
     if (!response?.ok) {
       await closeOffscreen();
       throw new Error(response?.error || t('err.engineFailed'));
@@ -203,6 +204,9 @@ function onMessage(msg, sender, sendResponse) {
       return false;
     case 'recording-ready':
       if (typeof msg.id === 'string' && msg.id.length < 200) chrome.tabs.create({ url: chrome.runtime.getURL(`recording.html?id=${encodeURIComponent(msg.id)}`) }).catch(() => {});
+      return false;
+    case 'open-transcript':
+      if (typeof msg.id === 'string' && msg.id.length < 200) chrome.tabs.create({ url: chrome.runtime.getURL(`recording.html?transcript=${encodeURIComponent(msg.id)}`) }).catch(() => {});
       return false;
     case 'engine-options':
       if (Object.keys(cleanModes(msg.options)).length) saveSettings(cleanModes(msg.options)).catch(() => {});

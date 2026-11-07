@@ -260,6 +260,24 @@ async function mockTranslationTest() {
   }
 }
 
+// The transcripts the engine kept, read from the extension's own database.
+function readTranscripts(control) {
+  return control.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const open = indexedDB.open('meet-tercuman');
+        open.onerror = () => resolve([]);
+        open.onsuccess = () => {
+          const db = open.result;
+          if (!db.objectStoreNames.contains('transcripts')) return resolve([]);
+          const req = db.transaction('transcripts').objectStore('transcripts').getAll();
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => resolve([]);
+        };
+      }),
+  );
+}
+
 async function freeTranslationTest() {
   console.log('\n== Free translation against a local mock (DeepL, Mistral, Groq; no Claude key) ==');
   const mock = await startMockApi({
@@ -314,6 +332,9 @@ async function freeTranslationTest() {
     check('the page never names the service that translated', shown.length > 0 && !/deepl|mistral|groq/i.test(shown), shown.slice(0, 160));
 
     await send(control, { type: 'stop' });
+    const kept = await waitFor(async () => (await readTranscripts(control)).find((t) => t.endedAt), 10000, 300);
+    const both = kept?.lines?.some((l) => l.dir === 'in' && l.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.') && kept?.lines?.some((l) => l.dir === 'out' && l.translation === 'Friday at three works for us.');
+    check('the call leaves a transcript of both sides with their translations', kept?.kind === 'call' && both, JSON.stringify(kept?.lines?.slice(0, 2)));
     check('no script errors on the Meet page', env.pageErrors.length === 0, env.pageErrors.join(' | '));
   } finally {
     await env.context.close();
@@ -422,12 +443,25 @@ async function mediaTest() {
     const spoken = await waitFor(() => mock.stats.tts.length > spokenBefore, 30000, 300);
     check('voice translation speaks over it', spoken, `${mock.stats.tts.length - spokenBefore} requests`);
 
+    // The panel's Transcript button saves what was said so far and opens it in a tab.
+    const txButton = video.locator('#meet-tercuman-overlay button[title="Save the transcript so far and open it"]');
+    if (!(await txButton.isVisible().catch(() => false))) await video.locator('#meet-tercuman-overlay .icon.open').click();
+    const txPage = context.waitForEvent('page', { predicate: (p) => p.url().includes('/recording.html?transcript='), timeout: 15000 }).catch(() => null);
+    await txButton.click();
+    const txTab = await txPage;
+    const txText = txTab ? await waitFor(async () => (await txTab.locator('#transcriptView').textContent().catch(() => '')) || '', 10000, 300) : '';
+    check('the Transcript button opens the transcript so far', /transcript: A talk/.test(txText) && txText.includes('→ Merhaba, bugün görüşmeye katıldığınız için teşekkürler.'), txText.slice(0, 160));
+    await txTab?.close();
+    await video.bringToFront();
+
     // A video site moves to the next video without leaving the tab.
     await video.evaluate(() => history.pushState({}, '', '/watch?v=2'));
     await sleep(1500);
     check('moving to another video on the same site keeps translating', (await sessionState(control))?.status === 'running');
 
     await send(control, { type: 'stop' });
+    const kept = await waitFor(async () => (await readTranscripts(control)).find((t) => t.kind === 'media' && t.endedAt), 10000, 300);
+    check('the video leaves a transcript with its title and translations', kept?.title === 'A talk' && kept.lines.some((l) => l.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.'), JSON.stringify({ title: kept?.title, lines: kept?.lines?.length }));
     const again = await send(control, { type: 'start', tabId, options: { mode: 'media', incomingMode: 'text' } });
     const hosts = await waitFor(() => video.evaluate(() => document.querySelectorAll('#meet-tercuman-subtitles').length), 10000, 300);
     check('starting again does not put the subtitles in twice', again?.ok === true && hosts === 1, `ok ${again?.ok}, ${hosts} subtitle bars`);

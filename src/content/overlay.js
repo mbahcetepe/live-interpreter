@@ -66,6 +66,7 @@ section:first-child { border-top: 0; }
 .clone .state { color: #9aa0a6; }
 .footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.07); }
 .usage { font-size: 11px; color: #80868b; line-height: 1.35; }
+.buttons { display: flex; gap: 6px; }
 .btn { all: unset; cursor: pointer; padding: 4px 10px; border-radius: 8px; font-size: 12px; background: rgba(255,255,255,0.09); color: #e8eaed; white-space: nowrap; }
 .btn:hover { background: rgba(255,255,255,0.16); }
 .meter { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; margin: 3px 0 8px; }
@@ -134,10 +135,11 @@ function segmented(options, value, onChange) {
 }
 
 export class Overlay {
-  constructor({ hello, onOptions, onChime, onStop, onClose, onMove }) {
+  constructor({ hello, onOptions, onChime, onTranscript, onStop, onClose, onMove }) {
     this.hello = hello;
     this.onOptions = onOptions;
     this.onChime = onChime;
+    this.onTranscript = onTranscript;
     this.onStop = onStop;
     this.onClose = onClose;
     this.onMove = onMove;
@@ -199,7 +201,19 @@ export class Overlay {
       'div',
       { class: 'bottom' },
       this.notices,
-      h('div', { class: 'footer' }, this.usage, h('button', { class: 'btn', text: t('popup.chime'), title: t('overlay.chimeTitle'), onclick: () => this.onChime() })),
+      h(
+        'div',
+        { class: 'footer' },
+        this.usage,
+        h(
+          'div',
+          { class: 'buttons' },
+          // The transcript so far, saved and opened in a tab.
+          hello.diagnostic ? null : h('button', { class: 'btn', text: t('overlay.transcript'), title: t('overlay.transcriptTitle'), onclick: () => this.onTranscript?.() }),
+          // A video tab sends nothing into the page, so there is nothing to test there.
+          hello.media ? null : h('button', { class: 'btn', text: t('popup.chime'), title: t('overlay.chimeTitle'), onclick: () => this.onChime() }),
+        ),
+      ),
     );
     this.panel.append(this.bottom);
 

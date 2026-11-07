@@ -142,6 +142,8 @@ export const DEFAULT_SETTINGS = {
   stability: 0.5,
   similarity: 0.8,
   showOverlay: true,
+  // Each session's transcript is kept on this computer (recordings page).
+  saveTranscripts: true,
   subtitleBar: true, // the translation as subtitles low in the Meet window
   settingsVersion: 2,
 };

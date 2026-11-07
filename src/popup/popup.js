@@ -191,6 +191,7 @@ async function init() {
     }
   });
   $('test').addEventListener('click', () => start('diagnostic'));
+  $('records').addEventListener('click', () => chrome.tabs.create({ url: chrome.runtime.getURL('recording.html') }));
   $('chime').addEventListener('click', () => chrome.runtime.sendMessage({ type: 'chime' }).catch(() => {}));
 
   chrome.storage.onChanged.addListener((changes, area) => {

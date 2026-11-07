@@ -824,7 +824,7 @@ async function init() {
   $('grantMic').addEventListener('click', grantMic);
   for (const id of ['micDeviceLabel', 'outputDeviceLabel']) bindSelect(id);
   bindSelect('vadSilenceSecs', { parse: Number });
-  for (const id of ['halfDuplex', 'showOverlay', 'subtitleBar']) bindCheck(id);
+  for (const id of ['halfDuplex', 'showOverlay', 'subtitleBar', 'saveTranscripts']) bindCheck(id);
   for (const id of ['translationVolume', 'originalVolume', 'duckVolume', 'monitorVolume', 'stability', 'similarity']) bindSlider(id);
   navigator.mediaDevices.addEventListener('devicechange', refreshDevices);
 

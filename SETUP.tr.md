@@ -146,6 +146,15 @@ Toplantı bitince çeviri, bağlantı kalmadıktan 30 saniye sonra kendiliğinde
 - Çeviri konuşmanın 1,5–3 saniye gerisinden gelir. Hızlı ve kesintisiz konuşulan videolarda sesli çeviri, yetişmek için kısaltır.
 - **Filmler ve gürültülü sesler:** Kendi ses sunucun konuşmayı müzikten ve efektlerden ayıran bir ses algılayıcıyla (Silero VAD) çalışır. Müzik diyalogu bastırıyorsa bazı cümleler kaçabilir.
 
+## 9. Dökümler (transkript)
+
+Görüşme ya da video, her çevirinin bir dökümü tutulur: her cümle, saati, kimin söylediği (sen ya da karşı taraf; videoda konuşan) ve çevirisiyle. Döküm çeviri sürerken birkaç saniyede bir, durunca da bir kez daha kaydedilir.
+
+- **Çeviri sürerken:** panelin altındaki **Döküm** düğmesi o ana kadar söylenenleri kaydeder ve bir sekmede açar.
+- **Sonra:** açılır penceredeki **Kayıtlar ve dökümler** düğmesi hepsini listeler. **Göster** dökümü açar, **Metin (.txt)** metin dosyası olarak, **Altyazı (.srt)** çeviriyi video oynatıcı için altyazı olarak kaydeder, **Sil** dökümü kaldırır.
+- Dökümler bu bilgisayarda, eklentinin deposunda kalır. Son 50 döküm saklanır; daha eskileri kendiliğinden silinir.
+- Hiç döküm tutulmasın istersen Ayarlar, Mikrofon ve ses altındaki **Her çevirinin dökümünü bu bilgisayarda sakla** kutusunu kaldır.
+
 ---
 
 ## Önemli bir toplantıdan önce dene

@@ -142,3 +142,29 @@ li:first-child {
 .empty {
   color: var(--muted);
 }
+
+.transcripts li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.transcripts li .label {
+  flex: 1;
+  min-width: 220px;
+}
+
+.transcripts li.open .label {
+  font-weight: 600;
+}
+
+pre.transcript {
+  white-space: pre-wrap;
+  font: 13px/1.55 ui-monospace, Consolas, monospace;
+  max-height: 60vh;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(127, 127, 127, 0.1);
+}

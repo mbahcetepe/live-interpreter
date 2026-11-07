@@ -30,7 +30,8 @@ import { FallbackTranslator } from './fallback-translator.js';
 import { synthesize } from './tts.js';
 import { DirectionPipeline, History, Speaker } from './pipeline.js';
 import { CloneCollector } from './voice-clone.js';
-import { saveChunk, saveRecording, recordingChunks } from '../shared/recordings.js';
+import { saveChunk, saveRecording, recordingChunks, saveTranscript } from '../shared/recordings.js';
+import { TranscriptLog } from '../shared/transcript.js';
 import { DebugSink, debugSinkUrl } from './debug-sink.js';
 
 // The debug copy is compiled in only by `npm run build:debug`; a normal build ignores
@@ -162,7 +163,8 @@ async function handle(msg) {
 }
 
 class Session {
-  constructor({ tabId, streamId, settings, options = {} }) {
+  constructor({ tabId, streamId, settings, options = {}, tab = {} }) {
+    this.tabInfo = tab;
     setLanguage(settings.uiLanguage);
     this.tabId = tabId;
     this.streamId = streamId;
@@ -373,6 +375,17 @@ class Session {
     // My side starts listening once Meet is actually sending my microphone (see onOutgoingOpened).
     this.ensureStt('out', this.outgoingMode === 'voice' && this.canSendOutgoing());
     if (this.cloneConsent) this.startClone();
+    if (s.saveTranscripts !== false) {
+      this.transcriptLog = new TranscriptLog({
+        id: `t-${Date.now()}`,
+        startedAt: Date.now(),
+        title: this.tabInfo.title || '',
+        url: this.tabInfo.url || '',
+        kind: this.media ? 'media' : 'call',
+        myLanguage: s.myLanguage,
+        theirLanguage: this.sourceLanguage(s),
+      });
+    }
   }
 
   createTranslator(s) {
@@ -712,6 +725,7 @@ class Session {
 
   caption(dir, event) {
     this.debugSink?.event({ kind: 'caption', dir, ...event });
+    if (this.transcriptLog?.add(dir, event)) this.saveTranscriptSoon();
     this.postTab({ type: 'caption', dir, ...event });
   }
 
@@ -815,6 +829,7 @@ class Session {
     } else if (m?.type === 'ui') {
       if (m.action === 'options') this.setOptions(m.options || {});
       else if (m.action === 'chime') this.sendChime();
+      else if (m.action === 'transcript') this.openTranscript();
     }
   }
 
@@ -1117,6 +1132,30 @@ class Session {
     return meta;
   }
 
+  // The transcript is written a few seconds after it changes, and at the end, so a closed
+  // tab or a crash loses at most those seconds.
+  saveTranscriptSoon() {
+    if (this.transcriptTimer) return;
+    this.transcriptTimer = setTimeout(() => {
+      this.transcriptTimer = 0;
+      this.saveTranscriptNow();
+    }, 4000);
+  }
+
+  saveTranscriptNow(extra = {}) {
+    if (!this.transcriptLog?.lines.length) return Promise.resolve();
+    return saveTranscript(this.transcriptLog.snapshot(extra)).catch((err) => log('warn', 'transcript not saved', err));
+  }
+
+  // The panel's "Transcript": what has been said so far, saved and opened in a tab.
+  async openTranscript() {
+    if (!this.transcriptLog) return;
+    clearTimeout(this.transcriptTimer);
+    this.transcriptTimer = 0;
+    await this.saveTranscriptNow();
+    chrome.runtime.sendMessage({ type: 'open-transcript', id: this.transcriptLog.meta.id }).catch(() => {});
+  }
+
   async stop() {
     if (this.stopped) return;
     this.stopped = true;
@@ -1129,6 +1168,8 @@ class Session {
     clearTimeout(this.callGoneTimer);
     clearTimeout(this.sttRestartTimer);
     clearTimeout(this.backupTimer);
+    clearTimeout(this.transcriptTimer);
+    await this.saveTranscriptNow({ endedAt: Date.now() });
     this.debugSink?.close();
     this.incoming?.flush();
     this.outgoing?.flush();

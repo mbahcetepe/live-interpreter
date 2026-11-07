@@ -1,9 +1,11 @@
-// Call recordings, kept in the extension's own IndexedDB on this computer. The engine
+// Call recordings and transcripts, kept in the extension's own IndexedDB on this computer. The engine
 // writes each chunk as it arrives (a long call never piles up in memory), and the
 // recording page puts the chunks back together for playing and saving.
 
 const DB_NAME = 'meet-tercuman';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
+// Transcripts kept; the oldest go when there are more.
+const KEEP_TRANSCRIPTS = 50;
 
 function open() {
   return new Promise((resolve, reject) => {
@@ -12,6 +14,7 @@ function open() {
       const db = req.result;
       if (!db.objectStoreNames.contains('recordings')) db.createObjectStore('recordings', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('chunks')) db.createObjectStore('chunks', { keyPath: ['id', 'seq'] });
+      if (!db.objectStoreNames.contains('transcripts')) db.createObjectStore('transcripts', { keyPath: 'id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -68,4 +71,25 @@ export async function deleteRecording(id) {
   const range = IDBKeyRange.bound([id, 0], [id, Number.MAX_SAFE_INTEGER]);
   await run('chunks', 'readwrite', (store) => store.delete(range));
   await run('recordings', 'readwrite', (store) => store.delete(id));
+}
+
+// ---- transcripts (shared/transcript.js) -------------------------------------------------
+
+export async function saveTranscript(transcript) {
+  await run('transcripts', 'readwrite', (store) => store.put(transcript));
+  const all = await listTranscripts();
+  for (const old of all.slice(KEEP_TRANSCRIPTS)) await deleteTranscript(old.id);
+}
+
+export async function listTranscripts() {
+  const all = await run('transcripts', 'readonly', (store) => store.getAll());
+  return all.sort((a, b) => b.startedAt - a.startedAt);
+}
+
+export function getTranscript(id) {
+  return run('transcripts', 'readonly', (store) => store.get(id));
+}
+
+export function deleteTranscript(id) {
+  return run('transcripts', 'readwrite', (store) => store.delete(id));
 }

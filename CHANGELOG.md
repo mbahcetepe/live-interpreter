@@ -2,6 +2,13 @@
 
 Versions follow [semantic versioning](https://semver.org): MAJOR for changes that need something done (new settings, a server update), MINOR for new features, PATCH for fixes. The version lives in `package.json`; the build writes it into the extension's manifest, and the popup and the settings page show it. The speech server has its own version and a protocol number (`/health`); the extension warns when the server is older than it needs.
 
+## 2.2.0 (2026-11-07)
+
+### New
+
+- **Transcripts** of every call (Teams, Meet) and every video or radio tab: each sentence with its time, who said it and its translation. They are kept on this computer (the last 50) and saved as text (`.txt`) or subtitles (`.srt`).
+- The panel's **Transcript** button opens the transcript so far; the popup's **Recordings and transcripts** button lists them all. A setting under Microphone and sound turns them off.
+
 ## 2.1.0 (2026-11-07)
 
 ### New

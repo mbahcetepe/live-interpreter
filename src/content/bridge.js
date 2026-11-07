@@ -117,6 +117,7 @@ function showOverlay({ always = false } = {}) {
       hello: state.hello,
       onOptions: (options) => state.enginePort?.postMessage({ type: 'ui', action: 'options', options }),
       onChime: () => state.enginePort?.postMessage({ type: 'ui', action: 'chime' }),
+      onTranscript: () => state.enginePort?.postMessage({ type: 'ui', action: 'transcript' }),
       onStop: () => chrome.runtime.sendMessage({ type: 'stop' }).catch(() => endSession()),
       onClose: closeOverlay,
       // The subtitles step aside when the panel opens, grows or is dragged over them.

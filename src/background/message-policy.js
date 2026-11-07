@@ -8,7 +8,7 @@ export const INCOMING_MODES = ['voice', 'text', 'off'];
 export const OUTGOING_MODES = ['voice', 'off'];
 
 const FROM_POPUP = new Set(['start', 'options', 'chime']);
-const FROM_ENGINE = new Set(['engine-status', 'engine-options', 'engine-failed', 'call-ended', 'recording-ready']);
+const FROM_ENGINE = new Set(['engine-status', 'engine-options', 'engine-failed', 'call-ended', 'recording-ready', 'open-transcript']);
 
 // The address tells the extension's own pages (even one opened in a tab, like the
 // settings page) from a content script, which reports the web page's address.

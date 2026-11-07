@@ -36,6 +36,7 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
 - A mode for each direction: spoken translation, subtitles only or off, switchable mid-call from the popup or the panel on the page. In voice mode you hear only the translation; with subtitles only or off you hear them normally.
 - Your own voice clone (ElevenLabs), recorded on the settings page. The other person's voice is cloned only after you confirm they agreed, and the clone is deleted when the call ends.
 - Optional call recording: the call tab's picture with both sides' audio, saved as MP4 on this computer only.
+- Transcripts of every call and video: what was said, who said it, when, and its translation, kept on this computer and saved as text (`.txt`) or subtitles (`.srt`).
 - Echo guard, a speaker mode for calls without headphones, automatic reconnects, and the call's microphone followed automatically.
 - In Teams the translation stops by itself 30 seconds after the call has no connection left; `Alt+Shift+T` or the popup stops it at once.
 
@@ -191,7 +192,7 @@ cd speech-server && python -m pytest tests           # the speech server: protoc
 - What the call page reports (muted or not, its microphone) is reduced to known fields of the right type; anything unclear counts as muted. Nothing reaches the call while you are muted, while translation to them is off, or before the call has started.
 - The service worker and the engine check who sends each message: a content script may only greet and stop its own session, and mode values are checked against a list.
 - The panel and the subtitles use closed shadow roots, so the page's scripts cannot read the transcripts. Only test and debug builds leave them open.
-- The other person's voice is cloned only after you tick the consent box, and the clone is deleted after the call unless you change that setting. Recordings stay in the extension's storage on your computer until you save or delete them.
+- The other person's voice is cloned only after you tick the consent box, and the clone is deleted after the call unless you change that setting. Recordings and transcripts stay in the extension's storage on your computer until you save or delete them; only the last 50 transcripts are kept.
 
 ---
 
