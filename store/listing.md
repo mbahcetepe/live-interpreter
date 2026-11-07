@@ -2,7 +2,7 @@
 
 One section per language. In the developer dashboard, **Store listing**, pick each language and paste its **Description**. The name and the short summary come from the package (`src/_locales/*/messages.json`) and cannot be typed in the dashboard.
 
-Rules kept in these texts: no Microsoft or Google logos, no claim of being made by or endorsed by them, no prices of other services, no superlatives the store would flag ("best", "#1").
+Rules kept in these texts: no lists of service or brand names (the store rejected 2.2.1 for that as keyword spam, "Yellow Argon"), no Microsoft or Google logos, no claim of being made by or endorsed by them, no prices of other services, no superlatives ("best", "#1").
 
 ---
 
@@ -20,7 +20,7 @@ IN A CALL
 • Mute in the call and nothing is translated or sent.
 • A small panel shows both sides' sentences and their translations as they come.
 
-ON A VIDEO OR RADIO TAB (YouTube, X, online radio and more)
+ON A VIDEO OR RADIO TAB (such as YouTube)
 • Subtitles in your language over the video, also in full screen.
 • Or a spoken translation over the original, which is turned down while the translation speaks.
 • The spoken language is detected by itself.
@@ -30,9 +30,8 @@ TRANSCRIPTS
 • Save it as a text file or as subtitles (.srt) for a video player.
 
 YOUR SERVICES, YOUR KEYS
-Choose what does the work:
-• Speech: ElevenLabs, OpenAI, Groq Whisper, or your own speech server (one comes with the project, with Whisper and Piper voices for 16 languages).
-• Translation: Claude, OpenAI or a compatible server, OpenRouter, your own Ollama server, DeepL, Mistral or Groq.
+• Choose the speech recognition, voice and translation services yourself, and use them with your own API keys.
+• Or run everything on your own servers: the project includes a speech server for 16 languages and works with a local language-model server.
 With your own servers nothing leaves your computers and there is nothing to pay per minute.
 
 PRIVATE BY DESIGN
@@ -62,7 +61,7 @@ GÖRÜŞMEDE
 • Görüşmede mikrofonunu kapatınca hiçbir şey çevrilmez, gönderilmez.
 • Küçük bir panel iki tarafın cümlelerini ve çevirilerini geldikçe gösterir.
 
-VİDEO VE RADYO SEKMELERİNDE (YouTube, X, çevrimiçi radyo ve daha fazlası)
+VİDEO VE RADYO SEKMELERİNDE (örneğin YouTube)
 • Videonun üzerinde, tam ekranda da, kendi dilinde altyazı.
 • Ya da asıl sesin üzerine sesli çeviri; çeviri konuşurken asıl ses kısılır.
 • Konuşulan dil kendiliğinden algılanır.
@@ -72,9 +71,8 @@ DÖKÜMLER
 • Metin dosyası ya da video oynatıcı için altyazı (.srt) olarak kaydedebilirsin.
 
 SENİN SERVİSLERİN, SENİN ANAHTARLARIN
-İşi neyin yapacağını sen seçersin:
-• Ses: ElevenLabs, OpenAI, Groq Whisper ya da kendi ses sunucun (projeyle birlikte, Whisper ve 16 dilde Piper sesleriyle bir sunucu gelir).
-• Çeviri: Claude, OpenAI ya da uyumlu bir sunucu, OpenRouter, kendi Ollama sunucun, DeepL, Mistral ya da Groq.
+• Ses tanıma, seslendirme ve çeviri servislerini kendin seçer, kendi API anahtarlarınla kullanırsın.
+• Ya da her şeyi kendi sunucularında çalıştırırsın: proje 16 dilde bir ses sunucusuyla gelir ve yerel bir dil modeli sunucusuyla çalışır.
 Kendi sunucularınla hiçbir şey bilgisayarlarından çıkmaz, dakika başı ödeme yoktur.
 
 GİZLİLİK ÖNCELİKLİ
@@ -104,7 +102,7 @@ IM ANRUF
 • Stummgeschaltet im Anruf wird nichts übersetzt und nichts gesendet.
 • Ein kleines Fenster zeigt die Sätze beider Seiten und ihre Übersetzungen, sobald sie da sind.
 
-IN VIDEO- UND RADIO-TABS (YouTube, X, Webradio und mehr)
+IN VIDEO- UND RADIO-TABS (zum Beispiel YouTube)
 • Untertitel in Ihrer Sprache über dem Video, auch im Vollbild.
 • Oder eine gesprochene Übersetzung über dem Original, das leiser wird, solange die Übersetzung spricht.
 • Die gesprochene Sprache wird automatisch erkannt.
@@ -114,9 +112,8 @@ TRANSKRIPTE
 • Als Textdatei oder als Untertitel (.srt) für einen Videoplayer speichern.
 
 IHRE DIENSTE, IHRE SCHLÜSSEL
-Sie wählen, was die Arbeit macht:
-• Sprache: ElevenLabs, OpenAI, Groq Whisper oder Ihr eigener Sprachserver (einer liegt dem Projekt bei, mit Whisper und Piper-Stimmen für 16 Sprachen).
-• Übersetzung: Claude, OpenAI oder ein kompatibler Server, OpenRouter, Ihr eigener Ollama-Server, DeepL, Mistral oder Groq.
+• Sie wählen die Dienste für Spracherkennung, Stimme und Übersetzung selbst und nutzen sie mit Ihren eigenen API-Schlüsseln.
+• Oder Sie betreiben alles auf eigenen Servern: Das Projekt enthält einen Sprachserver für 16 Sprachen und arbeitet mit einem lokalen Sprachmodell-Server.
 Mit eigenen Servern verlässt nichts Ihre Rechner, und es gibt keine Kosten pro Minute.
 
 DATENSCHUTZ VON ANFANG AN
@@ -146,7 +143,7 @@ EN UNA LLAMADA
 • Si silencias el micrófono en la llamada, no se traduce ni se envía nada.
 • Un pequeño panel muestra las frases de ambos lados y sus traducciones a medida que llegan.
 
-EN PESTAÑAS DE VÍDEO O RADIO (YouTube, X, radio en línea y más)
+EN PESTAÑAS DE VÍDEO O RADIO (por ejemplo, YouTube)
 • Subtítulos en tu idioma sobre el vídeo, también a pantalla completa.
 • O una traducción hablada sobre el original, que baja de volumen mientras habla la traducción.
 • El idioma hablado se detecta solo.
@@ -156,9 +153,8 @@ TRANSCRIPCIONES
 • Guárdala como archivo de texto o como subtítulos (.srt) para un reproductor de vídeo.
 
 TUS SERVICIOS, TUS CLAVES
-Tú eliges qué hace el trabajo:
-• Voz: ElevenLabs, OpenAI, Groq Whisper o tu propio servidor de voz (el proyecto incluye uno, con Whisper y voces Piper para 16 idiomas).
-• Traducción: Claude, OpenAI o un servidor compatible, OpenRouter, tu propio servidor Ollama, DeepL, Mistral o Groq.
+• Eliges tú los servicios de reconocimiento de voz, de voz y de traducción, y los usas con tus propias claves de API.
+• O lo ejecutas todo en tus propios servidores: el proyecto incluye un servidor de voz para 16 idiomas y funciona con un servidor local de modelos de lenguaje.
 Con tus propios servidores nada sale de tus equipos y no hay que pagar por minuto.
 
 PRIVACIDAD DESDE EL DISEÑO
@@ -188,7 +184,7 @@ Live Interpreter 在网页版 Microsoft Teams 和 Google Meet 通话中实时双
 • 在通话中静音时，不会翻译也不会发送任何内容。
 • 小面板实时显示双方的句子及其翻译。
 
-视频或电台标签页（YouTube、X、网络电台等）
+视频或电台标签页（例如 YouTube）
 • 在视频上显示你的语言的字幕，全屏时也可以。
 • 或在原声之上播放语音翻译，翻译说话时原声会调低。
 • 自动识别所说的语言。
@@ -198,9 +194,8 @@ Live Interpreter 在网页版 Microsoft Teams 和 Google Meet 通话中实时双
 • 可以保存为文本文件，或保存为视频播放器使用的字幕（.srt）。
 
 你的服务，你的密钥
-由你选择由谁来完成工作：
-• 语音：ElevenLabs、OpenAI、Groq Whisper，或你自己的语音服务器（项目自带一个，包含 Whisper 和 16 种语言的 Piper 声音）。
-• 翻译：Claude、OpenAI 或兼容服务器、OpenRouter、你自己的 Ollama 服务器、DeepL、Mistral 或 Groq。
+• 语音识别、语音合成和翻译服务由你自己选择，并使用你自己的 API 密钥。
+• 或者全部运行在你自己的服务器上：项目自带支持 16 种语言的语音服务器，并可与本地语言模型服务器配合使用。
 使用自己的服务器时，任何内容都不会离开你的电脑，也无需按分钟付费。
 
 注重隐私

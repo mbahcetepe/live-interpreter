@@ -191,7 +191,7 @@ async function screenshots(browser) {
 
     await render(browser, framed('One click to start', 'Choose how you hear them and how they hear you, then start. The same button translates a video tab.', popup, 380, 540), W, H, 'screenshot-3-popup.png');
     await render(browser, framed('Every word, kept', 'A transcript of each call and video, with its translation. Save it as text or as subtitles.', transcripts, 760, 600), W, H, 'screenshot-4-transcripts.png');
-    await render(browser, framed('Your services, your keys', 'Claude, OpenAI, OpenRouter, Ollama, DeepL and more, or your own servers. Nothing goes to us.', settings, 760, 600), W, H, 'screenshot-5-settings.png');
+    await render(browser, framed('Your services, your keys', 'Cloud services with your own keys, or your own servers. Nothing goes to us.', settings, 760, 600), W, H, 'screenshot-5-settings.png');
   } finally {
     await env.context.close();
     await rm(env.userDataDir, { recursive: true, force: true });
