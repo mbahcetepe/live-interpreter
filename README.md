@@ -185,6 +185,8 @@ cd speech-server && python -m pytest tests           # the speech server: protoc
 
 ## Security
 
+What the extension does with your data: [privacy policy](PRIVACY.md) ([Türkçe](PRIVACY.tr.md)).
+
 - No backend of its own, no analytics and no remote code: everything ships inside the extension.
 - No API key is in the source code. Keys are typed into the settings page, kept in `chrome.storage.local` and sent only to the service they belong to. Your own servers are reached only at the addresses you enter, after the browser has asked you for access to each one; the speech server also needs its own key and refuses requests from web pages.
 - A video tab is reached only after you click the extension on it (`activeTab`); the extension asks for no access to all sites.

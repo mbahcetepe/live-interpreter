@@ -3,7 +3,7 @@
     "message": "Live Interpreter"
   },
   "extDescription": {
-    "message": "Live-Übersetzung für Anrufe in Microsoft Teams (Web) und Google Meet in beide Richtungen, dazu Untertitel oder gesprochene Übersetzung für jeden Video- und Radio-Tab."
+    "message": "Live-Sprachübersetzung in beide Richtungen für Teams (Web) und Google Meet, dazu Untertitel oder Voice-over für Video-Tabs."
   },
   "cmdToggle": {
     "message": "Übersetzung starten oder beenden"

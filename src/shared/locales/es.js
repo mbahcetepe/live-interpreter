@@ -299,6 +299,7 @@ export default {
   'rec.txt': "Texto (.txt)",
   'rec.srt': "Subtítulos (.srt)",
   'rec.minutes': "{n} min",
+  'rec.line': "1 frase",
   'rec.lines': "{n} frases",
   'rec.deleteTranscriptConfirm': "¿Eliminar esta transcripción?",
   'tx.title': "Transcripción de Live Interpreter",

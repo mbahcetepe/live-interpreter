@@ -2,6 +2,11 @@
 
 Versions follow [semantic versioning](https://semver.org): MAJOR for changes that need something done (new settings, a server update), MINOR for new features, PATCH for fixes. The version lives in `package.json`; the build writes it into the extension's manifest, and the popup and the settings page show it. The speech server has its own version and a protocol number (`/health`); the extension warns when the server is older than it needs.
 
+## 2.2.1 (2026-11-07)
+
+- Ready for the Chrome Web Store: shorter package descriptions (the store allows 132 characters), a privacy policy (`PRIVACY.md`), the listing texts and form answers (`store/`) and `npm run store:images` for the store images.
+- The transcripts list says "1 sentence", not "1 sentences".
+
 ## 2.2.0 (2026-11-07)
 
 ### New

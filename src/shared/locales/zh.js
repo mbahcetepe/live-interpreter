@@ -299,6 +299,7 @@ export default {
   'rec.txt': "文本（.txt）",
   'rec.srt': "字幕（.srt）",
   'rec.minutes': "{n} 分钟",
+  'rec.line': "1 句",
   'rec.lines': "{n} 句",
   'rec.deleteTranscriptConfirm': "删除这份文字记录？",
   'tx.title': "Live Interpreter 文字记录",

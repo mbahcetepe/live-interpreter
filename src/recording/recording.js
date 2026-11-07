@@ -90,7 +90,7 @@ function describeTranscript(tr) {
     new Date(tr.startedAt).toLocaleString(locale()),
     tr.title || tr.url || '',
     minutes ? t('rec.minutes', { n: minutes }) : t('rec.unfinished'),
-    t('rec.lines', { n: tr.lines.length }),
+    tr.lines.length === 1 ? t('rec.line') : t('rec.lines', { n: tr.lines.length }),
   ]
     .filter(Boolean)
     .join(' · ');

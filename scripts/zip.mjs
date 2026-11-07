@@ -2,7 +2,7 @@
 // Uses the zip command where there is one (macOS, Linux) and tar elsewhere (Windows 10 and
 // newer ship a tar that writes zip files).
 import { execFileSync } from 'node:child_process';
-import { readFileSync, rmSync } from 'node:fs';
+import { readFileSync, readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,6 +14,7 @@ const dist = path.join(root, 'dist');
 try {
   execFileSync('zip', ['-qrX', out, '.', '-x', '.DS_Store'], { cwd: dist, stdio: 'ignore' });
 } catch {
-  execFileSync('tar', ['-a', '-c', '-f', out, '.'], { cwd: dist, stdio: 'inherit' });
+  // Names, not '.': the store wants manifest.json at the root, without a './' prefix.
+  execFileSync('tar', ['-a', '-c', '-f', out, ...readdirSync(dist)], { cwd: dist, stdio: 'inherit' });
 }
 console.log(`wrote ${path.relative(root, out)}`);

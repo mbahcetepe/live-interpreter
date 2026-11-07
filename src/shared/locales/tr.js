@@ -299,6 +299,7 @@ export default {
   'rec.txt': "Metin (.txt)",
   'rec.srt': "Altyazı (.srt)",
   'rec.minutes': "{n} dk",
+  'rec.line': "1 cümle",
   'rec.lines': "{n} cümle",
   'rec.deleteTranscriptConfirm': "Bu döküm silinsin mi?",
   'tx.title': "Canlı Tercüman dökümü",

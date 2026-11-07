@@ -299,6 +299,7 @@ export default {
   'rec.txt': "Text (.txt)",
   'rec.srt': "Subtitles (.srt)",
   'rec.minutes': "{n} min",
+  'rec.line': "1 sentence",
   'rec.lines': "{n} sentences",
   'rec.deleteTranscriptConfirm': "Delete this transcript?",
   'tx.title': "Live Interpreter transcript",
