@@ -1,4 +1,5 @@
 // Text helpers for the translation stream.
+import { insideMark } from './pronounce.js';
 
 const SENTENCE_END = /[.!?…。！？]+["'”’»)\]]*(?=\s)/g;
 const SOFT_BREAK = /[,;:،、]\s/g;
@@ -35,7 +36,7 @@ export class SentenceSplitter {
     let sentence = 0;
     while ((match = SENTENCE_END.exec(this.buffer))) {
       const end = match.index + match[0].length;
-      if (end >= this.minChars) {
+      if (end >= this.minChars && !insideMark(this.buffer, end)) {
         sentence = end;
         break;
       }
@@ -45,11 +46,12 @@ export class SentenceSplitter {
     while ((match = SOFT_BREAK.exec(this.buffer))) {
       const end = match.index + 1;
       if (sentence && end > sentence) break;
-      if (end >= this.clauseMin && end <= this.softMax) return end;
+      if (end >= this.clauseMin && end <= this.softMax && !insideMark(this.buffer, end)) return end;
     }
     if (sentence) return sentence;
     if (this.buffer.length > this.hardMax) {
-      const space = this.buffer.lastIndexOf(' ', this.hardMax);
+      let space = this.buffer.lastIndexOf(' ', this.hardMax);
+      while (space >= this.minChars && insideMark(this.buffer, space)) space = this.buffer.lastIndexOf(' ', space - 1);
       if (space >= this.minChars) return space;
     }
     return 0;

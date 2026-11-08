@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { languageByCode, AUTO_LANGUAGE } from '../shared/languages.js';
 import { SentenceSplitter, isOnlyPunctuation } from '../shared/text.js';
+import { markingRule } from '../shared/pronounce.js';
 import { t } from '../shared/i18n.js';
 
 // Models that accept the server-side refusal fallback on the Claude API. Claude Haiku 5.5
@@ -16,7 +17,8 @@ export class TranslationRefusedError extends Error {
 
 // from may be AUTO_LANGUAGE: the utterance can be in any language. media: the sound of a
 // video or radio tab the user is following, rather than a call.
-export function buildSystemPrompt({ from, to, myLanguage, theirLanguage, meetingContext, keyterms, concise, media = false }) {
+// marked: the reply will be spoken; foreign words come marked with how they sound.
+export function buildSystemPrompt({ from, to, myLanguage, theirLanguage, meetingContext, keyterms, concise, media = false, marked = false }) {
   const dst = languageByCode(to).english;
   const mine = languageByCode(myLanguage).english;
   const theirs = languageByCode(theirLanguage).english;
@@ -42,6 +44,7 @@ export function buildSystemPrompt({ from, to, myLanguage, theirLanguage, meeting
     `- If the utterance is already in ${dst}, repeat it unchanged.`,
     '- If the utterance has no words at all (only noise or a filler sound), reply with nothing.',
   ];
+  if (marked) lines.push(...markingRule(dst, to));
   if (concise) {
     lines.push('- The listener is falling behind the speaker right now: make this translation noticeably shorter, keeping every important point.');
   }
@@ -111,7 +114,7 @@ export class Translator {
   }
 
   // Yields the translation in speakable pieces while Claude is still writing it.
-  async *translate({ text, from, to, history, concise, media, signal }) {
+  async *translate({ text, from, to, history, concise, media, marked, signal }) {
     const system = buildSystemPrompt({
       from,
       to,
@@ -121,6 +124,7 @@ export class Translator {
       keyterms: this.keyterms,
       concise,
       media,
+      marked,
     });
     const user = buildUserMessage({ text, from, to, history });
     const { beta, params } = buildRequest({ model: this.model, system, user });

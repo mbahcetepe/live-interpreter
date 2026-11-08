@@ -835,6 +835,8 @@ async function init() {
   // Speech.
   bindSelect('speechProvider', { onChange: renderSpeech });
   bindText('sonioxKey', () => result('sonioxResult', ''));
+  bindCheck('pronounceForeign');
+  bindText('pronunciations');
   $('useSoniox').addEventListener('change', async () => {
     await save({ useSoniox: $('useSoniox').checked });
     renderSoniox();

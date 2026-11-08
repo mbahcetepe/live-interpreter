@@ -328,4 +328,9 @@ export default {
   'soniox.balance': "Soniox: hesapta bakiye kalmadı. soniox.com'da bakiye yükle ya da otomatik ödemeyi aç.",
   'soniox.key': "Soniox API anahtarını kabul etmedi. Ayarlarda (Ses tanıma ve sesler) yeniden yapıştır.",
   'soniox.stopped': "Soniox durdu: {message}",
+  'opt.pron.title': "Yabancı kelimelerin okunuşu",
+  'opt.pron.on': "Yabancı kelimeleri kendi dillerindeki gibi oku",
+  'opt.pron.hint': "Türkçe konuşmadaki İngilizce terimler, kısaltmalar ve markalar (API, Apple) İngilizce, İngilizce konuşmadaki Türkçe adlar Türkçe okunur. Çevirmen bunları işaretler; kendi ses sunucun okunuşlarını okur, kısa Türkçe kısaltmaları (SGK) harf harf söyler.",
+  'opt.pron.list': "Kendi okunuşların, her satıra bir tane",
+  'opt.pron.listHint': "Bütün seslerde ve bütün çeviri servislerinde, işaret konmayan yerlerde de (ücretsiz servisler, Soniox) kullanılır. Yalnızca seslendirilen metin değişir; altyazıda yazım olduğu gibi kalır.",
 };

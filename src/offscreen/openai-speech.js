@@ -170,14 +170,15 @@ function readWav(bytes) {
 
 // Yields 24 kHz 16-bit chunks, like synthesize() for ElevenLabs. Raw PCM is asked for
 // first (OpenAI streams it); a server that does not offer it gets asked for WAV.
-export async function* openaiSynthesize({ base, key = '', model, voice, text, speed = 1, signal, fetchImpl = (...a) => fetch(...a), wavOnly = false }) {
+// instructions: how to speak (only OpenAI's gpt-*-tts models take it).
+export async function* openaiSynthesize({ base, key = '', model, voice, text, speed = 1, instructions = '', signal, fetchImpl = (...a) => fetch(...a), wavOnly = false }) {
   const root = String(base || OPENAI_AUDIO_URL).replace(/\/+$/, '');
   const name = new URL(root).hostname;
   const ask = (format) =>
     fetchImpl(`${root}/audio/speech`, {
       method: 'POST',
       headers: headers(key, true),
-      body: JSON.stringify({ model, voice, input: text, response_format: format, speed }),
+      body: JSON.stringify({ model, voice, input: text, response_format: format, speed, ...(instructions && /gpt-.*tts/i.test(model || '') ? { instructions } : {}) }),
       signal,
     });
   let res;

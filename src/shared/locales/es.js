@@ -328,4 +328,9 @@ export default {
   'soniox.balance': "Soniox: la cuenta no tiene saldo. Añade fondos o activa el pago automático en soniox.com.",
   'soniox.key': "Soniox rechazó la clave de API. Vuelve a pegarla en los ajustes (Reconocimiento de voz y voces).",
   'soniox.stopped': "Soniox se detuvo: {message}",
+  'opt.pron.title': "Pronunciación de palabras extranjeras",
+  'opt.pron.on': "Decir las palabras extranjeras como se dicen en su idioma",
+  'opt.pron.hint': "Los términos, siglas y marcas en inglés dentro del turco (API, Apple) se dicen en inglés, y los nombres turcos en inglés, en turco. El traductor los marca; tu propio servidor de voz lee cómo suenan y las siglas turcas cortas (SGK), letra a letra.",
+  'opt.pron.list': "Tus propias pronunciaciones, una por línea",
+  'opt.pron.listHint': "Se usan con todas las voces y todos los servicios de traducción, también donde no se marca nada (servicios gratuitos, Soniox). Solo cambia lo que se dice; los subtítulos conservan la escritura.",
 };

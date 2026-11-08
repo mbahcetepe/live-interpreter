@@ -99,6 +99,8 @@ Ayarlar sayfası dört bölümden oluşur: **Diller**, **Çeviri**, **Ses tanım
 2. İkisini gir, **Test et** düğmesine bas ve tarayıcı adrese erişim izni isteyince izin ver. Sonuç, sunucunun sürümünü yazar ve "canlı ses tanıma hazır" ile biter.
 3. **Ses tanıma modeli**'ni (Whisper) ve sesleri seç. Ses listeleri, her sesin konuşacağı dilin seslerini gösterir; Yunanca, Endonezce, Japonca ve Korece için yerel ses yoktur (yalnızca altyazı). Bu modda ses klonu yoktur.
 
+**Yabancı kelimelerin okunuşu** (bu bölümün sonunda) varsayılan olarak açıktır: Türkçe konuşmadaki İngilizce terimler, kısaltmalar ve markalar İngilizce, İngilizce konuşmadaki Türkçe adlar Türkçe okunur. Kendi kelimelerini her satıra bir tane `kelime = okunuşu` biçiminde ekleyebilirsin (`Kubernetes = kubernetis`); yalnızca seslendirilen metin değişir.
+
 Kullandığın bilgisayar kendi sunucularınla aynı ağda (örneğin Tailscale'de) olmalı. Hem ses hem çeviri kendi sunucularında olduğunda görüşmenin hiçbir parçası senin bilgisayarlarının dışına çıkmaz ve ücret yazmaz.
 
 ## 6. Mikrofon ve ses

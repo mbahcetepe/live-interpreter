@@ -328,4 +328,9 @@ export default {
   'soniox.balance': "Soniox：账户余额已用完。请在 soniox.com 充值或开启自动付款。",
   'soniox.key': "Soniox 拒绝了 API 密钥。请在设置（语音识别和声音）中重新粘贴。",
   'soniox.stopped': "Soniox 已停止：{message}",
+  'opt.pron.title': "外语词的读法",
+  'opt.pron.on': "按外语词本来的语言读出",
+  'opt.pron.hint': "土耳其语中的英语术语、缩写和品牌（API、Apple）按英语读，英语中的土耳其语名字按土耳其语读。由翻译服务标注；你自己的语音服务器按标注的读音朗读，简短的土耳其语缩写（SGK）逐个字母读。",
+  'opt.pron.list': "自定义读法，每行一条",
+  'opt.pron.listHint': "适用于所有语音和所有翻译服务，包括不做标注的情况（免费服务、Soniox）。只改变朗读的内容，字幕保持原有拼写。",
 };

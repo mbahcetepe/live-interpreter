@@ -141,8 +141,8 @@ export class OpenAITranslator {
     return [];
   }
 
-  async *translate({ text, from, to, history, concise, media, signal }) {
-    const system = buildSystemPrompt({ from, to, myLanguage: this.myLanguage, theirLanguage: this.theirLanguage, meetingContext: this.meetingContext, keyterms: this.keyterms, concise, media });
+  async *translate({ text, from, to, history, concise, media, marked, signal }) {
+    const system = buildSystemPrompt({ from, to, myLanguage: this.myLanguage, theirLanguage: this.theirLanguage, meetingContext: this.meetingContext, keyterms: this.keyterms, concise, media, marked });
     const user = buildUserMessage({ text, from, to, history });
     const body = {
       model: this.model,

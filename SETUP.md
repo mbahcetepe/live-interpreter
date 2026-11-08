@@ -99,6 +99,8 @@ Choose the **Service**.
 2. Enter both and press **Test**, and allow access to the address when the browser asks. The result names the server's version and ends with "live recognition ready".
 3. Choose the **Recognition model** (Whisper) and the voices. The voice lists show the voices of the language each one speaks; Greek, Indonesian, Japanese and Korean have no local voice (subtitles only). No voice cloning in this mode.
 
+**Pronunciation of foreign words** (at the end of this section) is on by default: English terms, acronyms and brands in Turkish speech are said in English, Turkish names in English speech in Turkish. Add your own words, one `word = how it sounds` per line (`Kubernetes = kubernetis`); only what is spoken changes.
+
 The computer you use must be on the same network as your own servers (Tailscale, for example). With your own servers for both speech and translation, nothing of the call leaves your computers and nothing is billed.
 
 ## 6. Microphone and sound

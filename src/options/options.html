@@ -380,6 +380,22 @@
           </div>
         </div>
 
+        <details>
+          <summary data-i18n="opt.pron.title">Pronunciation of foreign words</summary>
+          <label class="check">
+            <input type="checkbox" id="pronounceForeign" />
+            <span>
+              <span data-i18n="opt.pron.on">Say foreign words the way they are said in their own language</span>
+              <small data-i18n="opt.pron.hint">English terms, acronyms and brands in Turkish speech (API, Apple) are said in English, Turkish names in English speech in Turkish. The translator marks them; your own speech server reads how they sound, short Turkish acronyms (SGK) letter by letter.</small>
+            </span>
+          </label>
+          <label class="field">
+            <span data-i18n="opt.pron.list">Your own pronunciations, one per line</span>
+            <textarea id="pronunciations" rows="4" spellcheck="false" placeholder="API = ey pi ay&#10;Kubernetes = kubernetis&#10;Şükrü = Shookroo"></textarea>
+          </label>
+          <small class="hint" data-i18n="opt.pron.listHint">Used for every voice and every translation service, also where nothing is marked (free services, Soniox). Only what is spoken changes; the subtitles keep the spelling.</small>
+        </details>
+
         <div class="actions">
           <button id="testSpeech" type="button" class="primary" data-i18n="opt.test">Test</button>
         </div>

@@ -2,6 +2,14 @@
 
 Versions follow [semantic versioning](https://semver.org): MAJOR for changes that need something done (new settings, a server update), MINOR for new features, PATCH for fixes. The version lives in `package.json`; the build writes it into the extension's manifest, and the popup and the settings page show it. The speech server has its own version and a protocol number (`/health`); the extension warns when the server is older than it needs.
 
+## 2.4.0 (2026-11-08)
+
+### New
+
+- **Foreign words said the right way.** When the translation is spoken, the translator marks words to be said in another language (English terms, acronyms and brands in Turkish speech; Turkish names in English speech) with how they sound, `[[Apple|epıl]]`. The screen and the transcript show the word as written; the local speech server reads the pronunciation; ElevenLabs and OpenAI get the word, and OpenAI's `gpt-*-tts` voices are told to say foreign words in their own language.
+- For the local voices where nothing is marked (free services, Soniox): a built-in list of common terms and brands, and short Turkish acronyms (SGK, THY) read letter by letter.
+- **Your own pronunciations** (Settings › Speech recognition and voices › Pronunciation of foreign words): one `word = how it sounds` per line, used for every voice. The whole feature can be turned off there.
+
 ## 2.3.0 (2026-11-08)
 
 ### New

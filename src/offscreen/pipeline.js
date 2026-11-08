@@ -8,6 +8,7 @@
 
 import { Watchdog } from '../shared/watchdog.js';
 import { SentenceSplitter, isOnlyPunctuation } from '../shared/text.js';
+import { displayText } from '../shared/pronounce.js';
 
 export class AsyncQueue {
   constructor() {
@@ -170,7 +171,9 @@ export class Speaker {
 
 export class DirectionPipeline {
   // media: the sound of a video or radio tab, not one side of a call.
-  constructor({ dir, from, to, translator, speaker, history, echoGuard, emit, describeError, isConcise, media = false, stallMs = TRANSLATION_STALL_MS }) {
+  // markWords(): ask the translator to mark foreign words with how they sound, when spoken.
+  constructor({ dir, from, to, translator, speaker, history, echoGuard, emit, describeError, isConcise, markWords, media = false, stallMs = TRANSLATION_STALL_MS }) {
+    this.markWords = markWords || (() => false);
     this.dir = dir;
     this.media = media;
     this.stallMs = stallMs;
@@ -296,12 +299,15 @@ export class DirectionPipeline {
         history: context,
         concise: this.isConcise(),
         media: this.media,
+        marked: this.mode === 'voice' && this.markWords(),
         signal: watch.signal,
       });
       for await (const piece of watch.guard(pieces)) {
         if (signal.aborted) break;
         if (!segment.firstTextAt) segment.firstTextAt = performance.now();
-        segment.translation = segment.translation ? `${segment.translation} ${piece}` : piece;
+        // The screen and the transcript get the words as written; the voice gets the marks.
+        const shown = displayText(piece);
+        segment.translation = segment.translation ? `${segment.translation} ${shown}` : shown;
         segment.sentences.push(piece);
         this.emit({ id: segment.id, phase: 'translating', source: segment.source, translation: segment.translation });
       }

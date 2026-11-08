@@ -17,7 +17,7 @@ import { listVoices, createVoiceClone, deleteVoice, describeElevenLabsError, spe
 import { PcmScheduler, testChime } from '../shared/scheduler.js';
 import { int16ToBase64 } from '../shared/pcm.js';
 import { EchoGuard, EarlySentences, isOnlyPunctuation } from '../shared/text.js';
-import { AUTO_LANGUAGE } from '../shared/languages.js';
+import { AUTO_LANGUAGE, languageByCode } from '../shared/languages.js';
 import { Usage } from '../shared/usage.js';
 import { sanitizePageState } from '../shared/page-state.js';
 import { describeMissingServers } from '../shared/setup-messages.js';
@@ -33,6 +33,7 @@ import { DirectionPipeline, History, Speaker } from './pipeline.js';
 import { CloneCollector } from './voice-clone.js';
 import { saveChunk, saveRecording, recordingChunks, saveTranscript } from '../shared/recordings.js';
 import { TranscriptLog } from '../shared/transcript.js';
+import { speechText, displayText, parseLexicon } from '../shared/pronounce.js';
 import { DebugSink, debugSinkUrl } from './debug-sink.js';
 
 // The debug copy is compiled in only by `npm run build:debug`; a normal build ignores
@@ -63,6 +64,8 @@ async function findDevice(kind, label) {
 }
 
 // Soniox's refusals, in words that say what to do.
+const languageName = (code) => languageByCode(code)?.english || code;
+
 function describeSonioxError(err) {
   if (err?.status === 402 || /balance/i.test(err?.type || '')) return t('soniox.balance');
   if (err?.status === 401 || /api_key|unauthorized/i.test(`${err?.type} ${err?.message}`)) return t('soniox.key');
@@ -354,12 +357,13 @@ class Session {
         synth: (item) => this.speak(item, 'in'),
         sink: this.localSink(),
         onFirstAudio: (item) => this.onFirstAudio(item),
-        onSpoken: (item, when) => this.playedGuard.remember(item.text, when),
+        onSpoken: (item, when) => this.playedGuard.remember(displayText(item.text), when),
         onError: (item, err) => this.onSpeechError('in', item, err),
         onDropped: (item) => log('info', `speech ${item.id} dropped: too far behind`),
       }),
       emit: (e) => this.caption('in', e),
       describeError: describeClaudeError,
+      markWords: () => this.settings.pronounceForeign !== false,
       isConcise: () => this.localPlayer.backlog() + this.incoming.speaker.pendingSeconds() > 8,
     });
     this.outgoing = new DirectionPipeline({
@@ -373,12 +377,13 @@ class Session {
         synth: (item) => this.speak(item, 'out'),
         sink: this.remoteSink(),
         onFirstAudio: (item) => this.onFirstAudio(item),
-        onSpoken: (item, when) => this.sentGuard.remember(item.text, when),
+        onSpoken: (item, when) => this.sentGuard.remember(displayText(item.text), when),
         onError: (item, err) => this.onSpeechError('out', item, err),
         onDropped: (item) => log('info', `speech ${item.id} dropped: too far behind`),
       }),
       emit: (e) => this.caption('out', e),
       describeError: describeClaudeError,
+      markWords: () => this.settings.pronounceForeign !== false,
       isConcise: () => this.page.backlog + this.outgoing.speaker.pendingSeconds() > 8,
     });
     this.incoming.setMode(this.incomingMode);
@@ -721,18 +726,23 @@ class Session {
     const queued = (dir === 'in' ? this.incoming : this.outgoing)?.speaker.pendingSeconds() || 0;
     const backlog = (dir === 'in' ? this.localPlayer.backlog() : this.page.backlog) + queued;
     const speed = backlog > 5 ? 1.2 : backlog > 2.5 ? 1.1 : 1;
-    this.usage.addTts(item.text.length, s.ttsModel);
+    const language = dir === 'in' ? s.myLanguage : s.theirLanguage;
+    // Foreign words: the local voice knows one language and reads how they sound; the
+    // others get the words themselves (and OpenAI is told how to say them).
+    const text = speechText(item.text, { language, singleLanguage: Boolean(this.speech.local), lexicon: parseLexicon(s.pronunciations), enabled: s.pronounceForeign !== false });
+    this.usage.addTts(text.length, s.ttsModel);
     if (this.speech.kind === 'openai') {
-      return openaiSynthesize({ ...this.speech.tts, voice: voiceId, text: item.text, speed, signal: item.signal });
+      const instructions = s.pronounceForeign !== false ? `Speak naturally in ${languageName(language)}. Say technical terms, acronyms, and brand and personal names from other languages the way they are said in their own language.` : '';
+      return openaiSynthesize({ ...this.speech.tts, voice: voiceId, text, speed, instructions, signal: item.signal });
     }
     return synthesize({
       apiKey: this.speech,
       voiceId,
-      text: item.text,
+      text,
       modelId: s.ttsModel,
-      languageCode: dir === 'in' ? s.myLanguage : s.theirLanguage,
+      languageCode: language,
       voiceSettings: { stability: s.stability, similarity_boost: s.similarity, speed },
-      previousText: item.previousText,
+      previousText: displayText(item.previousText),
       signal: item.signal,
     });
   }

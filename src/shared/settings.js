@@ -149,6 +149,8 @@ export const DEFAULT_SETTINGS = {
   // Each session's transcript is kept on this computer (recordings page).
   saveTranscripts: true,
   subtitleBar: true, // the translation as subtitles low in the Meet window
+  pronounceForeign: true, // foreign words read the way they are said in their own language
+  pronunciations: '', // the user's own list: "API = ey pi ay", one per line
   mediaSubtitles: true, // on a video tab with voice translation: subtitles too (false: voice only)
   settingsVersion: 2,
 };

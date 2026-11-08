@@ -328,4 +328,9 @@ export default {
   'soniox.balance': "Soniox: the account has no balance left. Add funds or turn on autopay at soniox.com.",
   'soniox.key': "Soniox refused the API key. Paste it again in the settings (Speech recognition and voices).",
   'soniox.stopped': "Soniox stopped: {message}",
+  'opt.pron.title': "Pronunciation of foreign words",
+  'opt.pron.on': "Say foreign words the way they are said in their own language",
+  'opt.pron.hint': "English terms, acronyms and brands in Turkish speech (API, Apple) are said in English, Turkish names in English speech in Turkish. The translator marks them; your own speech server reads how they sound, short Turkish acronyms (SGK) letter by letter.",
+  'opt.pron.list': "Your own pronunciations, one per line",
+  'opt.pron.listHint': "Used for every voice and every translation service, also where nothing is marked (free services, Soniox). Only what is spoken changes; the subtitles keep the spelling.",
 };

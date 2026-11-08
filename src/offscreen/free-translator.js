@@ -262,13 +262,13 @@ export class FreeTranslator {
   }
 
   // Yields the translation in speakable pieces, like the Claude translator.
-  async *translate({ text, from, to, history, concise, media, signal }) {
+  async *translate({ text, from, to, history, concise, media, marked, signal }) {
     let lastError = null;
     for (const step of FREE_STEPS) {
       if (!this.usable(step, from, to)) continue;
       const started = this.now();
       try {
-        const output = await this.run(step, { text, from, to, history, concise, media, signal });
+        const output = await this.run(step, { text, from, to, history, concise, media, marked, signal });
         this.log('info', `free translation by ${step.id} in ${this.now() - started} ms`);
         const translation = matchCase(text, cleanTranslation(output), to);
         if (translation) yield* speakable(translation);
@@ -315,7 +315,7 @@ export class FreeTranslator {
     return data?.translations?.[0]?.text || '';
   }
 
-  async chat(step, { text, from, to, history, concise, media }, signal) {
+  async chat(step, { text, from, to, history, concise, media, marked }, signal) {
     const system = buildSystemPrompt({
       from,
       to,
@@ -325,6 +325,7 @@ export class FreeTranslator {
       keyterms: this.keyterms,
       concise,
       media,
+      marked,
     });
     const user = buildUserMessage({ text, from, to, history });
     const body = {

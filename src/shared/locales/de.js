@@ -328,4 +328,9 @@ export default {
   'soniox.balance': "Soniox: Das Konto hat kein Guthaben mehr. Laden Sie es auf soniox.com auf oder aktivieren Sie die automatische Zahlung.",
   'soniox.key': "Soniox hat den API-Schlüssel abgelehnt. Fügen Sie ihn in den Einstellungen (Spracherkennung und Stimmen) erneut ein.",
   'soniox.stopped': "Soniox wurde beendet: {message}",
+  'opt.pron.title': "Aussprache fremder Wörter",
+  'opt.pron.on': "Fremde Wörter so aussprechen, wie man sie in ihrer Sprache sagt",
+  'opt.pron.hint': "Englische Fachwörter, Abkürzungen und Marken in türkischer Rede (API, Apple) werden englisch gesprochen, türkische Namen in englischer Rede türkisch. Der Übersetzer markiert sie; Ihr eigener Sprachserver liest ihre Aussprache, kurze türkische Abkürzungen (SGK) Buchstabe für Buchstabe.",
+  'opt.pron.list': "Eigene Aussprachen, eine pro Zeile",
+  'opt.pron.listHint': "Gilt für jede Stimme und jeden Übersetzungsdienst, auch wo nichts markiert ist (kostenlose Dienste, Soniox). Nur das Gesprochene ändert sich; die Untertitel behalten die Schreibung.",
 };
