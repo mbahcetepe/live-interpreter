@@ -2,7 +2,7 @@
 
 # Live Interpreter privacy policy
 
-Last updated: 7 November 2026
+Last updated: 8 November 2026
 
 Live Interpreter (Canlı Tercüman in Turkish) is a browser extension that translates speech in Microsoft Teams and Google Meet calls on the web, and in video or radio tabs. This page says what it does with your data.
 
@@ -25,6 +25,7 @@ Live Interpreter (Canlı Tercüman in Turkish) is a browser extension that trans
 
 The extension sends audio or text only to the services selected in its settings, and only while a translation runs or when you press a Test button. Each one handles the data under its own privacy policy:
 
+- Speech recognition and translation in one stream: Soniox.
 - Speech: ElevenLabs, OpenAI, Groq, or a speech server you run yourself (for example the one in this project, Speaches, LocalAI or Kokoro).
 - Translation: Anthropic (Claude), OpenAI or a server with the same API, OpenRouter, an Ollama server you run yourself, DeepL, Mistral, Groq, or the browser's built-in translator, which works on your computer.
 

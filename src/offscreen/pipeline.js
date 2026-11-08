@@ -7,6 +7,7 @@
 // known, so the next sentence is usually ready before the current one has finished.
 
 import { Watchdog } from '../shared/watchdog.js';
+import { SentenceSplitter, isOnlyPunctuation } from '../shared/text.js';
 
 export class AsyncQueue {
   constructor() {
@@ -78,12 +79,14 @@ const TRANSLATION_STALL_MS = 15000;
 
 // Plays speech items strictly in order, fetching ahead while earlier items play.
 export class Speaker {
-  constructor({ synth, sink, onFirstAudio, onSpoken, onError }) {
+  constructor({ synth, sink, onFirstAudio, onSpoken, onError, onDropped, maxQueuedSeconds = 20 }) {
     this.synth = synth;
     this.sink = sink;
     this.onFirstAudio = onFirstAudio;
     this.onSpoken = onSpoken;
     this.onError = onError;
+    this.onDropped = onDropped;
+    this.maxQueuedSeconds = maxQueuedSeconds;
     this.items = [];
     this.running = false;
     this.counter = 0;
@@ -100,15 +103,26 @@ export class Speaker {
     item.signal = speech.signal;
     item.cancel = () => speech.abort();
     item.audio = new AsyncQueue();
+    item.requestedAt = performance.now();
     (async () => {
       try {
-        for await (const chunk of this.synth(item)) item.audio.push(chunk);
+        for await (const chunk of this.synth(item)) {
+          if (!item.firstChunkAt) item.firstChunkAt = performance.now();
+          item.audio.push(chunk);
+        }
         item.audio.close();
       } catch (err) {
         item.audio.fail(err);
       }
     })();
     this.items.push(item);
+    // Far behind: the oldest speech not yet playing is dropped (its text stays on screen),
+    // so what is heard stays close to what is being said.
+    while (this.items.length > 1 && this.pendingSeconds() > this.maxQueuedSeconds) {
+      const dropped = this.items.shift();
+      dropped.cancel();
+      this.onDropped?.(dropped);
+    }
     if (!this.running) this.run();
   }
 
@@ -185,7 +199,8 @@ export class DirectionPipeline {
     else if (previous === 'voice') this.silence();
   }
 
-  onCommitted(text) {
+  // meta.listenMs: how long the speech had been over before the segment was committed.
+  onCommitted(text, meta = {}) {
     if (this.mode === 'off') return;
     if (this.echoGuard?.isEcho(text)) {
       this.emit({ phase: 'echo', source: text });
@@ -196,6 +211,7 @@ export class DirectionPipeline {
       source: text,
       translation: '',
       committedAt: performance.now(),
+      listenMs: meta.listenMs ?? null,
       controller: new AbortController(),
       sentences: new AsyncQueue(),
     };
@@ -209,6 +225,64 @@ export class DirectionPipeline {
       .then(() => (generation === this.generation ? this.queueSpeech(segment) : undefined))
       .catch(() => {})
       .finally(() => this.live.delete(segment));
+  }
+
+  // A segment heard and translated as one stream by the speech service (Soniox): nothing
+  // goes to a translator, and the translation is spoken clause by clause as it arrives.
+  // Returns { source(text), translation(piece), end({ source, translation }) }, or null
+  // when this side is off.
+  openSegment() {
+    if (this.mode === 'off') return null;
+    const segment = {
+      id: `${this.dir}${++this.counter}`,
+      source: '',
+      translation: '',
+      committedAt: performance.now(),
+      listenMs: 0,
+      controller: new AbortController(),
+      sentences: new AsyncQueue(),
+    };
+    this.live.add(segment);
+    this.history.add({ id: segment.id, dir: this.dir, source: '', translation: '' });
+    const generation = this.generation;
+    this.chain = this.chain
+      .then(() => (generation === this.generation ? this.queueSpeech(segment) : undefined))
+      .catch(() => {})
+      .finally(() => this.live.delete(segment));
+    const splitter = new SentenceSplitter();
+    let shown = false;
+    let ended = false;
+    const show = (phase, extra = {}) => this.emit({ id: segment.id, phase, source: segment.source, translation: segment.translation.trim(), ...extra });
+    return {
+      source: (text) => {
+        if (ended || !text || text === segment.source) return;
+        segment.source = text;
+        if (!shown) {
+          shown = true;
+          this.emit({ id: segment.id, phase: 'committed', source: text });
+        } else show('translating');
+      },
+      translation: (piece) => {
+        if (ended || segment.controller.signal.aborted || !piece) return;
+        if (!segment.firstTextAt) segment.firstTextAt = performance.now();
+        segment.translation += piece;
+        for (const sentence of splitter.push(piece)) if (!isOnlyPunctuation(sentence)) segment.sentences.push(sentence);
+        if (shown) show('translating');
+      },
+      end: ({ source, translation } = {}) => {
+        if (ended) return;
+        ended = true;
+        if (source) segment.source = source;
+        if (translation && !segment.translation.trim()) segment.translation = translation;
+        const rest = splitter.flush();
+        if (rest && !isOnlyPunctuation(rest)) segment.sentences.push(rest);
+        segment.sentences.close();
+        this.history.setTranslation(segment.id, segment.translation.trim());
+        if (!segment.source && !segment.translation.trim()) return;
+        if (!shown) this.emit({ id: segment.id, phase: 'committed', source: segment.source });
+        if (!segment.controller.signal.aborted) show('translated', { translateMs: Math.round(performance.now() - segment.committedAt) });
+      },
+    };
   }
 
   async translate(segment, context) {

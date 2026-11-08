@@ -5,6 +5,7 @@ import {
   claudeModelOf,
   isLocalSpeech,
   isOpenAISpeech,
+  isSoniox,
   missingKeys,
   missingServers,
   PROVIDERS,
@@ -22,6 +23,7 @@ import { OllamaTranslator, listOllamaModels } from '../offscreen/ollama-translat
 import { OpenAITranslator, listOpenAIModels } from '../offscreen/openai-translator.js';
 import { OpenAITranscriber, openaiSynthesize, listAudioModels, listAudioVoices } from '../offscreen/openai-speech.js';
 import { StreamResampler } from '../shared/dsp.js';
+import { SONIOX_WS, sonioxConfig } from '../offscreen/soniox.js';
 import { serverBase, originPattern, originRules } from '../shared/servers.js';
 import { localPairs, localTranslationState, prepareLocalTranslation } from '../shared/local-translation.js';
 import { PcmByteAligner, encodeWav, float32ToInt16 } from '../shared/pcm.js';
@@ -157,10 +159,11 @@ async function refreshStatus() {
   const translationOk =
     provider === 'free' ? localState === 'ready' || FREE_KEY_NAMES.some((k) => settings[k]) : !missing.some((m) => m !== 'ElevenLabs' && m !== 'speech');
   const speechName = isLocalSpeech(settings) ? t('opt.speech.local') : isOpenAISpeech(settings) ? t('opt.speech.openai') : 'ElevenLabs';
-  $('check-speech').textContent = `${t('opt.speech.title')}: ${speechName}`;
-  $('check-translation').textContent = `${t('opt.tr.title')}: ${t(PROVIDERS.find((p) => p.id === provider).labelKey)}`;
-  $('check-speech').classList.toggle('done', speechOk);
-  $('check-translation').classList.toggle('done', translationOk);
+  const soniox = isSoniox(settings);
+  $('check-speech').textContent = `${t('opt.speech.title')}: ${soniox ? `Soniox + ${speechName}` : speechName}`;
+  $('check-translation').textContent = `${t('opt.tr.title')}: ${soniox ? 'Soniox' : t(PROVIDERS.find((p) => p.id === provider).labelKey)}`;
+  $('check-speech').classList.toggle('done', speechOk && !missing.includes('Soniox'));
+  $('check-translation').classList.toggle('done', soniox ? !missing.includes('Soniox') : translationOk);
   $('check-mic').classList.toggle('done', (await micGranted()) === 'granted');
 }
 
@@ -323,6 +326,60 @@ async function prepareFree() {
 }
 
 // ---- speech ----------------------------------------------------------------------------
+
+function renderSoniox() {
+  const on = isSoniox(settings);
+  $('useSoniox').checked = on;
+  $('sonioxBox').hidden = !on;
+  $('sonioxTranslationNote').hidden = !on;
+  $('speechServiceLabel').textContent = on ? t('opt.soniox.voiceService') : t('opt.tr.provider');
+}
+
+// Opens a stream with the key and a moment of silence: Soniox answers a refused key or an
+// empty balance with an error message; a quiet stream means it is ready.
+async function testSoniox() {
+  const key = String(settings.sonioxKey || '').trim();
+  if (!key) return result('sonioxResult', t('opt.soniox.noKey'), 'bad');
+  result('sonioxResult', t('opt.testing'));
+  const started = performance.now();
+  const outcome = await new Promise((resolve) => {
+    let ws;
+    const done = (value) => {
+      clearTimeout(timer);
+      try {
+        if (ws?.readyState === 1) ws.send('');
+        ws?.close();
+      } catch {
+        // closed
+      }
+      resolve(value);
+    };
+    const timer = setTimeout(() => done({ ok: true }), 2500);
+    try {
+      ws = new WebSocket(SONIOX_WS, ['soniox-api-key', key]);
+    } catch (err) {
+      done({ ok: false, error: err?.message || String(err) });
+      return;
+    }
+    ws.onopen = () => {
+      ws.send(JSON.stringify(sonioxConfig({ target: settings.myLanguage, source: settings.theirLanguage })));
+      ws.send(new Int16Array(16000).buffer);
+    };
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.error_code || data.error_message) done({ ok: false, status: Number(data.error_code), type: data.error_type, error: data.error_message });
+      } catch {
+        // not JSON
+      }
+    };
+    ws.onerror = () => done({ ok: false, error: t('opt.soniox.noSocket') });
+    ws.onclose = (event) => done(event.wasClean && event.code === 1000 ? { ok: true } : { ok: false, error: t('opt.soniox.noSocket') });
+  });
+  if (outcome.ok) return result('sonioxResult', t('opt.soniox.ok', { ms: Math.round(performance.now() - started) }), 'ok');
+  const message = outcome.status === 402 ? t('soniox.balance') : outcome.status === 401 ? t('soniox.key') : t('soniox.stopped', { message: outcome.error || '' });
+  return result('sonioxResult', message, 'bad');
+}
 
 function renderSpeech() {
   const provider = isLocalSpeech(settings) ? 'local' : isOpenAISpeech(settings) ? 'openai' : 'elevenlabs';
@@ -777,6 +834,17 @@ async function init() {
 
   // Speech.
   bindSelect('speechProvider', { onChange: renderSpeech });
+  bindText('sonioxKey', () => result('sonioxResult', ''));
+  $('useSoniox').addEventListener('change', async () => {
+    await save({ useSoniox: $('useSoniox').checked });
+    renderSoniox();
+    refreshStatus();
+  });
+  $('testSoniox').addEventListener('click', async () => {
+    $('testSoniox').disabled = true;
+    await testSoniox();
+    $('testSoniox').disabled = false;
+  });
   for (const id of ['elevenLabsKey', 'localSpeechUrl', 'localSpeechKey']) bindText(id);
   $('elevenLabsKey').addEventListener('change', loadVoices);
   $('localSpeechUrl').addEventListener('change', () => loadLocalSpeech());
@@ -829,6 +897,7 @@ async function init() {
   navigator.mediaDevices.addEventListener('devicechange', refreshDevices);
 
   renderProvider();
+  renderSoniox();
   renderSpeech();
   refreshStatus();
 }

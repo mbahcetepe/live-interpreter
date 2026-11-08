@@ -72,6 +72,8 @@ Press **Test**: one sentence is translated and timed. If the chosen service fail
 
 ## 5. Speech recognition and voices
 
+**Soniox (fastest, optional):** tick **Hear and translate with Soniox**, paste the API key from [soniox.com](https://soniox.com) (Console › API keys; the account needs a balance or autopay) and press **Test**. Soniox then hears both sides and translates as it hears, before the sentence ends. Still choose a **Service** below: it only speaks the translation. The Translation section is not used while Soniox is on.
+
 Choose the **Service**.
 
 **ElevenLabs:**
@@ -142,6 +144,7 @@ When the meeting ends the translation stops by itself 30 seconds after the last 
 
 - The translation shows as subtitles low in the page. In YouTube's full screen they move into the player.
 - With voice translation the original is turned down to 20% while the translation speaks and comes back up between sentences.
+- To only hear the translation, with nothing written over the video, choose **Voice translation** and untick **Also show subtitles** in the extension window.
 - The extension reaches only the tab you clicked on and sends nothing into it. Moving to another video on the same site keeps translating.
 - The translation comes 1.5–3 s behind the speech. With fast, continuous speech, voice translation shortens what it says to keep up.
 - **Films and noisy sound:** your own speech server finds speech with a voice detector (Silero VAD) that tells a voice from music and effects. When the music drowns the dialogue, some sentences can still be missed.

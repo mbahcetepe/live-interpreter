@@ -2,6 +2,24 @@
 
 Versions follow [semantic versioning](https://semver.org): MAJOR for changes that need something done (new settings, a server update), MINOR for new features, PATCH for fixes. The version lives in `package.json`; the build writes it into the extension's manifest, and the popup and the settings page show it. The speech server has its own version and a protocol number (`/health`); the extension warns when the server is older than it needs.
 
+## 2.3.0 (2026-11-08)
+
+### New
+
+- **Soniox** (optional): speech recognition and translation in one stream. The translation arrives word by word while the speaker is still talking, with no separate translation request; the chosen voice service only speaks it. One Soniox stream per side of a call; the settings' **Test** reports a refused key or an empty balance.
+- **Voice only on video tabs**: with voice translation, untick **Also show subtitles** in the extension window to hear the translation with nothing written over the video.
+- The panel shows the delay in its parts: waiting for the speech to end, the first translated words, the first sound of the voice.
+
+### Faster
+
+- The translation is spoken clause by clause (from about 24 characters at a comma, semicolon or colon), not sentence by sentence.
+- Reasoning models are asked not to reason (`none`, then `minimal`, then `low`, as far as a model requires; remembered per model). On OpenRouter reasoning is turned off for every model and the quickest provider is chosen.
+- When the voice falls more than 20 s behind, the oldest piece not yet playing is skipped; its text stays on screen.
+
+### Tests
+
+- `ONLY=soniox,local npm run test:e2e` runs only the named suites; `node test/api/soniox.mjs` checks a real Soniox key (a fraction of a cent).
+
 ## 2.2.1 (2026-11-07)
 
 - Ready for the Chrome Web Store: shorter package descriptions (the store allows 132 characters), a privacy policy (`PRIVACY.md`), the listing texts and form answers (`store/`) and `npm run store:images` for the store images.

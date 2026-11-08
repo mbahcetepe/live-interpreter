@@ -65,10 +65,19 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
 | | Speech recognition and voices | Translation |
 | --- | --- | --- |
 | **Hosted** | ElevenLabs (Scribe v2 Realtime, Flash v2.5 / v4 Turbo); OpenAI (Whisper, gpt-4o-transcribe, gpt-4o-mini-tts); Groq Whisper (recognition, fast and cheap) | Claude Opus, Sonnet or Haiku 5.5; OpenAI; OpenRouter (hundreds of models, one key) |
+| **Recognition and translation in one** | Soniox (`stt-rt-v6`): hears and translates in the same stream, the fastest setup; any of the voices above speaks the translation | |
 | **Free services** | | DeepL Free, Mistral, Groq, Chrome's built-in translator |
 | **Your own servers** | The speech server in [speech-server/](speech-server/README.md) (faster-whisper and Piper), or any server with OpenAI's audio API (Speaches, LocalAI, Kokoro-FastAPI) | Ollama (for example `gemma4:12b`), or any server with OpenAI's API (LM Studio, vLLM) |
 
 The two columns are chosen separately. With your own servers in both, nothing of the call leaves your computers and nothing is billed.
+
+### Soniox: recognition and translation in one stream
+
+Under **Speech recognition and voices** tick **Hear and translate with Soniox** and paste a [Soniox](https://soniox.com) API key; **Test** opens a stream and reports a refused key or an empty balance. Soniox recognizes the speech and translates it in the same stream, word by word, so the translation starts before the sentence is over: there is no wait for the end of the sentence and no separate translation request. The service chosen below it (ElevenLabs, OpenAI or your own speech server) only speaks the translation; the Translation section is not used. Soniox charges per hour of audio (about $0.12/h at the time of writing, translation included in the same stream); each side of a call is its own stream.
+
+### How fast it is
+
+The translation is spoken clause by clause: as soon as a translated clause is long enough (a comma, semicolon or colon after about 24 characters, or the end of a sentence), its voice is asked for, and the voice streams back, so the first words are heard before the translator has finished the sentence. Reasoning models are asked not to reason (`reasoning_effort: none`, stepping up only as far as a model requires); on OpenRouter reasoning is turned off for every model and the quickest provider is chosen (`provider.sort: latency`). When speech falls more than 20 s behind, the oldest piece not yet playing is skipped (its text stays on screen). The panel shows the delay in its parts, averaged over the last sentences: waiting for the speech to end, the first translated words, and the first sound of the voice.
 
 ### Ollama for translation
 

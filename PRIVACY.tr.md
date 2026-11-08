@@ -2,7 +2,7 @@
 
 # Live Interpreter (Canlı Tercüman) gizlilik politikası
 
-Son güncelleme: 7 Kasım 2026
+Son güncelleme: 8 Kasım 2026
 
 Canlı Tercüman, web'deki Microsoft Teams ve Google Meet görüşmelerinde ve video ya da radyo sekmelerinde konuşmayı çeviren bir tarayıcı eklentisidir. Bu sayfa verilerinle ne yaptığını anlatır.
 
@@ -25,6 +25,7 @@ Canlı Tercüman, web'deki Microsoft Teams ve Google Meet görüşmelerinde ve v
 
 Eklenti ses ya da metni yalnızca ayarlarda seçili servislere, yalnızca çeviri sürerken ya da bir Test düğmesine bastığında gönderir. Her servis veriyi kendi gizlilik politikasına göre işler:
 
+- Tek akışta ses tanıma ve çeviri: Soniox.
 - Ses: ElevenLabs, OpenAI, Groq ya da kendi çalıştırdığın bir ses sunucusu (örneğin bu projedeki sunucu, Speaches, LocalAI ya da Kokoro).
 - Çeviri: Anthropic (Claude), OpenAI ya da aynı API'yi sunan bir sunucu, OpenRouter, kendi çalıştırdığın bir Ollama sunucusu, DeepL, Mistral, Groq ya da bilgisayarında çalışan tarayıcının kendi çevirmeni.
 

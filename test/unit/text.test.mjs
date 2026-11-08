@@ -133,3 +133,23 @@ test('a final transcript that only revises what was sent ahead adds nothing', ()
   same.partial('Bu çok kolay. Tekrar');
   assert.equal(same.committed('Bu çok kolay'), '');
 });
+
+test('a clause long enough to speak is cut at its comma, before the sentence ends', () => {
+  const s = new SentenceSplitter();
+  assert.deepEqual(s.push('Bugün görüşmeye katıldığınız için, hepinize çok teşekkür'), ['Bugün görüşmeye katıldığınız için,']);
+  assert.deepEqual(s.push(' ederim. Sonra'), ['hepinize çok teşekkür ederim.']);
+  assert.equal(s.flush(), 'Sonra');
+});
+
+test('a short clause stays with the rest of its sentence', () => {
+  const s = new SentenceSplitter();
+  assert.deepEqual(s.push('Yes, I agree with that. And'), ['Yes, I agree with that.']);
+});
+
+test('text with no break at all is cut at a space once it runs long', () => {
+  const s = new SentenceSplitter();
+  const long = 'word '.repeat(30);
+  const pieces = s.push(long);
+  assert.equal(pieces.length, 1);
+  assert.ok(pieces[0].length <= 110 && !pieces[0].endsWith(' '));
+});

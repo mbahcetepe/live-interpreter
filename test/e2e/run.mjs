@@ -561,6 +561,62 @@ async function openaiSpeechTest() {
 
 // Everything on the person's own servers: the real speech server (speech-server/, with
 // its stand-in engines) for recognition and speech, and a stand-in Ollama for translation.
+// Soniox hears and translates both sides in one stream; the voice still comes from
+// ElevenLabs (mocked). No translation service and no Anthropic key are involved.
+async function sonioxTest() {
+  console.log('\n== Soniox: recognition and translation in one stream (mock, no Claude) ==');
+  const mock = await startMockApi({
+    cert: readFileSync(path.join(fixtures, 'mock-cert.pem')),
+    key: readFileSync(path.join(fixtures, 'mock-key.pem')),
+  });
+  const env = await launch({ micWav: path.join(fixtures, 'turkish.wav'), remoteWav: path.join(fixtures, 'english.wav'), proxyPort: mock.port });
+  const { control, meet, tabId } = env;
+  const setSettings = (patch) =>
+    control.evaluate(async (p) => {
+      const { settings } = await chrome.storage.local.get('settings');
+      await chrome.storage.local.set({ settings: { ...(settings || {}), ...p } });
+    }, patch);
+  try {
+    await setSettings({ useSoniox: true, sonioxKey: '', elevenLabsKey: 'mock-el', speechProvider: 'elevenlabs', translationProvider: 'claude', anthropicKey: '' });
+    const bare = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('Soniox without a key does not start and names it', bare?.ok === false && /soniox/i.test(bare?.error || ''), bare?.error);
+
+    await setSettings({ sonioxKey: 'mock-soniox' });
+    const start = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('Soniox starts with no Anthropic key', start?.ok === true, start?.error);
+    if (!start?.ok) return;
+    const incoming = await waitFor(async () => done((await readCaptions(meet)).incoming), 30000, 300);
+    check('the counterpart is heard and translated into Turkish by Soniox', incoming?.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.', JSON.stringify(incoming));
+    const outgoing = await waitFor(async () => done((await readCaptions(meet)).outgoing), 30000, 300);
+    check('my Turkish is translated into English by Soniox', outgoing?.translation === 'Friday at three works for us.', JSON.stringify(outgoing));
+    const targets = mock.stats.soniox.map((x) => x.config?.translation?.target_language).sort();
+    check('one Soniox stream per side, each translating into the other language', targets.join(',') === 'en,tr' && mock.stats.soniox.every((x) => x.config?.audio_format === 'pcm_s16le'), targets.join(','));
+    check('no translation service was asked', mock.stats.claude.length === 0 && mock.stats.free.length === 0, `${mock.stats.claude.length} claude, ${mock.stats.free.length} free`);
+    const spoken = await waitFor(() => mock.stats.tts.some((r) => /Merhaba/.test(r.text || '')), 15000, 300);
+    check('the translation is spoken, starting with its first clause', spoken && mock.stats.tts.find((r) => /Merhaba/.test(r.text || ''))?.text.length < 60, JSON.stringify(mock.stats.tts.slice(0, 3).map((r) => r.text)));
+    const heard = await meet.evaluate(() => document.getElementById('meet-tercuman-overlay')?.shadowRoot?.textContent || '');
+    check('the panel shows what was said with its translation', heard.includes('Hi, thanks for joining the call today.'), heard.slice(0, 200));
+    await send(control, { type: 'stop' });
+    const kept = await waitFor(async () => (await readTranscripts(control)).find((t) => t.endedAt && t.lines?.length), 10000, 300);
+    check('the transcript keeps the whole sentence and its translation', kept?.lines?.some((l) => l.source === 'Hi, thanks for joining the call today.' && l.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.'), JSON.stringify(kept?.lines?.slice(0, 2)));
+
+    // An empty balance ends the session with a clear reason.
+    mock.faults.soniox = 402;
+    const again = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'off' } });
+    const ended = await waitFor(async () => {
+      const state = await sessionState(control);
+      return state?.status !== 'running' && /soniox/i.test(state?.error || state?.engine?.error || '') ? state : null;
+    }, 15000, 300);
+    check('an empty Soniox balance stops the translation and says so', again?.ok === true && Boolean(ended), JSON.stringify(await sessionState(control))?.slice(0, 240));
+    await send(control, { type: 'stop' }).catch(() => {});
+    check('no script errors on the Meet page', env.pageErrors.length === 0, env.pageErrors.join(' | '));
+  } finally {
+    await env.context.close();
+    await rm(env.userDataDir, { recursive: true, force: true });
+    mock.close();
+  }
+}
+
 async function startSpeechServer() {
   const port = 18000 + Math.floor(Math.random() * 2000);
   const python = process.platform === 'win32' ? 'python' : 'python3';
@@ -755,23 +811,20 @@ if (!existsSync(path.join(dist, 'manifest.json'))) {
 }
 await mkdir(fixtures, { recursive: true });
 makeFixtures();
-await connectionTest();
-await recordingTest();
-await mockTranslationTest();
-await freeTranslationTest();
-await ollamaTranslationTest();
-await openaiTranslationTest();
-await openaiSpeechTest();
-await localServersTest();
-await mediaTest();
+// ONLY=local,media runs only the suites whose names contain one of these words.
+const only = (process.env.ONLY || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
+const suites = { connectionTest, recordingTest, mockTranslationTest, freeTranslationTest, ollamaTranslationTest, openaiTranslationTest, openaiSpeechTest, sonioxTest, localServersTest, mediaTest };
+for (const [name, run] of Object.entries(suites)) {
+  if (!only.length || only.some((w) => name.toLowerCase().includes(w))) await run();
+}
 const env = loadEnv();
 // SKIP_REAL=1 runs only the keyless suites (no credits used).
-if (env.ELEVENLABS_API_KEY && !process.env.SKIP_REAL) {
+if (env.ELEVENLABS_API_KEY && !process.env.SKIP_REAL && !only.length) {
   await realElevenLabsTest({ el: env.ELEVENLABS_API_KEY, an: env.ANTHROPIC_API_KEY || '' });
 } else {
   console.log('\n(Real ElevenLabs check skipped: put ELEVENLABS_API_KEY in .env to run it.)');
 }
-if (env.ELEVENLABS_API_KEY && env.ANTHROPIC_API_KEY && !process.env.SKIP_REAL) {
+if (env.ELEVENLABS_API_KEY && env.ANTHROPIC_API_KEY && !process.env.SKIP_REAL && !only.length) {
   await translationTest({ el: env.ELEVENLABS_API_KEY, an: env.ANTHROPIC_API_KEY, model: env.CLAUDE_MODEL || 'claude-opus-5-5' });
 }
 process.exit(summary());

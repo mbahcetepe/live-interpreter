@@ -72,6 +72,8 @@ Ayarlar sayfası dört bölümden oluşur: **Diller**, **Çeviri**, **Ses tanım
 
 ## 5. Ses tanıma ve sesler
 
+**Soniox (en hızlısı, isteğe bağlı):** **Soniox ile dinle ve çevir** kutusunu işaretle, [soniox.com](https://soniox.com) panelinden aldığın API anahtarını (Console › API keys; hesapta bakiye ya da otomatik ödeme olmalı) yapıştır ve **Test et** düğmesine bas. Soniox iki tarafı dinler ve cümle bitmeden, duyduğu anda çevirir. Aşağıdan yine bir **Servis** seç: o yalnızca çeviriyi seslendirir. Soniox açıkken Çeviri bölümü kullanılmaz.
+
 **Servis**'i seç.
 
 **ElevenLabs:**
@@ -142,6 +144,7 @@ Toplantı bitince çeviri, bağlantı kalmadıktan 30 saniye sonra kendiliğinde
 
 - Çeviri sayfanın altında film altyazısı gibi çıkar. YouTube tam ekrandayken altyazı oynatıcının içine taşınır.
 - Sesli çeviride asıl ses, çeviri konuşurken %20'ye iner, cümle aralarında normale döner.
+- Yalnızca çeviriyi duymak, videonun üzerinde yazı görmemek için eklenti penceresinde **Sesli çeviri**'yi seç ve **Altyazıyı da göster** kutusunun işaretini kaldır.
 - Eklenti yalnızca tıkladığın sekmeye erişir ve sayfaya hiçbir şey göndermez. Aynı sitede başka bir videoya geçince çeviri devam eder.
 - Çeviri konuşmanın 1,5–3 saniye gerisinden gelir. Hızlı ve kesintisiz konuşulan videolarda sesli çeviri, yetişmek için kısaltır.
 - **Filmler ve gürültülü sesler:** Kendi ses sunucun konuşmayı müzikten ve efektlerden ayıran bir ses algılayıcıyla (Silero VAD) çalışır. Müzik diyalogu bastırıyorsa bazı cümleler kaçabilir.

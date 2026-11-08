@@ -67,6 +67,9 @@ function render() {
 
   // The local speech server cannot clone a voice.
   $('consentRow').hidden = media || !settings.offerTheirClone || settings.incomingMode !== 'voice' || isLocalSpeech(settings) || isOpenAISpeech(settings);
+  // A video with spoken translation can go without subtitles.
+  $('mediaSubsRow').hidden = !media || settings.incomingMode !== 'voice';
+  $('mediaSubs').checked = settings.mediaSubtitles !== false;
   // A recording has to be chosen before the start: the tab picture is captured then.
   $('recordRow').hidden = running || busy || media;
 
@@ -181,6 +184,10 @@ async function init() {
     if (state.status === 'running') {
       chrome.runtime.sendMessage({ type: 'options', options: { cloneConsent: $('consent').checked } }).catch(() => {});
     }
+  });
+  $('mediaSubs').addEventListener('change', async () => {
+    settings = await saveSettings({ mediaSubtitles: $('mediaSubs').checked });
+    render();
   });
   $('settings').addEventListener('click', () => chrome.runtime.openOptionsPage());
   $('primary').addEventListener('click', async () => {

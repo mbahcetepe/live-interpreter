@@ -49,6 +49,7 @@
 
       <section class="card">
         <h2 data-i18n="opt.tr.title">Translation</h2>
+        <p class="hint" id="sonioxTranslationNote" hidden data-i18n="opt.soniox.translationNote">Soniox is on (Speech recognition and voices): it translates as it hears, and the service below is not used.</p>
         <label class="field">
           <span data-i18n="opt.tr.provider">Service</span>
           <select id="translationProvider"></select>
@@ -177,8 +178,27 @@
 
       <section class="card">
         <h2 data-i18n="opt.speech.title">Speech recognition and voices</h2>
+        <label class="check">
+          <input type="checkbox" id="useSoniox" />
+          <span>
+            <span data-i18n="opt.soniox.use">Hear and translate with Soniox (fastest)</span>
+            <small data-i18n="opt.soniox.hint">Soniox recognizes the speech and translates it in the same stream, before the sentence ends. The service below then only speaks the translation.</small>
+          </span>
+        </label>
+        <div class="box" id="sonioxBox" hidden>
+          <div class="grid2">
+            <label class="field">
+              <span data-i18n="opt.soniox.key">Soniox API key</span>
+              <input type="password" id="sonioxKey" class="key" autocomplete="off" spellcheck="false" />
+            </label>
+            <div class="actions">
+              <button id="testSoniox" type="button" data-i18n="opt.test">Test</button>
+            </div>
+          </div>
+          <p class="result" id="sonioxResult" role="status"></p>
+        </div>
         <label class="field">
-          <span data-i18n="opt.tr.provider">Service</span>
+          <span id="speechServiceLabel" data-i18n="opt.tr.provider">Service</span>
           <select id="speechProvider">
             <option value="elevenlabs">ElevenLabs</option>
             <option value="local" data-i18n="opt.speech.local">My own speech server</option>

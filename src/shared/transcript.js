@@ -22,9 +22,18 @@ export class TranscriptLog {
     }
     if (event.phase === 'translating' || event.phase === 'translated') {
       const line = this.byId.get(event.id);
-      if (!line || !event.translation) return false;
-      line.translation = event.translation;
-      return true;
+      if (!line) return false;
+      let changed = false;
+      // A segment heard and translated as one stream (Soniox) grows after it starts.
+      if (event.source && event.source !== line.source) {
+        line.source = event.source;
+        changed = true;
+      }
+      if (event.translation && event.translation !== line.translation) {
+        line.translation = event.translation;
+        changed = true;
+      }
+      return changed;
     }
     return false;
   }

@@ -197,6 +197,7 @@ export class Overlay {
     // Notices and the footer stay visible below the scrolling subtitles.
     this.notices = h('div', {});
     this.usage = h('span', { class: 'usage' });
+    this.stagesLine = h('div', { class: 'usage', hidden: true });
     this.bottom = h(
       'div',
       { class: 'bottom' },
@@ -204,7 +205,7 @@ export class Overlay {
       h(
         'div',
         { class: 'footer' },
-        this.usage,
+        h('div', {}, this.stagesLine, this.usage),
         h(
           'div',
           { class: 'buttons' },
@@ -421,6 +422,17 @@ export class Overlay {
     else if (status.latencyMs != null) this.meta.textContent = t('overlay.latency', { n: num(status.latencyMs / 1000, 1) });
     else this.meta.textContent = connecting ? t('overlay.connecting') : t('overlay.listening');
     this.usage.textContent = status.diagnostic ? '' : formatUsage(status.usage);
+    const stages = status.stages || {};
+    const parts = [
+      ['listen', 'overlay.stageListen'],
+      ['translate', 'overlay.stageTranslate'],
+      ['voice', 'overlay.stageVoice'],
+    ]
+      .filter(([k]) => stages[k] != null)
+      .map(([k, key]) => t(key, { n: num(stages[k] / 1000, 1) }));
+    this.stagesLine.hidden = status.diagnostic || !parts.length;
+    this.stagesLine.textContent = parts.join(' · ');
+    this.stagesLine.title = t('overlay.stagesTitle');
 
     if (this.tabMeter) {
       this.tabMeter.style.width = `${Math.min(100, Math.round(status.levels.tab * 400))}%`;

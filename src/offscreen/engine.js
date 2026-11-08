@@ -9,7 +9,7 @@
 // worker with each message, and everything for the Meet tab goes through a port the
 // tab's content script opens.
 
-import { isFreeTranslation, isOllamaTranslation, translationProvider, claudeModelOf, missingKeys, missingServers, parseKeyterms, OPENAI_URL, OPENROUTER_URL } from '../shared/settings.js';
+import { isSoniox, isFreeTranslation, isOllamaTranslation, translationProvider, claudeModelOf, missingKeys, missingServers, parseKeyterms, OPENAI_URL, OPENROUTER_URL } from '../shared/settings.js';
 import { OpenAITranslator, openaiRestMs } from './openai-translator.js';
 import { serverBase } from '../shared/servers.js';
 import { OllamaTranslator, ollamaRestMs } from './ollama-translator.js';
@@ -23,6 +23,7 @@ import { sanitizePageState } from '../shared/page-state.js';
 import { describeMissingServers } from '../shared/setup-messages.js';
 import { cleanModes } from '../background/message-policy.js';
 import { ScribeRealtime } from './stt.js';
+import { SonioxSession, sonioxConfig } from './soniox.js';
 import { OpenAITranscriber, openaiSynthesize, listAudioModels } from './openai-speech.js';
 import { Translator, describeClaudeError, claudeRestMs } from './translator.js';
 import { FreeTranslator, freeKeys } from './free-translator.js';
@@ -59,6 +60,13 @@ async function findDevice(kind, label) {
   if (!label) return null;
   const devices = await navigator.mediaDevices.enumerateDevices();
   return devices.find((d) => d.kind === kind && d.label === label)?.deviceId || null;
+}
+
+// Soniox's refusals, in words that say what to do.
+function describeSonioxError(err) {
+  if (err?.status === 402 || /balance/i.test(err?.type || '')) return t('soniox.balance');
+  if (err?.status === 401 || /api_key|unauthorized/i.test(`${err?.type} ${err?.message}`)) return t('soniox.key');
+  return t('soniox.stopped', { message: err?.message || String(err) });
 }
 
 function describeSttFatal(err, cause) {
@@ -186,6 +194,10 @@ class Session {
     // The local server costs nothing; OpenAI's and Groq's prices are not in the estimate.
     this.usage = new Usage({ freeSpeech: this.speech.local || this.speech.kind === 'openai' });
     this.latencies = [];
+    // The delay in its parts, for the panel: waiting for the speech to end, the first
+    // translated words, the first sound of the voice (last few segments each).
+    this.stages = { listen: [], translate: [], voice: [] };
+    this.lastPartialAt = { in: 0, out: 0 };
     this.warnings = new Map();
     this.clone = { state: 'off' };
     this.error = null;
@@ -317,10 +329,11 @@ class Session {
   async startTranslation() {
     const s = this.settings;
     const keyterms = parseKeyterms(s.keyterms);
-    this.translator = this.createTranslator(s);
+    // With Soniox the speech comes back translated; no translator is needed.
+    this.translator = isSoniox(s) ? null : this.createTranslator(s);
 
     // Check the keys before the call depends on them, so a bad key shows up now.
-    await withTimeout(Promise.all([this.verifyTranslator(), this.resolveVoices()]), START_TIMEOUT_MS).catch((err) => {
+    await withTimeout(Promise.all([this.translator ? this.verifyTranslator() : null, this.resolveVoices()]), START_TIMEOUT_MS).catch((err) => {
       throw err.message === 'timeout' ? new UserError(t('err.startTimeout'), 'timeout') : err;
     });
 
@@ -343,6 +356,7 @@ class Session {
         onFirstAudio: (item) => this.onFirstAudio(item),
         onSpoken: (item, when) => this.playedGuard.remember(item.text, when),
         onError: (item, err) => this.onSpeechError('in', item, err),
+        onDropped: (item) => log('info', `speech ${item.id} dropped: too far behind`),
       }),
       emit: (e) => this.caption('in', e),
       describeError: describeClaudeError,
@@ -361,6 +375,7 @@ class Session {
         onFirstAudio: (item) => this.onFirstAudio(item),
         onSpoken: (item, when) => this.sentGuard.remember(item.text, when),
         onError: (item, err) => this.onSpeechError('out', item, err),
+        onDropped: (item) => log('info', `speech ${item.id} dropped: too far behind`),
       }),
       emit: (e) => this.caption('out', e),
       describeError: describeClaudeError,
@@ -546,6 +561,7 @@ class Session {
   }
 
   createStt(dir, languageCode, keyterms) {
+    if (isSoniox(this.settings)) return this.createSoniox(dir, keyterms);
     if (this.speech.kind === 'openai') {
       return new OpenAITranscriber({
         name: dir === 'in' ? 'stt-in' : 'stt-out',
@@ -579,6 +595,44 @@ class Session {
         this.report();
       },
       onFatal: (err, cause) => this.fail(new UserError(describeSttFatal(err, cause), 'stt')),
+      log,
+    });
+  }
+
+  // Soniox hears one side and translates it in the same stream: its words feed the live
+  // line, and each segment's translation is spoken clause by clause as it arrives.
+  createSoniox(dir, keyterms) {
+    const s = this.settings;
+    const target = dir === 'in' ? s.myLanguage : s.theirLanguage;
+    const source = dir === 'in' ? this.sourceLanguage(s) : s.myLanguage;
+    let segment = null;
+    const pipeline = () => (dir === 'in' ? this.incoming : this.outgoing);
+    return new SonioxSession({
+      name: `soniox-${dir}`,
+      apiKey: s.sonioxKey,
+      config: sonioxConfig({ target, source: source === AUTO_LANGUAGE ? '' : source, terms: keyterms, endpointDelayMs: (s.vadSilenceSecs || 0.7) * 1000 }),
+      onOriginal: (text) => {
+        if (dir === 'out' && !this.canSendOutgoing()) return;
+        this.debugSink?.event({ kind: 'partial', dir, text });
+        if (segment) segment.source(text);
+        else this.caption(dir, { phase: 'partial', source: text });
+      },
+      onSegmentStart: () => {
+        if (dir === 'out' && !this.canSendOutgoing()) return;
+        segment = pipeline()?.openSegment() || null;
+      },
+      onTranslation: (piece) => segment?.translation(piece),
+      onSegmentEnd: (done) => {
+        this.debugSink?.event({ kind: 'committed', dir, text: done.source });
+        segment?.end(done);
+        segment = null;
+      },
+      onStatus: (status) => {
+        this.stt[dir] = status;
+        this.debugSink?.event({ kind: 'stt', dir, status });
+        this.report();
+      },
+      onFatal: (err) => this.fail(new UserError(describeSonioxError(err), 'stt')),
       log,
     });
   }
@@ -634,9 +688,11 @@ class Session {
   onPartial(dir, text) {
     this.debugSink?.event({ kind: 'partial', dir, text });
     if (dir === 'out' && !this.canSendOutgoing()) return;
+    this.lastPartialAt[dir] = performance.now();
     const early = this.early?.[dir];
     const ready = early?.partial(text);
-    if (ready) this.translateSegment(dir, ready);
+    // Sent while the speaker is still talking: no wait for the end of the speech.
+    if (ready) this.translateSegment(dir, ready, { listenMs: 0 });
     this.caption(dir, { phase: 'partial', source: early ? early.live(text) : text });
   }
 
@@ -646,12 +702,16 @@ class Session {
       this.early?.out.reset();
       return;
     }
+    // From the last change in the live text (the speech ending) to this commit.
+    const since = this.lastPartialAt[dir] ? performance.now() - this.lastPartialAt[dir] : null;
+    this.lastPartialAt[dir] = 0;
+    const listenMs = since != null && since < 8000 ? Math.round(since) : null;
     const rest = this.early ? this.early[dir].committed(text) : text;
-    if (rest && !isOnlyPunctuation(rest)) this.translateSegment(dir, rest);
+    if (rest && !isOnlyPunctuation(rest)) this.translateSegment(dir, rest, { listenMs });
   }
 
-  translateSegment(dir, text) {
-    (dir === 'in' ? this.incoming : this.outgoing)?.onCommitted(text);
+  translateSegment(dir, text, meta = {}) {
+    (dir === 'in' ? this.incoming : this.outgoing)?.onCommitted(text, meta);
   }
 
   speak(item, dir) {
@@ -714,7 +774,15 @@ class Session {
     const ms = Math.round(segment.firstAudioAt - segment.committedAt);
     this.latencies.push(ms);
     if (this.latencies.length > 8) this.latencies.shift();
-    log('info', `${segment.id} first audio ${ms} ms after commit`);
+    const sample = (name, value) => {
+      if (value == null || !Number.isFinite(value) || value < 0) return;
+      this.stages[name].push(Math.round(value));
+      if (this.stages[name].length > 8) this.stages[name].shift();
+    };
+    sample('listen', segment.listenMs);
+    sample('translate', segment.firstTextAt ? segment.firstTextAt - segment.committedAt : null);
+    sample('voice', item.firstChunkAt ? item.firstChunkAt - item.requestedAt : null);
+    log('info', `${segment.id} first audio ${ms} ms after commit (listen ${segment.listenMs ?? '-'}, translate ${segment.firstTextAt ? Math.round(segment.firstTextAt - segment.committedAt) : '-'}, voice ${item.firstChunkAt ? Math.round(item.firstChunkAt - item.requestedAt) : '-'} ms)`);
   }
 
   // The translation stays readable; the line only says it could not be spoken.
@@ -769,7 +837,7 @@ class Session {
       incomingMode: this.incomingMode,
       outgoingMode: this.outgoingMode,
       offerClone: this.settings.offerTheirClone && !this.diagnostic && !this.speech.local && this.speech.kind !== 'openai' && !this.media,
-      subtitleBar: (this.settings.subtitleBar || this.media) && !this.diagnostic,
+      subtitleBar: this.showSubtitles(),
       cloneConsent: this.cloneConsent,
       media: this.media,
     });
@@ -866,6 +934,14 @@ class Session {
     this.report();
   }
 
+  // The subtitle bar. On a video tab it is the translation's only text, so it shows unless
+  // the translation is spoken and the subtitles were turned off; in a call, as set.
+  showSubtitles(settings = this.settings) {
+    if (this.diagnostic) return false;
+    if (this.media) return !(this.incomingMode === 'voice' && settings.mediaSubtitles === false);
+    return Boolean(settings.subtitleBar);
+  }
+
   setOptions(raw) {
     const options = cleanModes(raw);
     if (typeof raw?.cloneConsent === 'boolean') options.cloneConsent = raw.cloneConsent;
@@ -877,6 +953,7 @@ class Session {
       if (this.incomingMode !== 'voice') this.stopCloneCollection();
       else if (this.cloneConsent) this.startClone();
       this.updateDucking();
+      if (this.media) this.postTab({ type: 'subtitles', show: this.showSubtitles() });
     }
     if (!this.diagnostic && options.outgoingMode && options.outgoingMode !== this.outgoingMode) {
       this.outgoingMode = options.outgoingMode;
@@ -908,7 +985,12 @@ class Session {
     this.updateDucking();
     const switched = translationSetup(next) !== translationSetup(prev);
     const newKey = !isFreeTranslation(next) && next.anthropicKey !== prev.anthropicKey;
-    if (this.translator && (switched || newKey) && !missingKeys(next).length && !missingServers(next).length) {
+    if (isSoniox(prev) && !isSoniox(next) && !this.translator && !missingKeys(next).length && !missingServers(next).length) {
+      // Soniox turned off mid-call: the translation service takes over.
+      this.translator = this.createTranslator(next);
+      if (this.incoming) this.incoming.translator = this.translator;
+      if (this.outgoing) this.outgoing.translator = this.translator;
+    } else if (this.translator && (switched || newKey) && !missingKeys(next).length && !missingServers(next).length) {
       // Switched between Claude, Ollama and free translation mid-call, another Ollama
       // server or model, or a new Anthropic key.
       this.translator = this.createTranslator(next);
@@ -929,7 +1011,8 @@ class Session {
     const speechBefore = this.speech;
     this.speech = speechAccount(next);
     this.usage.freeSpeech = this.speech.local || this.speech.kind === 'openai';
-    for (const stt of [this.sttIn, this.sttOut]) if (stt) stt.apiKey = this.speech;
+    for (const stt of [this.sttIn, this.sttOut]) if (stt && !(stt instanceof SonioxSession)) stt.apiKey = this.speech;
+    const sonioxChanged = isSoniox(next) !== isSoniox(prev) || (isSoniox(next) && next.sonioxKey !== prev.sonioxKey);
     const pairChanged = next.myLanguage !== prev.myLanguage || this.sourceLanguage(next) !== this.sourceLanguage(prev) || next.theirLanguage !== prev.theirLanguage;
     if (pairChanged && this.incoming) {
       // A new language pair mid-call: both sides are heard and translated in it from now on.
@@ -937,7 +1020,7 @@ class Session {
       Object.assign(this.outgoing, { from: next.myLanguage, to: next.theirLanguage });
       this.postTab({ type: 'pair', myLanguage: next.myLanguage, theirLanguage: this.sourceLanguage(next) });
     }
-    if (this.sttIn && (pairChanged || JSON.stringify(speechBefore) !== JSON.stringify(this.speech) || next.localWhisperModel !== prev.localWhisperModel || next.vadSilenceSecs !== prev.vadSilenceSecs || next.keyterms !== prev.keyterms)) {
+    if (this.sttIn && (pairChanged || sonioxChanged || JSON.stringify(speechBefore) !== JSON.stringify(this.speech) || next.localWhisperModel !== prev.localWhisperModel || next.vadSilenceSecs !== prev.vadSilenceSecs || next.keyterms !== prev.keyterms)) {
       // Speech recognition takes these when it connects. Typing in the glossary saves on
       // every pause, so the new connections wait until the typing is over.
       clearTimeout(this.sttRestartTimer);
@@ -958,7 +1041,7 @@ class Session {
     if (next.outputDeviceLabel !== prev.outputDeviceLabel) this.applyOutputDevice();
     if (next.micDeviceLabel !== prev.micDeviceLabel) this.openMic().catch((err) => log('warn', 'microphone switch', err));
     if (next.showOverlay !== prev.showOverlay) this.postTab({ type: 'overlay', show: next.showOverlay });
-    if (next.subtitleBar !== prev.subtitleBar) this.postTab({ type: 'subtitles', show: next.subtitleBar && !this.diagnostic });
+    if (next.subtitleBar !== prev.subtitleBar || next.mediaSubtitles !== prev.mediaSubtitles) this.postTab({ type: 'subtitles', show: this.showSubtitles(next) });
     this.report();
   }
 
@@ -1057,6 +1140,7 @@ class Session {
       micLabel: this.micLabel || '',
       clone: this.clone,
       latencyMs: latency,
+      stages: Object.fromEntries(Object.entries(this.stages).map(([k, v]) => [k, v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null])),
       usage: this.usage.snapshot(),
       warnings: [...this.warnings.values()].map((w) => t(w.key, w.params)),
       error: this.error,

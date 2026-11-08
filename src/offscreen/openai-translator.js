@@ -28,8 +28,23 @@ export function openaiRestMs(err) {
 }
 
 // Reasoning models think before they answer unless told not to, which a live
-// translation cannot wait for.
-const REASONING = /(^|\/)(o\d|gpt-5)/i;
+// translation cannot wait for. Models differ in the lowest effort they take.
+const REASONING = /(^|\/)(o\d|gpt-[5-9])/i;
+
+// Extra request fields, fastest first; each is tried in turn when a model refuses the one
+// before (HTTP 400). OpenRouter takes one reasoning switch for every model and can route
+// to the provider that answers first.
+export function tuningFor(base, model) {
+  if (String(base).includes('openrouter.ai')) {
+    const provider = { sort: 'latency' };
+    return [{ reasoning: { effort: 'none' }, provider }, { reasoning: { effort: 'minimal' }, provider }, { reasoning: { effort: 'low' }, provider }, { provider }, {}];
+  }
+  if (REASONING.test(model)) return [{ reasoning_effort: 'none' }, { reasoning_effort: 'minimal' }, { reasoning_effort: 'low' }, {}];
+  return [{}];
+}
+
+// server|model -> index of the tuning that model took.
+const TUNING_STEP = new Map();
 
 function limiter(signal, ms) {
   const controller = new AbortController();
@@ -67,7 +82,7 @@ export class OpenAITranslator {
     this.firstTokenMs = firstTokenMs;
     this.stallMs = stallMs;
     this.log = log || (() => {});
-    this.sendReasoning = REASONING.test(this.model);
+    this.tuning = tuningFor(this.base, this.model);
   }
 
   update({ myLanguage, theirLanguage, meetingContext, keyterms } = {}) {
@@ -139,16 +154,22 @@ export class OpenAITranslator {
     };
     const limit = limiter(signal, this.firstTokenMs);
     try {
+      // The fastest settings first; a model that refuses one (400) is asked with the next,
+      // and the one that worked is remembered for this server and model.
+      const key = `${this.base}|${this.model}`;
+      let step = TUNING_STEP.get(key) ?? 0;
       let res;
-      try {
-        res = await this.request('/chat/completions', { method: 'POST', body: this.sendReasoning ? { ...body, reasoning_effort: 'low' } : body, signal: limit.signal });
-      } catch (err) {
-        // A model or server that does not take the field is asked again without it.
-        if (!(err instanceof OpenAIError) || err.status !== 400 || !this.sendReasoning) throw err;
-        this.sendReasoning = false;
-        this.log('info', `${this.label}: ${this.model} does not take reasoning_effort, asking without it`);
-        res = await this.request('/chat/completions', { method: 'POST', body, signal: limit.signal });
+      for (;;) {
+        try {
+          res = await this.request('/chat/completions', { method: 'POST', body: { ...body, ...this.tuning[step] }, signal: limit.signal });
+          break;
+        } catch (err) {
+          if (!(err instanceof OpenAIError) || err.status !== 400 || step >= this.tuning.length - 1) throw err;
+          this.log('info', `${this.label}: ${this.model} refused ${JSON.stringify(this.tuning[step])}, trying ${JSON.stringify(this.tuning[step + 1])}`);
+          step += 1;
+        }
       }
+      TUNING_STEP.set(key, step);
       yield* this.read(res, limit);
     } finally {
       limit.done();

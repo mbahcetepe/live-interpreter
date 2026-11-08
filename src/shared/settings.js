@@ -42,6 +42,8 @@ export const isOpenAITranslation = (settings) => ['openai', 'openrouter'].includ
 export const isLocalSpeech = (settings) => settings.speechProvider === 'local';
 // Speech recognition and speech through OpenAI's audio API (offscreen/openai-speech.js).
 export const isOpenAISpeech = (settings) => settings.speechProvider === 'openai';
+// Soniox hears and translates in one stream; the speech service then only speaks.
+export const isSoniox = (settings) => settings.useSoniox === true;
 
 export const OPENAI_URL = 'https://api.openai.com/v1';
 export const OPENROUTER_URL = 'https://openrouter.ai/api/v1';
@@ -103,6 +105,8 @@ export const DEFAULT_SETTINGS = {
   ollamaBackupModel: '',
   // 'elevenlabs' or 'local' (speech-server/ on the person's own computer).
   speechProvider: 'elevenlabs',
+  useSoniox: false,
+  sonioxKey: '',
   localSpeechUrl: '',
   localSpeechKey: '',
   // On the local speech server: the recognition model ('' = the server's own) and the
@@ -145,6 +149,7 @@ export const DEFAULT_SETTINGS = {
   // Each session's transcript is kept on this computer (recordings page).
   saveTranscripts: true,
   subtitleBar: true, // the translation as subtitles low in the Meet window
+  mediaSubtitles: true, // on a video tab with voice translation: subtitles too (false: voice only)
   settingsVersion: 2,
 };
 
@@ -183,13 +188,18 @@ export async function saveSettings(patch) {
 export function missingKeys(settings) {
   const missing = [];
   const provider = translationProvider(settings);
+  const soniox = isSoniox(settings);
+  if (soniox && !String(settings.sonioxKey || '').trim()) missing.push('Soniox');
   if (!settings.elevenLabsKey && !isLocalSpeech(settings) && !isOpenAISpeech(settings)) missing.push('ElevenLabs');
   if (isOpenAISpeech(settings)) {
     const stt = settings.oaiSttServer || 'openai';
-    if (stt === 'openai' && !String(settings.oaiSttKey || settings.openaiKey || '').trim()) missing.push('OpenAI');
-    if (stt === 'groq' && !String(settings.oaiSttKey || settings.groqKey || '').trim()) missing.push('Groq');
+    // With Soniox listening, only the voice is needed from here.
+    if (!soniox && stt === 'openai' && !String(settings.oaiSttKey || settings.openaiKey || '').trim()) missing.push('OpenAI');
+    if (!soniox && stt === 'groq' && !String(settings.oaiSttKey || settings.groqKey || '').trim()) missing.push('Groq');
     if ((settings.oaiTtsServer || 'openai') === 'openai' && !String(settings.oaiTtsKey || settings.openaiKey || '').trim() && !missing.includes('OpenAI')) missing.push('OpenAI');
   }
+  // Soniox translates too: the translation service is not used.
+  if (soniox) return missing;
   if (provider === 'claude' && !settings.anthropicKey) missing.push('Anthropic');
   if (provider === 'openrouter' && !String(settings.openrouterKey || '').trim()) missing.push('OpenRouter');
   // OpenAI itself needs a key; a server of one's own with the same API may not.
@@ -200,7 +210,7 @@ export function missingKeys(settings) {
 // What else the chosen setup needs: a server address or a model ('ollama', 'speech', 'model').
 export function missingServers(settings) {
   const missing = [];
-  const provider = translationProvider(settings);
+  const provider = isSoniox(settings) ? 'soniox' : translationProvider(settings);
   if (provider === 'ollama' && !(String(settings.ollamaUrl || '').trim() && String(settings.ollamaModel || '').trim())) missing.push('ollama');
   if (provider === 'openai' && !String(settings.openaiModel || '').trim()) missing.push('model');
   if (provider === 'openrouter' && !String(settings.openrouterModel || '').trim()) missing.push('model');

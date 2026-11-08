@@ -4,7 +4,8 @@ import { OpenAITranslator, OpenAIError, openaiRestMs, listOpenAIModels } from '.
 import { translationProvider, claudeModelOf, missingKeys, missingServers, DEFAULT_SETTINGS } from '../../src/shared/settings.js';
 
 // A stand-in for an OpenAI-compatible server: /models and a streamed /chat/completions.
-function fakeServer({ models = ['gpt-test', 'text-embedding-3-small', 'whisper-1'], status = 200, refuseReasoning = false } = {}) {
+// refuse(body): true answers HTTP 400, like a model that does not take a field or value.
+function fakeServer({ models = ['gpt-test', 'text-embedding-3-small', 'whisper-1'], status = 200, refuse = () => false } = {}) {
   const calls = [];
   const fetchImpl = async (url, init = {}) => {
     const body = init.body ? JSON.parse(init.body) : null;
@@ -12,7 +13,7 @@ function fakeServer({ models = ['gpt-test', 'text-embedding-3-small', 'whisper-1
     if (status !== 200) return Response.json({ error: { message: 'nope' } }, { status });
     if (url.endsWith('/models')) return Response.json({ data: models.map((id) => ({ id })) });
     if (url.endsWith('/key')) return Response.json({ data: {} });
-    if (refuseReasoning && 'reasoning_effort' in body) return Response.json({ error: { message: 'Unsupported parameter: reasoning_effort' } }, { status: 400 });
+    if (body && refuse(body)) return Response.json({ error: { message: 'Unsupported value' } }, { status: 400 });
     const words = ['Günaydın ', 'herkese. ', 'Başlayalım mı?'];
     const lines = words.map((w) => `data: ${JSON.stringify({ choices: [{ delta: { content: w } }] })}\n\n`);
     lines.push('data: [DONE]\n\n');
@@ -46,14 +47,45 @@ test('the translation streams from chat completions in sentences', async () => {
   assert.equal('reasoning_effort' in chat.body, false);
 });
 
-test('a reasoning model is asked not to think long, and asked again without it when refused', async () => {
-  const { fetchImpl, calls } = fakeServer({ refuseReasoning: true });
-  const tr = new OpenAITranslator({ base: 'https://openrouter.ai/api/v1', key: 'k', model: 'openai/gpt-5-mini', fetchImpl });
+test('a reasoning model is asked not to think, stepping up only as far as it requires', async () => {
+  const { fetchImpl, calls } = fakeServer({ refuse: (b) => b.reasoning_effort === 'none' });
+  const tr = new OpenAITranslator({ base: 'https://api.openai.com/v1', key: 'k', model: 'gpt-5-mini', fetchImpl });
+  assert.deepEqual(await collect(tr.translate(job)), ['Günaydın herkese.', 'Başlayalım mı?']);
+  const chats = () => calls.filter((c) => c.url.endsWith('/chat/completions'));
+  assert.deepEqual(chats().map((c) => c.body.reasoning_effort), ['none', 'minimal']);
+  // The next sentence goes straight to what worked.
+  await collect(new OpenAITranslator({ base: 'https://api.openai.com/v1', key: 'k', model: 'gpt-5-mini', fetchImpl }).translate(job));
+  assert.deepEqual(chats().map((c) => c.body.reasoning_effort), ['none', 'minimal', 'minimal']);
+});
+
+test('a server that takes no reasoning field at all is asked without one', async () => {
+  const { fetchImpl, calls } = fakeServer({ refuse: (b) => 'reasoning_effort' in b });
+  const tr = new OpenAITranslator({ base: 'https://api.openai.com/v1', key: 'k', model: 'gpt-5-nano', fetchImpl });
   assert.deepEqual(await collect(tr.translate(job)), ['Günaydın herkese.', 'Başlayalım mı?']);
   const chats = calls.filter((c) => c.url.endsWith('/chat/completions'));
-  assert.equal(chats[0].body.reasoning_effort, 'low');
-  assert.equal('reasoning_effort' in chats[1].body, false);
-  assert.equal(chats[0].headers['X-Title'], 'Live Interpreter');
+  assert.equal(chats.length, 4);
+  assert.equal('reasoning_effort' in chats[3].body, false);
+});
+
+test('OpenRouter turns reasoning off and asks for the quickest provider, for any model', async () => {
+  const { fetchImpl, calls } = fakeServer();
+  const tr = new OpenAITranslator({ base: 'https://openrouter.ai/api/v1', key: 'k', model: 'google/gemini-flash-latest', fetchImpl });
+  await collect(tr.translate(job));
+  const chat = calls.find((c) => c.url.endsWith('/chat/completions'));
+  assert.deepEqual(chat.body.reasoning, { effort: 'none' });
+  assert.deepEqual(chat.body.provider, { sort: 'latency' });
+  assert.equal(chat.headers['X-Title'], 'Live Interpreter');
+  // A model that must reason gets the lowest effort it takes.
+  const strict = fakeServer({ refuse: (b) => ['none', 'minimal'].includes(b.reasoning?.effort) });
+  await collect(new OpenAITranslator({ base: 'https://openrouter.ai/api/v1', key: 'k', model: 'deepseek/r1', fetchImpl: strict.fetchImpl }).translate(job));
+  assert.deepEqual(strict.calls.filter((c) => c.url.endsWith('/chat/completions')).map((c) => c.body.reasoning?.effort), ['none', 'minimal', 'low']);
+});
+
+test('a model that does not reason on a server of your own gets no extra fields', async () => {
+  const { fetchImpl, calls } = fakeServer();
+  await collect(new OpenAITranslator({ base: 'http://127.0.0.1:1234/v1', model: 'qwen2.5', fetchImpl }).translate(job));
+  const chat = calls.find((c) => c.url.endsWith('/chat/completions'));
+  assert.equal('reasoning_effort' in chat.body || 'reasoning' in chat.body || 'provider' in chat.body, false);
 });
 
 test('verify finds a refused key and a model the server does not offer', async () => {

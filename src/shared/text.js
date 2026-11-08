@@ -4,11 +4,15 @@ const SENTENCE_END = /[.!?…。！？]+["'”’»)\]]*(?=\s)/g;
 const SOFT_BREAK = /[,;:،、]\s/g;
 
 // Cuts a streamed translation into pieces the voice can start speaking right away:
-// whole sentences, or a clause when a sentence runs long.
+// a sentence, or a clause once it is long enough to sound natural on its own (clauseMin),
+// so the first words are heard before the sentence is finished. Text with no break at
+// all is cut at a space once it passes hardMax.
 export class SentenceSplitter {
-  constructor({ minChars = 12, softMax = 160 } = {}) {
+  constructor({ minChars = 12, clauseMin = 24, softMax = 160, hardMax = 110 } = {}) {
     this.minChars = minChars;
+    this.clauseMin = clauseMin;
     this.softMax = softMax;
+    this.hardMax = Math.min(hardMax, softMax);
     this.buffer = '';
   }
 
@@ -28,17 +32,25 @@ export class SentenceSplitter {
   findCut() {
     SENTENCE_END.lastIndex = 0;
     let match;
+    let sentence = 0;
     while ((match = SENTENCE_END.exec(this.buffer))) {
       const end = match.index + match[0].length;
-      if (end >= this.minChars) return end;
-    }
-    if (this.buffer.length > this.softMax) {
-      let last = -1;
-      SOFT_BREAK.lastIndex = 0;
-      while ((match = SOFT_BREAK.exec(this.buffer))) {
-        if (match.index + 1 <= this.softMax) last = match.index + 1;
+      if (end >= this.minChars) {
+        sentence = end;
+        break;
       }
-      if (last >= this.minChars) return last;
+    }
+    // The first clause long enough to speak, unless a sentence ends before it.
+    SOFT_BREAK.lastIndex = 0;
+    while ((match = SOFT_BREAK.exec(this.buffer))) {
+      const end = match.index + 1;
+      if (sentence && end > sentence) break;
+      if (end >= this.clauseMin && end <= this.softMax) return end;
+    }
+    if (sentence) return sentence;
+    if (this.buffer.length > this.hardMax) {
+      const space = this.buffer.lastIndexOf(' ', this.hardMax);
+      if (space >= this.minChars) return space;
     }
     return 0;
   }

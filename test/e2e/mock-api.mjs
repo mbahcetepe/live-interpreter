@@ -13,7 +13,7 @@ import net from 'node:net';
 import { WebSocketServer } from 'ws';
 import { LANGUAGES } from '../../src/shared/languages.js';
 
-export const API_HOSTS = ['api.elevenlabs.io', 'api.anthropic.com', 'api-free.deepl.com', 'api.mistral.ai', 'api.groq.com'];
+export const API_HOSTS = ['api.elevenlabs.io', 'api.anthropic.com', 'api-free.deepl.com', 'api.mistral.ai', 'api.groq.com', 'stt-rt.soniox.com'];
 const HOSTS = new Set(API_HOSTS);
 
 const HEARD = {
@@ -132,6 +132,54 @@ function scribe(ws, req, stats, faults) {
   });
 }
 
+// Soniox real time: the key comes as the second subprotocol, the config as the first
+// message, then binary 16 kHz audio. Words come back as tokens; the translation follows in
+// pieces, and <end> closes a segment. `faults.soniox` (e.g. 402) answers with that error.
+function soniox(ws, req, stats, faults) {
+  const protocols = String(req.headers['sec-websocket-protocol'] || '').split(',').map((x) => x.trim());
+  const session = { key: protocols[1] || '', config: null, voiced: 0, segments: 0, open: true };
+  stats.soniox.push(session);
+  ws.on('close', () => (session.open = false));
+  const error = (code, type, message) => {
+    ws.send(JSON.stringify({ tokens: [], error_code: code, error_type: type, error_message: message }));
+    ws.close();
+  };
+  ws.on('message', (raw, isBinary) => {
+    if (!isBinary) {
+      const text = raw.toString();
+      if (!text) return ws.close();
+      const msg = JSON.parse(text);
+      if (msg.type) return; // keepalive, finalize
+      session.config = msg;
+      if (session.key !== 'mock-soniox') return error(401, 'invalid_api_key', 'Invalid API key.');
+      if (faults.soniox) return error(faults.soniox, 'organization_balance_exhausted', 'Organization balance exhausted.');
+      return;
+    }
+    if (!session.config) return;
+    const pcm = Buffer.from(raw);
+    let peak = 0;
+    for (let i = 0; i + 1 < pcm.length; i += 2) peak = Math.max(peak, Math.abs(pcm.readInt16LE(i)));
+    if (peak < 300) return;
+    session.voiced += 1;
+    const target = session.config.translation?.target_language;
+    const heard = target === 'tr' ? HEARD.en : HEARD.tr;
+    const translated = translate(heard.committed);
+    const cut = translated.indexOf(',') > 0 ? translated.indexOf(',') + 1 : Math.ceil(translated.length / 2);
+    const send = (tokens) => ws.send(JSON.stringify({ tokens, final_audio_proc_ms: session.voiced * 100, total_audio_proc_ms: session.voiced * 100 }));
+    if (session.voiced === 6) send([{ text: heard.partial, is_final: false }]);
+    if (session.voiced === 12) send([{ text: heard.partial, is_final: true }, { text: translated.slice(0, cut), translation_status: 'translation', is_final: true }]);
+    if (session.voiced >= 22) {
+      session.voiced = 0;
+      session.segments += 1;
+      send([
+        { text: heard.committed.slice(heard.partial.length), is_final: true },
+        { text: '<end>', is_final: true },
+        { text: translated.slice(cut), translation_status: 'translation', is_final: true },
+      ]);
+    }
+  });
+}
+
 // The free services answer in their own formats; `faults` makes one fail on purpose, and a
 // `translator` (see claude) answers DeepL's requests instead of the fixed table.
 async function free(req, res, url, host, stats, faults, translator) {
@@ -194,16 +242,25 @@ async function route(req, res, stats, faults, options = {}) {
 export async function startMockApi({ cert, key, passthrough = [], mockOnly = null, translator = null }) {
   const real = new Set(passthrough);
   const options = { translator };
-  const stats = { requests: [], stt: [], tts: [], claude: [], free: [] };
-  const faults = { deepl: 0, mistral: 0, groq: 0, tts: 0, claude: 0, stt: null };
+  const stats = { requests: [], stt: [], tts: [], claude: [], free: [], soniox: [] };
+  const faults = { deepl: 0, mistral: 0, groq: 0, tts: 0, claude: 0, stt: null, soniox: 0 };
   const api = https.createServer({ cert, key }, (req, res) => {
     route(req, res, stats, faults, options).catch((err) => {
       res.writeHead(500);
       res.end(String(err));
     });
   });
-  const wss = new WebSocketServer({ server: api, path: '/v1/speech-to-text/realtime' });
+  // Two WebSocket services on one server: each upgrade goes to the one for its path.
+  const wss = new WebSocketServer({ noServer: true });
   wss.on('connection', (ws, req) => scribe(ws, req, stats, faults));
+  const sonioxWss = new WebSocketServer({ noServer: true, handleProtocols: (protocols) => (protocols.has('soniox-api-key') ? 'soniox-api-key' : false) });
+  sonioxWss.on('connection', (ws, req) => soniox(ws, req, stats, faults));
+  api.on('upgrade', (req, socket, head) => {
+    const path = new URL(req.url, 'https://x').pathname;
+    const target = path === '/v1/speech-to-text/realtime' ? wss : path === '/transcribe-websocket' ? sonioxWss : null;
+    if (!target) return socket.destroy();
+    target.handleUpgrade(req, socket, head, (ws) => target.emit('connection', ws, req));
+  });
   const proxy = http.createServer((_req, res) => {
     res.writeHead(400);
     res.end();

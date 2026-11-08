@@ -147,3 +147,26 @@ test('history gives each translation the conversation so far', async () => {
   history.add({ id: 'd', dir: 'out', source: 'dört', translation: '' });
   assert.deepEqual(history.recent(8).map((x) => x.id), ['b', 'c', 'd']);
 });
+
+test('speech far behind drops its oldest queued piece, not the newest', async () => {
+  const sink = fakeSink();
+  const dropped = [];
+  let release;
+  const gate = new Promise((r) => (release = r));
+  const speaker = new Speaker({
+    sink,
+    maxQueuedSeconds: 3,
+    onDropped: (item) => dropped.push(item.text),
+    synth: async function* (item) {
+      await gate;
+      yield item.text;
+    },
+  });
+  const segment = { id: 's1', controller: new AbortController() };
+  // Each piece is about 2.6 s of speech (40 characters).
+  for (const n of [1, 2, 3, 4]) speaker.enqueue({ segment, text: `piece ${n} `.padEnd(40, '.') });
+  release();
+  await sleep(20);
+  assert.ok(dropped.length >= 1);
+  assert.ok(dropped.every((t) => !t.startsWith('piece 4')));
+});
