@@ -82,7 +82,7 @@ test('the translation streams in sentences, without thinking', async () => {
   assert.equal(chat.url, 'http://100.65.147.84:11434/api/chat');
   assert.equal(chat.body.think, false);
   assert.equal(chat.body.stream, true);
-  assert.match(chat.body.messages[1].content, /Good morning/);
+  assert.match(chat.body.messages.at(-1).content, /Good morning/);
 });
 
 test('a model that refuses the think field is asked again without it', async () => {

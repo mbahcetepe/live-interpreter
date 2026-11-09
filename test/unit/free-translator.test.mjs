@@ -281,8 +281,13 @@ test('chat requests carry the interpreter prompt, context and conversation', asy
   assert.match(body.messages[0].content, /Launch call\./);
   assert.match(body.messages[0].content, /Fungo/);
   assert.match(body.messages[0].content, /falling behind/);
-  assert.match(body.messages[1].content, /Counterpart: Hello there\./);
-  assert.match(body.messages[1].content, /<utterance>\nHi, thanks for joining\.\n<\/utterance>/);
+  const last = body.messages.at(-1);
+  assert.equal(last.role, 'user');
+  assert.match(last.content, /Remote participant: Hello there\./);
+  assert.match(last.content, /<utterance>\nHi, thanks for joining\.\n<\/utterance>/);
+  // Example turns before it show a question being translated, not answered.
+  assert.equal(body.messages[1].role, 'user');
+  assert.equal(body.messages[2].role, 'assistant');
 });
 
 test('helpers: DeepL hosts, language codes, context and output cleanup', () => {

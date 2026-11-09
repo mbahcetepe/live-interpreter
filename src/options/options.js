@@ -13,6 +13,7 @@ import {
   TTS_MODELS,
   OPENAI_URL,
   OPENROUTER_URL,
+  isEnglishOnlyWhisper,
 } from '../shared/settings.js';
 import { LANGUAGES, AUTO_LANGUAGE } from '../shared/languages.js';
 import { setLanguage, t, applyI18n, languageLabel, UI_LANGUAGES } from '../shared/i18n.js';
@@ -493,8 +494,10 @@ function renderLocalSpeech() {
   const info = localSpeechInfo;
   const models = info?.recognition?.models || [];
   const current = settings.localWhisperModel;
-  const modelItems = [['', t('opt.speech.serverDefault', { model: info?.recognition?.default || '...' })], ...models.map((m) => [m, m])];
-  if (current && !models.includes(current)) modelItems.push([current, current]);
+  // English-only models are marked: other languages go to a multilingual model in a call.
+  const name = (m) => (isEnglishOnlyWhisper(m) ? t('opt.speech.englishOnly', { model: m }) : m);
+  const modelItems = [['', t('opt.speech.serverDefault', { model: name(info?.recognition?.default || '...') })], ...models.map((m) => [m, name(m)])];
+  if (current && !models.includes(current)) modelItems.push([current, name(current)]);
   fillSelect($('localWhisperModel'), modelItems, current);
   const voiceList = (language) => [['', t('opt.voice.auto')], ...(info?.voices?.[language] || []).map((v) => [v, v])];
   fillSelect($('localMyVoice'), voiceList(settings.theirLanguage), settings.localMyVoice);

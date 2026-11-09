@@ -269,6 +269,7 @@ export default {
   'opt.speech.title': "Ses tanıma ve sesler",
   'opt.speech.model': "Ses tanıma modeli",
   'opt.speech.serverDefault': "Sunucunun kendi modeli ({model})",
+  'opt.speech.englishOnly': "{model} (yalnızca İngilizce; diğer diller large-v3-turbo ile tanınır)",
   'opt.voice.mine': "Benim sesim",
   'opt.voice.theirs': "Karşı tarafın sesi",
   'opt.voice.mineIn': "Benim sesim ({language} konuşur)",

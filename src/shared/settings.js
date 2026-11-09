@@ -22,6 +22,20 @@ export const PROVIDERS = [
   { id: 'free', labelKey: 'provider.free' },
 ];
 
+// Whisper models that know only English: Distil-Whisper (distil-large-v3 and the like) and
+// the ".en" models. Given other speech they write an English rendering of it, not the words.
+export const MULTILINGUAL_WHISPER = 'large-v3-turbo';
+export function isEnglishOnlyWhisper(model) {
+  return /(^|\/)distil-|\.en$/i.test(String(model || ''));
+}
+
+// The model to ask the local server for, for speech in this language ('' = the server's own).
+export function whisperModelFor(model, languageCode) {
+  const lang = String(languageCode || '').split(/[-_]/)[0].toLowerCase();
+  if (isEnglishOnlyWhisper(model) && lang !== 'en') return MULTILINGUAL_WHISPER;
+  return model || '';
+}
+
 // Before translationProvider existed, claudeModel held 'free' or 'ollama' as well.
 export function translationProvider(settings) {
   const chosen = settings?.translationProvider;

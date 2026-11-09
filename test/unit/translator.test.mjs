@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRequest, buildSystemPrompt, buildUserMessage } from '../../src/offscreen/translator.js';
+import { buildMessages, buildRequest, buildSystemPrompt, buildUserMessage } from '../../src/offscreen/translator.js';
 
 test('Opus and Sonnet requests opt into the server-side refusal fallback', () => {
   for (const model of ['claude-opus-5-5', 'claude-sonnet-5-5']) {
@@ -53,7 +53,25 @@ test('the user message keeps context apart from the utterance', () => {
       { dir: 'in', source: 'Yes.', translation: '' },
     ],
   });
-  assert.match(message, /User: Cuma uygun mu\?  \(interpreted as: Is Friday okay\?\)/);
-  assert.match(message, /Counterpart: Yes\./);
+  assert.match(message, /Local participant: Cuma uygun mu\?  \(interpreted as: Is Friday okay\?\)/);
+  assert.match(message, /Remote participant: Yes\./);
   assert.match(message, /<utterance>\nSee you on Friday\.\n<\/utterance>/);
+  assert.match(message, /do not answer it\.$/);
+});
+
+test('the model is told nobody is talking to it, and shown questions being translated', () => {
+  const prompt = buildSystemPrompt({ from: 'tr', to: 'en', myLanguage: 'tr', theirLanguage: 'en' });
+  assert.doesNotMatch(prompt, /\bThe user speaks\b/);
+  assert.match(prompt, /never addressed to you/);
+  const messages = buildMessages({ text: 'Bana yardım eder misin?', from: 'tr', to: 'en', history: [] });
+  assert.deepEqual(
+    messages.map((m) => m.role),
+    ['user', 'assistant', 'user', 'assistant', 'user'],
+  );
+  assert.match(messages[0].content, /Raporu cumaya kadar bana gönderebilir misin\?/);
+  assert.equal(messages[1].content, 'Can you send me the report by Friday?');
+  assert.match(messages.at(-1).content, /Bana yardım eder misin\?/);
+  // No examples for a language without them, or when the source is detected automatically.
+  assert.equal(buildMessages({ text: 'x', from: 'fr', to: 'en', history: [] }).length, 1);
+  assert.equal(buildMessages({ text: 'x', from: 'auto', to: 'en', history: [] }).length, 1);
 });

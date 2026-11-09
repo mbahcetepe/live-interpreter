@@ -5,7 +5,7 @@
 // The extension removes the Origin header from its own requests to the server (see
 // src/shared/servers.js), so Ollama needs no OLLAMA_ORIGINS setting.
 
-import { buildSystemPrompt, buildUserMessage } from './translator.js';
+import { buildSystemPrompt, buildMessages } from './translator.js';
 import { SentenceSplitter, isOnlyPunctuation } from '../shared/text.js';
 import { serverBase } from '../shared/servers.js';
 import { t } from '../shared/i18n.js';
@@ -155,16 +155,12 @@ export class OllamaTranslator {
       media,
       marked,
     });
-    const user = buildUserMessage({ text, from, to, history });
     const body = {
       model: this.model,
       stream: true,
       keep_alive: '30m',
       options: { temperature: 0.2, num_predict: 512 },
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
+      messages: [{ role: 'system', content: system }, ...buildMessages({ text, from, to, history })],
     };
     const limit = timer(signal, this.firstTokenMs);
     try {

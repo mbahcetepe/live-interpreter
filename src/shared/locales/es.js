@@ -269,6 +269,7 @@ export default {
   'opt.speech.title': 'Reconocimiento de voz y voces',
   'opt.speech.model': 'Modelo de reconocimiento',
   'opt.speech.serverDefault': 'El del servidor ({model})',
+  'opt.speech.englishOnly': "{model} (solo inglés; otros idiomas con large-v3-turbo)",
   'opt.voice.mine': 'Mi voz',
   'opt.voice.theirs': 'Su voz',
   'opt.voice.mineIn': 'Mi voz (habla {language})',

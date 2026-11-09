@@ -8,7 +8,7 @@
 // Chrome's translator runs on this computer and needs no key, so free translation
 // always has somewhere to land. Which service translated a sentence is never shown.
 
-import { buildSystemPrompt, buildUserMessage } from './translator.js';
+import { buildSystemPrompt, buildMessages } from './translator.js';
 import { SentenceSplitter, isOnlyPunctuation } from '../shared/text.js';
 import { t, locale } from '../shared/i18n.js';
 import { AUTO_LANGUAGE } from '../shared/languages.js';
@@ -327,13 +327,9 @@ export class FreeTranslator {
       media,
       marked,
     });
-    const user = buildUserMessage({ text, from, to, history });
     const body = {
       model: step.model,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
+      messages: [{ role: 'system', content: system }, ...buildMessages({ text, from, to, history })],
       temperature: 0.2,
       ...step.params,
     };

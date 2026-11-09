@@ -2,7 +2,7 @@
 // server with the same API (LM Studio, vLLM, a company gateway). The prompt is the one
 // Claude gets (translator.js); the answer is streamed and cut into speakable sentences.
 
-import { buildSystemPrompt, buildUserMessage } from './translator.js';
+import { buildSystemPrompt, buildMessages } from './translator.js';
 import { SentenceSplitter, isOnlyPunctuation } from '../shared/text.js';
 import { t } from '../shared/i18n.js';
 
@@ -143,14 +143,10 @@ export class OpenAITranslator {
 
   async *translate({ text, from, to, history, concise, media, marked, signal }) {
     const system = buildSystemPrompt({ from, to, myLanguage: this.myLanguage, theirLanguage: this.theirLanguage, meetingContext: this.meetingContext, keyterms: this.keyterms, concise, media, marked });
-    const user = buildUserMessage({ text, from, to, history });
     const body = {
       model: this.model,
       stream: true,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
+      messages: [{ role: 'system', content: system }, ...buildMessages({ text, from, to, history })],
     };
     const limit = limiter(signal, this.firstTokenMs);
     try {

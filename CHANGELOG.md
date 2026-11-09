@@ -2,6 +2,13 @@
 
 Versions follow [semantic versioning](https://semver.org): MAJOR for changes that need something done (new settings, a server update), MINOR for new features, PATCH for fixes. The version lives in `package.json`; the build writes it into the extension's manifest, and the popup and the settings page show it. The speech server has its own version and a protocol number (`/health`); the extension warns when the server is older than it needs.
 
+## 2.4.1 (2026-11-09)
+
+### Fixed
+
+- **Your own speech came out as nonsense in calls with the local speech server set to `distil-large-v3`.** That model knows only English: given Turkish speech it wrote an English rendering of it ("How old are you?", with repeated words), which was then "translated" again. English-only models (`distil-*`, `*.en`) are now used only for English speech; other languages go to `large-v3-turbo`, even when the English-only model is the server's own default. The settings mark these models as English only.
+- The translator is told more plainly that nobody in the call is talking to it, and is shown two examples of a question being translated rather than answered.
+
 ## 2.4.0 (2026-11-08)
 
 ### New

@@ -9,11 +9,11 @@
 // worker with each message, and everything for the Meet tab goes through a port the
 // tab's content script opens.
 
-import { isSoniox, isFreeTranslation, isOllamaTranslation, translationProvider, claudeModelOf, missingKeys, missingServers, parseKeyterms, OPENAI_URL, OPENROUTER_URL } from '../shared/settings.js';
+import { isSoniox, whisperModelFor, isFreeTranslation, isOllamaTranslation, translationProvider, claudeModelOf, missingKeys, missingServers, parseKeyterms, OPENAI_URL, OPENROUTER_URL } from '../shared/settings.js';
 import { OpenAITranslator, openaiRestMs } from './openai-translator.js';
 import { serverBase } from '../shared/servers.js';
 import { OllamaTranslator, ollamaRestMs } from './ollama-translator.js';
-import { listVoices, createVoiceClone, deleteVoice, describeElevenLabsError, speechAccount, speechHealth, SPEECH_PROTOCOL } from '../shared/elevenlabs.js';
+import { listVoices, createVoiceClone, deleteVoice, describeElevenLabsError, speechAccount, speechHealth, speechModels, SPEECH_PROTOCOL } from '../shared/elevenlabs.js';
 import { PcmScheduler, testChime } from '../shared/scheduler.js';
 import { int16ToBase64 } from '../shared/pcm.js';
 import { EchoGuard, EarlySentences, isOnlyPunctuation } from '../shared/text.js';
@@ -544,6 +544,8 @@ class Session {
       await listVoices(this.speech);
       const health = await speechHealth(this.speech).catch(() => ({}));
       if (!(health.protocol >= SPEECH_PROTOCOL)) this.warn('speech-old', 'lsp.old');
+      // The server's own recognition model, in case it is one that knows only English.
+      this.speechServerModel = (await speechModels(this.speech).catch(() => ({})))?.recognition?.default || '';
     } catch (err) {
       throw new UserError(describeElevenLabsError(err, this.speech), 'speech');
     }
@@ -563,6 +565,16 @@ class Session {
     }
     this.myVoiceId = s.oaiMyVoice || 'alloy';
     this.theirVoiceId = s.oaiTheirVoice || 'nova';
+  }
+
+  // An English-only model (distil-large-v3) cannot write down other languages: speech that
+  // is not English goes to a multilingual one instead.
+  whisperParams(dir, languageCode) {
+    const chosen = this.settings.localWhisperModel || this.speechServerModel || '';
+    const model = whisperModelFor(chosen, languageCode);
+    if (model === chosen) return this.settings.localWhisperModel ? { whisper_model: model } : {};
+    log('info', `stt-${dir}: ${chosen} knows only English; ${languageCode || 'auto'} speech uses ${model}`);
+    return { whisper_model: model };
   }
 
   createStt(dir, languageCode, keyterms) {
@@ -590,7 +602,7 @@ class Session {
       languageCode: languageCode === AUTO_LANGUAGE ? '' : languageCode,
       vadSilenceSecs: this.settings.vadSilenceSecs,
       keyterms,
-      extraParams: this.speech.local ? { whisper_model: this.settings.localWhisperModel } : {},
+      extraParams: this.speech.local ? this.whisperParams(dir, languageCode) : {},
       onPartial: (text) => this.onPartial(dir, text),
       onCommitted: (text) => this.onCommitted(dir, text),
       onServerMessage: (type, text) => this.debugSink?.event({ kind: 'stt-message', dir, type, text }),

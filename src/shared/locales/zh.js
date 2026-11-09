@@ -269,6 +269,7 @@ export default {
   'opt.speech.title': '语音识别和声音',
   'opt.speech.model': '识别模型',
   'opt.speech.serverDefault': '服务器自带（{model}）',
+  'opt.speech.englishOnly': "{model}（仅英语；其他语言使用 large-v3-turbo）",
   'opt.voice.mine': '我的声音',
   'opt.voice.theirs': '对方的声音',
   'opt.voice.mineIn': '我的声音（说{language}）',
