@@ -4,6 +4,10 @@ Versions follow [semantic versioning](https://semver.org): MAJOR for changes tha
 
 ## Unreleased
 
+### Changed
+
+- More words in the built-in pronunciation list for the local Turkish voices: TSMC, Omniverse, Cosmos, hacker (hackers, hackerlar), hacking; "pdf" in any case; "zeka" read as "zekâ".
+
 ### Documentation
 
 - Install from the Chrome Web Store, or build from source; the guides cover every setting, the connection test and the English-only speech models.

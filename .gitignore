@@ -15,3 +15,5 @@ speech-server/voices/
 # Marketing and store material: kept locally, not published
 promo/
 store/
+# Editor settings
+.vscode/

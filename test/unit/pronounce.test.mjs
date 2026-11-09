@@ -35,6 +35,13 @@ test('unmarked text: built-in words and short Turkish acronyms for the local Tur
   assert.equal(speechText('CEO ve SGK', { language: 'tr' }), 'CEO ve SGK');
 });
 
+test('built-in words added after release: tech names, hacker, pdf in any case', () => {
+  const tr = (text) => speechText(text, { language: 'tr', singleLanguage: true });
+  assert.equal(tr("Hacker'lar TSMC ve Omniverse hakkında pdf paylaştı."), "hekır'lar ti es em si ve omnivers hakkında pi di ef paylaştı.");
+  assert.equal(tr('PDF ve Cosmos, hackerlar ve hacking'), 'pi di ef ve kozmos, hekırlar ve heking');
+  assert.equal(tr('Yapay zeka ve zekanın'), 'Yapay zekâ ve zekanın');
+});
+
 test('a Turkish name for a local English voice is spelled the English way', () => {
   assert.equal(speechText('Thanks, Şükrü.', { language: 'en', singleLanguage: true }), 'Thanks, Shewkrew.');
   assert.equal(speechText('Meet [[Şükrü|Shoo-kroo]].', { language: 'en', singleLanguage: true }), 'Meet Shoo-kroo.');
