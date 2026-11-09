@@ -52,14 +52,14 @@ Settings live in `/etc/live-interpreter-speech.env`:
 | --- | --- | --- |
 | `SPEECH_KEY` | random | The key the extension sends |
 | `SPEECH_PORT` | 8765 | Port |
-| `WHISPER_MODEL` | large-v3-turbo | `medium` or `small` for more speed |
+| `WHISPER_MODEL` | large-v3-turbo | `medium` or `small` for more speed. `distil-large-v3` and `*.en` know only English: the extension (2.4.1 and newer) uses them only for English speech and sends other languages to `large-v3-turbo` |
 | `WHISPER_DEVICE` / `WHISPER_COMPUTE` | cuda / float16 | `cpu` / `int8` without a GPU |
 | `PIPER_VOICES` | voices/voices.json | Voices per language |
 
 ## In the extension
 
 1. Settings, **Speech recognition and voices**, **Service**: choose **My own speech server**.
-2. Enter the address (for example `100.65.147.84`; port 8765 is added when none is given) and the key.
+2. Enter the address (for example `100.101.102.103`; port 8765 is added when none is given) and the key.
 3. Press **Test** and accept the browser's prompt for that address. The result names the server's version and ends with "live recognition ready". Then choose the **Recognition model** and the voices; **↻** fetches the server's lists again.
 
 ## Security

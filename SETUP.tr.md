@@ -15,7 +15,7 @@ Kurulumdan ilk çevrilen Teams görüşmesine ya da YouTube videosuna adım adı
 | Gereksinim | Açıklama |
 | --- | --- |
 | **Chrome 116+, Edge ya da Brave** | Teams toplantısına da bu tarayıcıdan katılırsın. Masaüstü Teams uygulaması desteklenmez |
-| **Node.js 18+** | Eklentiyi derlemek için ([nodejs.org](https://nodejs.org)) |
+| **Node.js 18+** | Yalnızca eklentiyi kaynaktan derlemek için ([nodejs.org](https://nodejs.org)); Chrome Web Store kopyasında gerekmez |
 | **Ses tanıma ve sesler için biri** | ElevenLabs hesabı (kendi ses klonun için Starter veya üstü plan, [planlar](https://elevenlabs.io/pricing)) **ya da** kendi ses sunucun ([speech-server](speech-server/README.tr.md)) |
 | **Çeviri için biri** | Claude, OpenAI ya da OpenRouter için bir API anahtarı, **ya da** kendi sunucun (Ollama, LM Studio), **ya da** hiçbiri (ücretsiz çeviri) |
 | **Kulaklık** | Görüşmelerde, duyduğun çeviri mikrofonuna girip karşıya geri gitmesin diye |
@@ -23,6 +23,10 @@ Kurulumdan ilk çevrilen Teams görüşmesine ya da YouTube videosuna adım adı
 Eklentinin kendi sunucusu yok. Anahtarların yalnızca tarayıcında kalır ve yalnızca seçtiğin servise gider.
 
 ---
+
+## En kolayı: Chrome Web Store
+
+[Mağaza sayfasını](https://chromewebstore.google.com/detail/opaicinhommdnfhikkmlgjcalkohnkhl) aç, **Chrome'a ekle** düğmesine bas (Edge ve Brave'de de aynı) ve [3. Diller](#3-diller) adımından devam et. Mağaza kopyası kendini günceller; Node.js'e ve 1. ile 2. adımlara gerek kalmaz. 1. ve 2. adımlar kaynaktan derlemek içindir.
 
 ## 1. İndir ve derle
 
@@ -61,7 +65,7 @@ Ayarlar sayfası dört bölümden oluşur: **Diller**, **Çeviri**, **Ses tanım
 | **Claude (Anthropic)** | [Claude Console › API keys](https://platform.claude.com/settings/keys) sayfasından bir API anahtarı (hesapta kredi olmalı) ve bir model; en kısa gecikme **Claude Haiku 5.5** |
 | **OpenAI ya da uyumlu bir sunucu** | OpenAI için **Sunucu**'yu boş bırak ve API anahtarını gir; ya da aynı arayüzü sunan bir sunucunun adresini gir (LM Studio, vLLM; örneğin `http://192.168.1.5:1234/v1`) |
 | **OpenRouter** | [openrouter.ai](https://openrouter.ai/keys) sayfasından bir API anahtarı |
-| **Ollama (kendi sunucunuz)** | Sunucunun adresi (örneğin `100.65.147.84`; port 11434 eklenir); altına bir **ikinci sunucu** eklenebilir |
+| **Ollama (kendi sunucunuz)** | Sunucunun adresi (örneğin `100.101.102.103`; port 11434 eklenir); altına bir **ikinci sunucu** eklenebilir |
 | **Ücretsiz** | Hiçbir şey; ücretsiz bir [DeepL API Free](https://www.deepl.com/pro-api) anahtarı kaliteyi artırır, Brave'de gereklidir |
 
 **Model** listesi servisten kendiliğinden dolar; **↻** listeyi yeniden getirir. Kendi sunucunda (Ollama, LM Studio) tarayıcı o adrese erişim için bir kez izin ister: izin ver. Ollama sunucusunda `OLLAMA_ORIGINS` ayarı gerekmez.
@@ -97,7 +101,7 @@ Ayarlar sayfası dört bölümden oluşur: **Diller**, **Çeviri**, **Ses tanım
    ```
    Betik sonunda bir **adres** ve **anahtar** yazar ([ayrıntılar](speech-server/README.tr.md)).
 2. İkisini gir, **Test et** düğmesine bas ve tarayıcı adrese erişim izni isteyince izin ver. Sonuç, sunucunun sürümünü yazar ve "canlı ses tanıma hazır" ile biter.
-3. **Ses tanıma modeli**'ni (Whisper) ve sesleri seç. Ses listeleri, her sesin konuşacağı dilin seslerini gösterir; Yunanca, Endonezce, Japonca ve Korece için yerel ses yoktur (yalnızca altyazı). Bu modda ses klonu yoktur.
+3. **Ses tanıma modeli**'ni (Whisper) ve sesleri seç. "Yalnızca İngilizce" diye işaretli modeller (`distil-large-v3`) yalnızca İngilizce konuşmada kullanılır; diğer diller `large-v3-turbo` ile tanınır. Ses listeleri, her sesin konuşacağı dilin seslerini gösterir; Yunanca, Endonezce, Japonca ve Korece için yerel ses yoktur (yalnızca altyazı). Bu modda ses klonu yoktur.
 
 **Yabancı kelimelerin okunuşu** (bu bölümün sonunda) varsayılan olarak açıktır: Türkçe konuşmadaki İngilizce terimler, kısaltmalar ve markalar İngilizce, İngilizce konuşmadaki Türkçe adlar Türkçe okunur. Kendi kelimelerini her satıra bir tane `kelime = okunuşu` biçiminde ekleyebilirsin (`Kubernetes = kubernetis`); yalnızca seslendirilen metin değişir.
 
@@ -107,6 +111,10 @@ Kullandığın bilgisayar kendi sunucularınla aynı ağda (örneğin Tailscale'
 
 - **Mikrofon iznini ver** düğmesine bas ve tarayıcının sorusuna izin ver. Teams'te kullandığın mikrofonu seç ya da "Görüşmeyle aynı" bırak.
 - "Cümle bitti sayılması için sessizlik" ayarını **0,5 sn** yaparsan çeviri daha erken başlar. Kulaklık yoksa **Hoparlör modu**nu aç.
+- **Çeviriyi duyacağınız çıkış:** çıkış aygıtı ya da sistemin varsayılanı.
+- **Çeviri sesinin seviyesi**, **Karşı tarafın kendi sesi** ve **Çeviri konuşurken karşı tarafın kendi sesi**, sesli modda her birinin ne kadar yüksek duyulacağını belirler; **Kendi çevirimi duy**, karşıya gönderileni kısık sesle duymanı sağlar.
+- İstemezsen **Sayfanın altında altyazı** ve **Sayfada panel** kutularını kaldırabilirsin.
+- **Ses ayrıntıları** (ElevenLabs): ses modeli, **Ses tutarlılığı** ve **Sese benzerlik**.
 
 ---
 
@@ -116,6 +124,8 @@ Kullandığın bilgisayar kendi sunucularınla aynı ağda (örneğin Tailscale'
 2. Kulaklığı tak, toplantıya katıl.
 3. Eklenti Teams sekmesi açıldıktan sonra yüklendiyse ya da yenilendiyse sekmeyi bir kez **F5** ile yenile.
 4. Teams sekmesindeyken eklenti simgesine tıkla, modları seç ve **Çeviriyi başlat** de (kısayol: `Alt+Shift+T`).
+
+**Bağlantı testi (anahtarsız)** düğmesi hiçbir şey çevirmeden eklentinin görüşmenin sesine ulaştığını denetler; **Test sesi gönder**, çeviri sürerken karşı tarafa kısa bir zil sesi gönderir.
 
 Desteklenen adresler: `teams.microsoft.com`, `teams.cloud.microsoft` (iş/okul hesabı), `teams.live.com` (kişisel hesap) ve Google Meet.
 
@@ -177,7 +187,7 @@ Aynı bilgisayardan iki katılımcı birbirinin sesini bozar; ikinci bir cihaz k
 | Belirti | Çözüm |
 | --- | --- |
 | "Manifest dosyası eksik veya okunamıyor" | Yanlış klasör seçilmiş: `dist` klasörünü seç |
-| "Görüşme sekmesini bir kez yenileyin (F5)" ve F5 işe yaramıyor | Uzantılar sayfasında eklentinin birden çok kopyası var. Yalnızca `dist`'ten yüklenen kalsın, sonra F5 |
+| "Görüşme sekmesini bir kez yenileyin (F5)" ve F5 işe yaramıyor | Eklentinin birden çok kopyası yüklü (örneğin mağaza kopyası ve `dist`'ten yüklenen). Yalnızca biri kalsın, sonra F5 |
 | Açılır pencere bir görüşme ya da sayfa açmanı istiyor | Pencereyi Teams, Meet ya da video sekmesindeyken aç. Tarayıcının kendi sayfaları (`brave://...`) çevrilemez |
 | "Eklentinin mikrofon izni yok" | Ayarlar → **Mikrofon iznini ver** |
 | Karşı taraf beni duymuyor | Teams'te mikrofonun açık mı? Paneldeki uyarıyı oku; **Test sesi gönder** ile dene |
@@ -188,6 +198,7 @@ Aynı bilgisayardan iki katılımcı birbirinin sesini bozar; ikinci bir cihaz k
 | "Yedek çeviri henüz hazır değil" | Brave'de Chrome'un çevirmeni yok: bir DeepL Free anahtarı ya da ikinci bir Ollama sunucusu ekle |
 | Gecikme fazla | Ollama ya da **Claude Haiku 5.5** seç, sessizlik ayarını **0,5 sn** yap, kısa cümlelerle konuş |
 | Filmde çeviri gelmiyor | Kendi ses sunucunu güncelle (`git pull` ve `sudo ./install-ubuntu.sh`); konuşma algılayıcısı yeni sürümde. Altyazıyı yalnızca konuşmanın olduğu yerlerde bekle |
+| Konuşmam karşıya anlamsız İngilizce cümleler ya da cevaplar olarak gidiyor | Kendi ses sunucunda yalnızca İngilizce bilen bir model seçili (`distil-large-v3`). Eklentiyi 2.4.1 ya da sonrasına güncelle (diğer dilleri `large-v3-turbo`ya gönderir) ya da ses tanıma modeli olarak `large-v3-turbo` seç. Net ve mikrofona yakın konuş |
 | Çeviri kendiliğinden durdu | Panel nedenini yazar (örneğin ElevenLabs kotası doldu). Sorunu giderip yeniden başlat |
 
 ## Güncelleme
@@ -198,6 +209,6 @@ npm install
 npm run build
 ```
 
-Sonra uzantılar sayfasında eklentinin yenile düğmesine bas ve açık sekmeyi F5 ile yenile. Ayarların ve sesin yerinde kalır. Kendi ses sunucunu güncellemek için Ubuntu'da `git pull` yapıp `speech-server` klasöründe `sudo ./install-ubuntu.sh` komutunu tekrar çalıştır; anahtar korunur.
+Sonra uzantılar sayfasında eklentinin yenile düğmesine bas ve açık sekmeyi F5 ile yenile. Ayarların ve sesin yerinde kalır. Chrome Web Store kopyasında bunların hiçbiri gerekmez, kendini günceller. Kendi ses sunucunu güncellemek için Ubuntu'da `git pull` yapıp `speech-server` klasöründe `sudo ./install-ubuntu.sh` komutunu tekrar çalıştır; anahtar korunur.
 
 Teams'e özgü teknik notlar ve henüz doğrulanmamış noktalar: [TEAMS.tr.md](TEAMS.tr.md).

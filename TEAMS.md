@@ -4,7 +4,7 @@
 
 Live Interpreter works with **Microsoft Teams in the browser** as well as Google Meet. The desktop Teams app is not supported: browser extensions only run in the browser. Setup: [SETUP.md](SETUP.md).
 
-> **Status:** two-way translation worked in a real work-account Teams call in Brave; the translations reached the other side. The "Unverified points" below are still being checked. Run a test call before an important meeting.
+> **Status:** two-way translation has been used in real work-account Teams calls in Brave; the translations reached the other side. The "Unverified points" below are still being checked. Run a test call before an important meeting.
 >
 > In Teams calls too, translation can run on Ollama and speech recognition and speech on your own speech server: [SETUP.md](SETUP.md), steps 4 and 5. Video and radio tabs: step 8.
 
@@ -50,7 +50,7 @@ All are marked `UNVERIFIED` in the code.
 
 Put on headphones and join the same meeting from a second device (a phone will do).
 
-1. `npm run build`; on the extensions page keep only the one copy loaded from `dist` and press reload.
+1. Keep only one copy of the extension: the Chrome Web Store copy, or the one built from source (`npm run build`, then reload the copy loaded from `dist`).
 2. Join the Teams meeting in the browser and reload the tab once (F5).
 3. **Incoming:** speak on the phone; the computer should play the translation and show the subtitles.
 4. **Outgoing:** speak at the computer; the phone should hear the *translated* voice.

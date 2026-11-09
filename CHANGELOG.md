@@ -2,6 +2,14 @@
 
 Versions follow [semantic versioning](https://semver.org): MAJOR for changes that need something done (new settings, a server update), MINOR for new features, PATCH for fixes. The version lives in `package.json`; the build writes it into the extension's manifest, and the popup and the settings page show it. The speech server has its own version and a protocol number (`/health`); the extension warns when the server is older than it needs.
 
+## Unreleased
+
+### Documentation
+
+- Install from the Chrome Web Store, or build from source; the guides cover every setting, the connection test and the English-only speech models.
+- The marketing and store material (`promo/`, `store/`, the store image script) is no longer part of the repository.
+- Example server addresses are now generic (`100.101.102.103`).
+
 ## 2.4.1 (2026-11-09)
 
 ### Fixed

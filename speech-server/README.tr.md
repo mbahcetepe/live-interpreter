@@ -52,14 +52,14 @@ Ayarlar `/etc/live-interpreter-speech.env` dosyasındadır:
 | --- | --- | --- |
 | `SPEECH_KEY` | rastgele | Eklentinin gönderdiği anahtar |
 | `SPEECH_PORT` | 8765 | Port |
-| `WHISPER_MODEL` | large-v3-turbo | Daha hızlısı için `medium` ya da `small` |
+| `WHISPER_MODEL` | large-v3-turbo | Daha hızlısı için `medium` ya da `small`. `distil-large-v3` ve `*.en` yalnızca İngilizce bilir: eklenti (2.4.1 ve sonrası) onları yalnızca İngilizce konuşmada kullanır, diğer dilleri `large-v3-turbo`ya gönderir |
 | `WHISPER_DEVICE` / `WHISPER_COMPUTE` | cuda / float16 | GPU yoksa `cpu` / `int8` |
 | `PIPER_VOICES` | voices/voices.json | Dil başına ses listesi |
 
 ## Eklentide
 
 1. Ayarlar, **Ses tanıma ve sesler**, **Servis**: **Kendi ses sunucum**'u seçin.
-2. Adresi (örneğin `100.65.147.84`; port yazılmazsa 8765 eklenir) ve anahtarı girin.
+2. Adresi (örneğin `100.101.102.103`; port yazılmazsa 8765 eklenir) ve anahtarı girin.
 3. **Test et** düğmesine basın; tarayıcı bu adrese erişim izni ister, izin verin. Sonuç satırı sunucunun sürümünü yazar ve "canlı ses tanıma hazır" ile biter. Ardından **Ses tanıma modeli**ni ve sesleri seçin; **↻** sunucunun listelerini yeniden getirir.
 
 ## Güvenlik

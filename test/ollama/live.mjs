@@ -2,7 +2,7 @@
 // settings page (Translation, "Test"): the model list, the header rule and the translation.
 //
 //   npm run build && node test/ollama/live.mjs <server> <model> [<second server> <model>]
-//   node test/ollama/live.mjs 100.65.147.84 gemma4:12b 100.77.37.21 gemma4:26b-uncensored
+//   node test/ollama/live.mjs 100.101.102.103 gemma4:12b 100.101.102.104 gemma4:26b
 //
 // The browser cannot be clicked through its permission prompt here, so a copy of dist/
 // that already holds access to the servers is loaded instead.

@@ -16,8 +16,7 @@
     "test:scenarios": "node scripts/build.mjs --test && node test/e2e/scenarios.mjs",
     "test:api": "node test/api/smoke.mjs",
     "test:free": "node test/api/free.mjs",
-    "test:soniox": "node test/api/soniox.mjs",
-    "store:images": "node scripts/build.mjs --test && node scripts/store-images.mjs"
+    "test:soniox": "node test/api/soniox.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0"

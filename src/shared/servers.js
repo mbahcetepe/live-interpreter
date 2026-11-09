@@ -12,7 +12,7 @@ import { translationProvider } from './settings.js';
 
 const OLLAMA_PORT = '11434';
 
-// "100.65.147.84" or "http://100.65.147.84:11434/" -> "http://100.65.147.84:11434"
+// "100.101.102.103" or "http://100.101.102.103:11434/" -> "http://100.101.102.103:11434"
 export function serverBase(url, { defaultPort = OLLAMA_PORT } = {}) {
   let text = String(url || '').trim();
   if (!text) return '';
@@ -30,7 +30,7 @@ export function serverBase(url, { defaultPort = OLLAMA_PORT } = {}) {
   return `${parsed.protocol}//${parsed.host}${parsed.pathname.replace(/\/+$/, '')}`;
 }
 
-// The permission pattern for a server ("http://100.65.147.84/*"; a pattern covers every port).
+// The permission pattern for a server ("http://100.101.102.103/*"; a pattern covers every port).
 export function originPattern(base) {
   try {
     const u = new URL(base);

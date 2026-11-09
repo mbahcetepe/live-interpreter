@@ -12,7 +12,6 @@ test/meet/out/
 speech-server/**/__pycache__/
 speech-server/.pytest_cache/
 speech-server/voices/
-promo/node_modules/
-promo/out/
-promo/public/audio/
-promo/public/frames/
+# Marketing and store material: kept locally, not published
+promo/
+store/

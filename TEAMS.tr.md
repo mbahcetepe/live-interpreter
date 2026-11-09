@@ -4,7 +4,7 @@
 
 Live Interpreter (Türkçe arayüzde Canlı Tercüman), Google Meet'e ek olarak **tarayıcıdaki Microsoft Teams** ile çalışır. Masaüstü Teams uygulaması desteklenmez: tarayıcı eklentileri yalnızca tarayıcıda çalışır. Kurulum için [SETUP.tr.md](SETUP.tr.md).
 
-> **Durum:** Brave'de gerçek bir iş hesabı Teams görüşmesinde iki yönlü çeviri denendi; çeviriler karşıya ulaştı. Aşağıdaki "Doğrulanmamış noktalar" henüz kontrol ediliyor. Önemli bir toplantıdan önce deneme görüşmesi yapın.
+> **Durum:** Brave'de gerçek iş hesabı Teams görüşmelerinde iki yönlü çeviri kullanıldı; çeviriler karşıya ulaştı. Aşağıdaki "Doğrulanmamış noktalar" henüz kontrol ediliyor. Önemli bir toplantıdan önce deneme görüşmesi yapın.
 >
 > Teams görüşmelerinde de çeviri Ollama'da, ses tanıma ve seslendirme kendi ses sunucunuzda yapılabilir; kurulum için [SETUP.tr.md](SETUP.tr.md), 4. ve 5. adımlar. Video ve radyo sekmeleri için 8. adım.
 
@@ -50,7 +50,7 @@ Hepsi kodda `UNVERIFIED` yorumuyla işaretli.
 
 Kulaklık takın ve ikinci bir cihazdan (telefon olabilir) aynı toplantıya katılın.
 
-1. `npm run build`, uzantılar sayfasında yalnızca `dist`'ten yüklenen tek kopya olsun, yenile düğmesine basın.
+1. Eklentinin yalnızca bir kopyası yüklü olsun: Chrome Web Store kopyası ya da kaynaktan derlenen (`npm run build`, ardından `dist`'ten yüklenen kopyada yenile).
 2. Teams toplantısına tarayıcıdan katılın, sekmeyi bir kez yenileyin (F5).
 3. **Gelen yön:** Telefondan konuşun; bilgisayarda çeviriyi duymalı ve altyazıyı görmelisiniz.
 4. **Giden yön:** Bilgisayarda konuşun; telefonda *çevrilmiş* sesi duymalısınız.

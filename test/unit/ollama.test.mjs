@@ -39,23 +39,23 @@ const collect = async (it) => {
 };
 
 test('an address becomes a server base with the usual port', () => {
-  assert.equal(serverBase('100.65.147.84'), 'http://100.65.147.84:11434');
-  assert.equal(serverBase('http://100.65.147.84:11434/'), 'http://100.65.147.84:11434');
+  assert.equal(serverBase('100.101.102.103'), 'http://100.101.102.103:11434');
+  assert.equal(serverBase('http://100.101.102.103:11434/'), 'http://100.101.102.103:11434');
   assert.equal(serverBase('http://localhost:8080'), 'http://localhost:8080');
   assert.equal(serverBase('https://ollama.example.com'), 'https://ollama.example.com');
-  assert.equal(serverBase('100.65.147.84', { defaultPort: '8765' }), 'http://100.65.147.84:8765');
+  assert.equal(serverBase('100.101.102.103', { defaultPort: '8765' }), 'http://100.101.102.103:8765');
   assert.equal(serverBase(''), '');
   assert.equal(serverBase('ftp://x'), '');
-  assert.equal(originPattern('http://100.65.147.84:11434'), 'http://100.65.147.84/*');
+  assert.equal(originPattern('http://100.101.102.103:11434'), 'http://100.101.102.103/*');
 });
 
 test('the Origin rule covers only Ollama servers in the settings and only this extension', () => {
-  const settings = { claudeModel: 'ollama', ollamaUrl: '100.65.147.84', ollamaBackupUrl: 'http://100.77.37.21:11434', speechProvider: 'local', localSpeechUrl: '100.65.147.84' };
+  const settings = { claudeModel: 'ollama', ollamaUrl: '100.101.102.103', ollamaBackupUrl: 'http://100.101.102.104:11434', speechProvider: 'local', localSpeechUrl: '100.101.102.103' };
   const [rule] = originRules(settings, 'extid');
-  assert.deepEqual(rule.condition.requestDomains, ['100.65.147.84', '100.77.37.21']);
+  assert.deepEqual(rule.condition.requestDomains, ['100.101.102.103', '100.101.102.104']);
   assert.deepEqual(rule.condition.initiatorDomains, ['extid']);
   assert.equal(rule.action.requestHeaders[0].header, 'origin');
-  assert.deepEqual(originRules({ claudeModel: 'claude-opus-5-5', ollamaUrl: '100.65.147.84' }, 'extid'), []);
+  assert.deepEqual(originRules({ claudeModel: 'claude-opus-5-5', ollamaUrl: '100.101.102.103' }, 'extid'), []);
   assert.deepEqual(configuredServers(settings).map((s) => s.kind), ['ollama', 'ollama', 'speech']);
 });
 
@@ -63,7 +63,7 @@ test('with Ollama no Anthropic key is needed, but the server address is', () => 
   const s = { ...DEFAULT_SETTINGS, claudeModel: 'ollama', elevenLabsKey: 'k' };
   assert.deepEqual(missingKeys(s), []);
   assert.deepEqual(missingServers(s), ['ollama']);
-  assert.deepEqual(missingServers({ ...s, ollamaUrl: '100.65.147.84' }), []);
+  assert.deepEqual(missingServers({ ...s, ollamaUrl: '100.101.102.103' }), []);
   assert.deepEqual(missingKeys({ ...DEFAULT_SETTINGS, elevenLabsKey: 'k' }), ['Anthropic']);
 });
 
@@ -76,10 +76,10 @@ test('model names match with or without the tag', () => {
 
 test('the translation streams in sentences, without thinking', async () => {
   const { fetchImpl, calls } = fakeOllama();
-  const tr = new OllamaTranslator({ url: '100.65.147.84', model: 'gemma4:12b', myLanguage: 'tr', theirLanguage: 'en', fetchImpl });
+  const tr = new OllamaTranslator({ url: '100.101.102.103', model: 'gemma4:12b', myLanguage: 'tr', theirLanguage: 'en', fetchImpl });
   assert.deepEqual(await collect(tr.translate(job)), ['Günaydın herkese.', 'Başlayalım mı?']);
   const chat = calls.find((c) => c.url.endsWith('/api/chat'));
-  assert.equal(chat.url, 'http://100.65.147.84:11434/api/chat');
+  assert.equal(chat.url, 'http://100.101.102.103:11434/api/chat');
   assert.equal(chat.body.think, false);
   assert.equal(chat.body.stream, true);
   assert.match(chat.body.messages.at(-1).content, /Good morning/);
