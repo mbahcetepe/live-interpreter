@@ -1,13 +1,30 @@
 // Text helpers for the translation stream.
 import { insideMark } from './pronounce.js';
 
-const SENTENCE_END = /[.!?…。！？]+["'”’»)\]]*(?=\s)/g;
-const SOFT_BREAK = /[,;:،、]\s/g;
+// Chinese and Japanese are written without spaces, and their punctuation (。，、) has no
+// space after it either. A Latin full stop needs a space after it ("3.5" is no sentence
+// end); a CJK one does not, but it must not be the last character yet, so a closing
+// quote that follows in the next chunk stays with its sentence.
+const CJK = '\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}ー';
+const CLOSERS = `"'”’»)\\]」』`;
+const SENTENCE_END = new RegExp(`[.!?…]+[${CLOSERS}]*(?=\\s)|[。！？]+[${CLOSERS}]*(?=[^${CLOSERS}])`, 'gu');
+const SOFT_BREAK = /[,;:،]\s|[、，；：]/gu;
+const CJK_CHAR = new RegExp(`[${CJK}]`, 'u');
+
+// How long a piece of text sounds, in Latin characters: a Chinese or Japanese character
+// carries about as much speech as two, so the same thresholds give clauses of a similar
+// length in every language.
+export function textWeight(text) {
+  let weight = 0;
+  for (const ch of String(text)) weight += CJK_CHAR.test(ch) ? 2 : 1;
+  return weight;
+}
 
 // Cuts a streamed translation into pieces the voice can start speaking right away:
 // a sentence, or a clause once it is long enough to sound natural on its own (clauseMin),
 // so the first words are heard before the sentence is finished. Text with no break at
-// all is cut at a space once it passes hardMax.
+// all is cut at a space once it passes hardMax (or anywhere in text without spaces).
+// The lengths are text weights (textWeight).
 export class SentenceSplitter {
   constructor({ minChars = 12, clauseMin = 24, softMax = 160, hardMax = 110 } = {}) {
     this.minChars = minChars;
@@ -15,6 +32,10 @@ export class SentenceSplitter {
     this.softMax = softMax;
     this.hardMax = Math.min(hardMax, softMax);
     this.buffer = '';
+  }
+
+  weightTo(index) {
+    return textWeight(this.buffer.slice(0, index));
   }
 
   push(text) {
@@ -36,7 +57,7 @@ export class SentenceSplitter {
     let sentence = 0;
     while ((match = SENTENCE_END.exec(this.buffer))) {
       const end = match.index + match[0].length;
-      if (end >= this.minChars && !insideMark(this.buffer, end)) {
+      if (this.weightTo(end) >= this.minChars && !insideMark(this.buffer, end)) {
         sentence = end;
         break;
       }
@@ -46,13 +67,26 @@ export class SentenceSplitter {
     while ((match = SOFT_BREAK.exec(this.buffer))) {
       const end = match.index + 1;
       if (sentence && end > sentence) break;
-      if (end >= this.clauseMin && end <= this.softMax && !insideMark(this.buffer, end)) return end;
+      const weight = this.weightTo(end);
+      if (weight >= this.clauseMin && weight <= this.softMax && !insideMark(this.buffer, end)) return end;
     }
     if (sentence) return sentence;
-    if (this.buffer.length > this.hardMax) {
-      let space = this.buffer.lastIndexOf(' ', this.hardMax);
-      while (space >= this.minChars && insideMark(this.buffer, space)) space = this.buffer.lastIndexOf(' ', space - 1);
-      if (space >= this.minChars) return space;
+    if (textWeight(this.buffer) > this.hardMax) {
+      // The last index whose text still fits in hardMax.
+      let limit = 0;
+      let weight = 0;
+      for (const ch of this.buffer) {
+        weight += CJK_CHAR.test(ch) ? 2 : 1;
+        if (weight > this.hardMax) break;
+        limit += ch.length;
+      }
+      let space = this.buffer.lastIndexOf(' ', limit);
+      while (space > 0 && this.weightTo(space) >= this.minChars && insideMark(this.buffer, space)) space = this.buffer.lastIndexOf(' ', space - 1);
+      if (space > 0 && this.weightTo(space) >= this.minChars) return space;
+      // No space to cut at (Chinese, Japanese): cut between two CJK characters.
+      for (let i = limit; i > 0; i--) {
+        if (CJK_CHAR.test(this.buffer[i - 1]) && CJK_CHAR.test(this.buffer[i]) && this.weightTo(i) >= this.minChars && !insideMark(this.buffer, i)) return i;
+      }
     }
     return 0;
   }
@@ -68,13 +102,17 @@ export class SentenceSplitter {
   }
 }
 
+// A word is a run of letters or digits; in Chinese and Japanese, which have no spaces,
+// every character counts as one word.
+const WORD = new RegExp(`[${CJK}]|(?:(?![${CJK}])[\\p{L}\\p{N}])+`, 'gu');
+
 export function words(text) {
   return (
     String(text)
       .toLocaleLowerCase()
       .normalize('NFKD')
       .replace(/[̀-ͯ]/g, '')
-      .match(/[\p{L}\p{N}]+/gu) || []
+      .match(WORD) || []
   );
 }
 
@@ -137,20 +175,22 @@ const ABBREVIATIONS = new Set(['mr', 'mrs', 'ms', 'dr', 'prof', 'st', 'vs', 'etc
 
 // Index just after the last sentence end that more words follow; 0 when there is none.
 export function finishedSentenceEnd(text) {
-  const re = /([\p{L}\p{N}]*)([.!?…。！？]+["'”’»)\]]*)\s+(?=\S)/gu;
+  // A Latin sentence end needs a space and more words after it; a CJK one (。) only more words.
+  const re = new RegExp(`([\\p{L}\\p{N}]*)(?:([.!?…]+[${CLOSERS}]*)\\s+(?=\\S)|([。！？]+[${CLOSERS}]*)\\s*(?=[\\p{L}\\p{N}]))`, 'gu');
   let cut = 0;
   let match;
   while ((match = re.exec(text))) {
     const word = match[1].toLocaleLowerCase();
-    if (match[2][0] === '.' && (ABBREVIATIONS.has(word) || /^\p{L}$/u.test(word))) continue;
-    cut = match.index + match[1].length + match[2].length;
+    const end = match[2] || match[3];
+    if (match[2] && end[0] === '.' && (ABBREVIATIONS.has(word) || /^\p{L}$/u.test(word))) continue;
+    cut = match.index + match[1].length + end.length;
   }
   return cut;
 }
 
 function tokens(text) {
   const out = [];
-  const re = /[\p{L}\p{N}]+/gu;
+  const re = new RegExp(WORD.source, 'gu');
   let match;
   while ((match = re.exec(text))) out.push({ word: words(match[0]).join(''), end: match.index + match[0].length });
   return out;
@@ -211,7 +251,7 @@ export class EarlySentences {
       return '';
     }
     const fresh = this.sent ? remainderAfter(this.sent, candidate) : candidate.trim();
-    if (fresh.length < this.minChars) return '';
+    if (textWeight(fresh) < this.minChars) return '';
     this.sent = candidate;
     return fresh;
   }

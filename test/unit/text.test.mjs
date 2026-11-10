@@ -153,3 +153,63 @@ test('text with no break at all is cut at a space once it runs long', () => {
   assert.equal(pieces.length, 1);
   assert.ok(pieces[0].length <= 110 && !pieces[0].endsWith(' '));
 });
+
+// ---- Chinese and Japanese: no spaces, full-width punctuation -----------------------------
+
+import { textWeight } from '../../src/shared/text.js';
+
+const streamAll = (splitter, chunks) => [...chunks.flatMap((c) => splitter.push(c)), splitter.flush()].filter(Boolean);
+
+test('a Chinese translation is spoken clause by clause, though it has no spaces', () => {
+  const pieces = streamAll(new SentenceSplitter(), ['我们今天讨论一下', '新产品的发布计划，', '然后再看预算。', '大家', '有问题吗？']);
+  assert.deepEqual(pieces, ['我们今天讨论一下新产品的发布计划，', '然后再看预算。', '大家有问题吗？']);
+});
+
+test('a Chinese sentence end waits for the next character, so a closing quote stays with it', () => {
+  const splitter = new SentenceSplitter();
+  assert.deepEqual(splitter.push('他说：「明天我们一起开会讨论这个问题。'), []);
+  assert.deepEqual(splitter.push('」然后'), ['他说：「明天我们一起开会讨论这个问题。」']);
+});
+
+test('Japanese is cut at 、 and 。 the same way', () => {
+  const pieces = streamAll(new SentenceSplitter(), ['来週の金曜日までに報告書を送っていただけますか、', 'よろしくお願いします。']);
+  assert.deepEqual(pieces, ['来週の金曜日までに報告書を送っていただけますか、', 'よろしくお願いします。']);
+});
+
+test('long Chinese text with no punctuation is cut between characters', () => {
+  const splitter = new SentenceSplitter();
+  const pieces = splitter.push('这'.repeat(80));
+  assert.equal(pieces.length, 1);
+  assert.ok(textWeight(pieces[0]) <= 110 && textWeight(pieces[0]) >= 100, `weight ${textWeight(pieces[0])}`);
+});
+
+test('a Chinese or Japanese character weighs two Latin ones; Latin text is unchanged', () => {
+  assert.equal(textWeight('你好'), 4);
+  assert.equal(textWeight('ok'), 2);
+  assert.equal(textWeight('API接口'), 7);
+  // Latin rules as before: no cut at a decimal comma or a full stop without a space.
+  assert.deepEqual(new SentenceSplitter().push('The price went up to 3,5 percent.'), []);
+});
+
+test('Chinese and Japanese words are single characters', () => {
+  assert.deepEqual(words('你好世界'), ['你', '好', '世', '界']);
+  assert.deepEqual(words('api接口 works'), ['api', '接', '口', 'works']);
+  assert.deepEqual(words('Merhaba dünya'), ['merhaba', 'dunya']);
+});
+
+test('our own Chinese voice coming back is an echo', () => {
+  const guard = new EchoGuard();
+  guard.remember('我们明天下午三点开会。', { start: 1000, end: 3000 });
+  assert.equal(guard.isEcho('我们明天下午三点开会', 3500), true);
+  assert.equal(guard.isEcho('好的，没问题，谢谢你', 3500), false);
+});
+
+test('a finished Chinese sentence is sent ahead while the speaker keeps talking', () => {
+  assert.equal(finishedSentenceEnd('你好。我们开始'), '你好。'.length);
+  assert.equal(finishedSentenceEnd('你好。'), 0);
+  assert.equal(remainderAfter('你好。', '你好。我们开始吧'), '我们开始吧');
+  const early = new EarlySentences();
+  assert.equal(early.partial('谢谢大家参加今天的会议。我们'), '');
+  assert.equal(early.partial('谢谢大家参加今天的会议。我们'), '谢谢大家参加今天的会议。');
+  assert.equal(early.committed('谢谢大家参加今天的会议。我们开始吧。'), '我们开始吧。');
+});

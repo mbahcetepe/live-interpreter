@@ -4,6 +4,11 @@ Versions follow [semantic versioning](https://semver.org): MAJOR for changes tha
 
 ## Unreleased
 
+### Fixed
+
+- **Chinese and Japanese translations are spoken clause by clause too.** Their punctuation (。，、；：) has no space after it, so it was not seen as a break, and the whole utterance was spoken only at the end. A Chinese or Japanese character now counts as two Latin ones for the clause lengths, and long text with no punctuation is cut between characters.
+- Chinese and Japanese speech: finished sentences are sent ahead while the speaker keeps talking, and the echo guard recognizes our own voice coming back. Both counted words by spaces, so a whole Chinese sentence was one "word".
+
 ### Changed
 
 - More words in the built-in pronunciation list for the local Turkish voices: TSMC, Omniverse, Cosmos, hacker (hackers, hackerlar), hacking; "pdf" in any case; "zeka" read as "zekâ".

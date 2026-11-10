@@ -1,6 +1,6 @@
 import { fetchScribeToken, ElevenLabsError, realtimeUrl } from '../shared/elevenlabs.js';
 import { int16ToBase64 } from '../shared/pcm.js';
-import { words, lcsLength } from '../shared/text.js';
+import { words, lcsLength, textWeight } from '../shared/text.js';
 
 // Server messages that end the session for good, need a fresh connection, or are only worth a log line.
 const FATAL = new Set(['auth_error', 'quota_exceeded', 'unaccepted_terms']);
@@ -197,7 +197,7 @@ export class ScribeRealtime {
   considerForcedCommit() {
     if (!this.manualCommits) return;
     const text = this.partial.trim();
-    if (text.length < 600 || !/[.!?…]["')\]]*$/.test(text)) return;
+    if (textWeight(text) < 600 || !/[.!?…。！？]["')\]」』]*$/u.test(text)) return;
     if (Date.now() - this.lastForcedCommit < 3000) return;
     this.pendingCommit = true;
     this.lastForcedCommit = Date.now();
@@ -315,7 +315,7 @@ export class ScribeRealtime {
 function startsNewSegment(previous, next) {
   const before = words(previous);
   const after = words(next);
-  if (before.length < MIN_RECOVERED_WORDS || !after.length || !/[.!?…]["'”’»)\]]*\s*$/u.test(previous)) return false;
+  if (before.length < MIN_RECOVERED_WORDS || !after.length || !/[.!?…。！？]["'”’»)\]」』]*\s*$/u.test(previous)) return false;
   const head = Math.min(3, after.length);
   return lcsLength(before.slice(0, head), after.slice(0, head)) === 0;
 }
