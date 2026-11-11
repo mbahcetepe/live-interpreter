@@ -393,3 +393,11 @@ test('a translation starts with a capital when the sentence did', () => {
   assert.equal(matchCase('Cuma günü saat 15.00 bizim için uygun.', '15.00 on Friday is suitable for us.', 'en'), '15.00 on Friday is suitable for us.');
   assert.equal(matchCase('3 Ekim uygun.', 'ekim 3 uygun.', 'en'), 'ekim 3 uygun.');
 });
+
+test('a missing translator is blamed on the browser, not the version, in a recent Chromium', async () => {
+  const { missingTranslatorReason } = await import('../../src/shared/local-translation.js');
+  assert.equal(missingTranslatorReason({ userAgent: 'Mozilla/5.0 Chrome/120.0.0.0 Safari/537.36' }), 'old');
+  assert.equal(missingTranslatorReason({ userAgent: 'Mozilla/5.0 Chrome/142.0.0.0 Safari/537.36' }), 'browser');
+  assert.equal(missingTranslatorReason({ brave: {}, userAgent: 'Mozilla/5.0 Chrome/120.0.0.0' }), 'browser');
+  assert.equal(missingTranslatorReason({ userAgentData: { brands: [{ brand: 'Chromium', version: '141' }] }, userAgent: '' }), 'browser');
+});

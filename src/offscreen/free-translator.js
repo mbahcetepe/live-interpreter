@@ -12,6 +12,7 @@ import { buildSystemPrompt, buildMessages } from './translator.js';
 import { SentenceSplitter, isOnlyPunctuation } from '../shared/text.js';
 import { t, locale } from '../shared/i18n.js';
 import { AUTO_LANGUAGE } from '../shared/languages.js';
+import { missingTranslatorReason } from '../shared/local-translation.js';
 
 const MISTRAL_URL = 'https://api.mistral.ai/v1/chat/completions';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -416,7 +417,7 @@ export class FreeTranslator {
     const localReady = Boolean(localStates?.every((state) => state === 'available'));
     if (keyed || localReady) return notes;
     if (!localStates) {
-      throw new FreeTranslationError(t('free.needChrome'));
+      throw new FreeTranslationError(t(missingTranslatorReason() === 'browser' ? 'free.otherBrowser' : 'free.needChrome'));
     }
     if (localStates.includes('unavailable')) {
       throw new FreeTranslationError(t('free.pairUnsupported'));

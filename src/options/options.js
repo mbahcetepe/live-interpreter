@@ -28,7 +28,7 @@ import { StreamResampler } from '../shared/dsp.js';
 import { SONIOX_WS, sonioxConfig } from '../offscreen/soniox.js';
 import { sonioxSynthesize, listSonioxVoices, SONIOX_VOICES, SONIOX_DEFAULT_VOICES } from '../offscreen/soniox-tts.js';
 import { serverBase, originPattern, originRules } from '../shared/servers.js';
-import { localPairs, localTranslationState, prepareLocalTranslation } from '../shared/local-translation.js';
+import { localPairs, localTranslationState, prepareLocalTranslation, missingTranslatorReason } from '../shared/local-translation.js';
 import { PcmByteAligner, encodeWav, float32ToInt16 } from '../shared/pcm.js';
 import { PcmScheduler } from '../shared/scheduler.js';
 
@@ -304,7 +304,8 @@ const LOCAL_STATE_TEXT = {
 
 function showLocalState(state) {
   localState = state;
-  const [key, kind] = LOCAL_STATE_TEXT[state] || ['', ''];
+  let [key, kind] = LOCAL_STATE_TEXT[state] || ['', ''];
+  if (state === 'unsupported' && missingTranslatorReason() === 'browser') key = 'local.otherBrowser';
   $('freeState').textContent = key ? t(key) : '';
   $('freeState').className = `pill ${kind}`;
   $('prepareFree').hidden = state !== 'download';

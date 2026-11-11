@@ -43,3 +43,15 @@ export async function prepareLocalTranslation(pairs, { onProgress, api = globalT
   );
   return localTranslationState(pairs, api);
 }
+
+// Why the built-in translator is missing: an old Chrome, or a Chromium browser that
+// leaves it out (Brave, Opera and the like report a recent Chrome version but have no
+// Translator). Returns 'old' or 'browser'.
+export function missingTranslatorReason(nav = globalThis.navigator) {
+  const brands = nav?.userAgentData?.brands || [];
+  const brand = brands.find((b) => /chrom/i.test(b.brand));
+  const fromUa = /Chrome\/(\d+)/.exec(nav?.userAgent || '')?.[1];
+  const major = Number(brand?.version || fromUa || 0);
+  if (nav?.brave || (major && major >= 138)) return 'browser';
+  return 'old';
+}
