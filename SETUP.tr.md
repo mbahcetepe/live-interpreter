@@ -127,7 +127,7 @@ Kullandığın bilgisayar kendi sunucularınla aynı ağda (örneğin Tailscale'
 
 **Bağlantı testi (anahtarsız)** düğmesi hiçbir şey çevirmeden eklentinin görüşmenin sesine ulaştığını denetler; **Test sesi gönder**, çeviri sürerken karşı tarafa kısa bir zil sesi gönderir.
 
-Desteklenen adresler: `teams.microsoft.com`, `teams.cloud.microsoft` (iş/okul hesabı), `teams.live.com` (kişisel hesap) ve Google Meet.
+Desteklenen adresler: `teams.microsoft.com`, `teams.cloud.microsoft` (iş/okul hesabı), `teams.live.com` (kişisel hesap), Google Meet ve web'deki Zoom (`*.zoom.us/wc/`).
 
 | Karşı taraf konuşunca | Ne olur | ElevenLabs kredisi |
 | --- | --- | --- |
@@ -148,7 +148,15 @@ Sayfanın sol altında küçük bir **Canlı Tercüman** düğmesi çıkar. Tık
 
 Toplantı bitince çeviri, bağlantı kalmadıktan 30 saniye sonra kendiliğinden durur. Hemen durdurmak için açılır pencereyi ya da `Alt+Shift+T` kısayolunu kullan.
 
-## 8. Video ve radyo sekmelerinde (YouTube, X, çevrimiçi radyo)
+## 8. Zoom görüşmesinde
+
+1. Toplantı bağlantısını aç ve Zoom uygulaması yerine tarayıcıdan katıl (adres `app.zoom.us/wc/` ile başlar). Zoom'un tarayıcıdan kurulan web uygulaması da aynı şekilde çalışır.
+2. Kulaklığı tak, toplantıya ve sesine katıl.
+3. Zoom sekmesindeyken eklenti simgesine tıkla ve **Çeviriyi başlat** de. İlk seferde tarayıcı `zoom.us` adresine erişim izni ister: izin ver, **Sekmeyi yenile** düğmesine bas, sonra yeniden başlat. Eklenti bu izni yalnızca Zoom'da kullandığında ister.
+
+Zoom'un masaüstü uygulaması desteklenmez.
+
+## 9. Video ve radyo sekmelerinde (YouTube, X, çevrimiçi radyo)
 
 1. Videoyu ya da radyoyu aç ve çalmaya başlat.
 2. O sekmedeyken eklenti simgesine tıkla. Pencerede "Bu sekmedeki ses" seçeneği görünür.
@@ -161,7 +169,7 @@ Toplantı bitince çeviri, bağlantı kalmadıktan 30 saniye sonra kendiliğinde
 - Çeviri konuşmanın 1,5–3 saniye gerisinden gelir. Hızlı ve kesintisiz konuşulan videolarda sesli çeviri, yetişmek için kısaltır.
 - **Filmler ve gürültülü sesler:** Kendi ses sunucun konuşmayı müzikten ve efektlerden ayıran bir ses algılayıcıyla (Silero VAD) çalışır. Müzik diyalogu bastırıyorsa bazı cümleler kaçabilir.
 
-## 9. Dökümler (transkript)
+## 10. Dökümler (transkript)
 
 Görüşme ya da video, her çevirinin bir dökümü tutulur: her cümle, saati, kimin söylediği (sen ya da karşı taraf; videoda konuşan) ve çevirisiyle. Döküm çeviri sürerken birkaç saniyede bir, durunca da bir kez daha kaydedilir.
 

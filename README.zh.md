@@ -4,7 +4,7 @@
 
 # Live Interpreter
 
-### 为网页版 Microsoft Teams、Google Meet 以及任何视频或电台标签页提供实时语音翻译
+### 为网页版 Microsoft Teams、Google Meet、网页版 Zoom 以及任何视频或电台标签页提供实时语音翻译
 
 [English](README.md) · **中文**
 
@@ -13,7 +13,7 @@
 **[从 Chrome 网上应用店添加到 Chrome](https://chromewebstore.google.com/detail/opaicinhommdnfhikkmlgjcalkohnkhl)** · 免费且开源（MIT）
 
 <table>
-  <tr><td><b>通话</b></td><td>浏览器中的 Microsoft Teams（工作/学校账户和个人账户）、Google Meet</td></tr>
+  <tr><td><b>通话</b></td><td>浏览器中的 Microsoft Teams（工作/学校账户和个人账户）、Google Meet、浏览器中的 Zoom</td></tr>
   <tr><td><b>其他标签页</b></td><td>YouTube、X、网络电台、任何有声音的网页</td></tr>
   <tr><td><b>浏览器</b></td><td>Chrome、Edge、Brave 以及其他 Chromium 浏览器</td></tr>
   <tr><td><b>语言</b></td><td>20 种，任意两种互译；首次启动时跟随浏览器语言；在视频标签页中可自动识别所说的语言</td></tr>
@@ -25,18 +25,18 @@
 
 </div>
 
-> **状态。** 已在 Chrome 网上应用店发布。网页版 Teams 和 Google Meet 已在真实通话中双向使用过（英语和土耳其语）；Teams 中的静音检测和字幕区域仍在检查中（[TEAMS.md](TEAMS.md)）。翻译已在真实视频上使用过，包括中文，双向均可。重要会议前请先测试一次。
+> **状态。** 已在 Chrome 网上应用店发布。网页版 Teams、Google Meet 和网页版 Zoom 已在真实通话中双向使用过（英语和土耳其语）；Teams 中的静音检测和字幕区域仍在检查中（[TEAMS.md](TEAMS.md)）。翻译已在真实视频上使用过，包括中文，双向均可。重要会议前请先测试一次。
 >
-> 不支持 Teams 桌面应用：浏览器扩展只能在浏览器中运行。请选择 **“在此浏览器上继续”** 加入会议。
+> 不支持 Teams 和 Zoom 桌面应用：浏览器扩展只能在浏览器中运行。加入 Teams 会议请选择 **“在此浏览器上继续”**，加入 Zoom 会议请选择 **“从浏览器加入”**（从浏览器安装的 Zoom 网页应用也可以）。
 
 ---
 
 ## 功能
 
-**在 Teams 或 Meet 通话中**
+**在 Teams、Meet 或 Zoom 通话中**
 
 - 通过标签页捕获收听通话，通过麦克风收听你自己，将双方的话转写、翻译并朗读出来。
-- 你翻译后的声音代替你的麦克风进入通话。Teams 照常工作，在 Teams 中静音会停止一切发往通话的声音。
+- 你翻译后的声音代替你的麦克风进入通话。通话照常工作，在通话中静音会停止一切发往通话的声音。
 - 每个方向可单独选择模式：语音翻译、仅字幕或关闭，通话中可随时在弹出窗口或页面上的面板中切换。语音模式下你只听到翻译；仅字幕或关闭时你照常听到对方。
 - 你自己的声音克隆（ElevenLabs），在设置页面中录制。对方的声音只有在你确认对方同意后才会克隆，通话结束时克隆会被删除。
 - 可选的通话录制：通话标签页的画面加上双方的声音，以 MP4 格式仅保存在这台电脑上。
@@ -207,7 +207,7 @@ node test/ollama/live.mjs 100.101.102.103 gemma4:12b   # 通过设置页面实�
 cd speech-server && python -m pytest tests           # 语音服务器：协议、切分、密钥、拒绝网页请求
 ```
 
-- 端到端测试不需要密钥，也不产生费用。除了模拟的 Meet 通话，还覆盖录制、免费翻译、模拟 Ollama 服务器（像真的一样拒绝任何 `Origin` 请求头）、模拟 OpenAI 翻译和语音、模拟 Soniox 流、带替身引擎的真实语音服务器、完全不用 ElevenLabs 和 Claude 的通话，以及视频标签页。`.env` 中有密钥时，还会对真实的 ElevenLabs 和 Claude 做一次往返；`SKIP_REAL=1` 可跳过。
+- 端到端测试不需要密钥，也不产生费用。除了模拟的 Meet 和 Zoom 通话，还覆盖录制、免费翻译、模拟 Ollama 服务器（像真的一样拒绝任何 `Origin` 请求头）、模拟 OpenAI 翻译和语音、模拟 Soniox 流、带替身引擎的真实语音服务器、完全不用 ElevenLabs 和 Claude 的通话，以及视频标签页。`.env` 中有密钥时，还会对真实的 ElevenLabs 和 Claude 做一次往返；`SKIP_REAL=1` 可跳过。
 - `test/meet/` 中是使用真实服务的较慢检查：真实的 Google Meet 通话（`live.mjs`）、四人替身通话（`group-call.mjs`）以及录制的双向演示（`mock-call-demo.mjs`）。
 - 它们使用 `--test` 构建（`npm run build:test`），为测试打开面板的 shadow root，并允许访问 `127.0.0.1` 和模拟视频网站；正常构建两者都没有。
 - 测试用的语音样本由 macOS 的 `say` 命令和 ffmpeg 生成，证书由 openssl 生成。在 Windows 上，请把现成的 `english.wav`、`turkish.wav` 和 `tone.wav`（48 kHz 单声道）放进 `test/e2e/fixtures`，并把 Git 的 `usr\bin` 加入 PATH 以使用 openssl。语音服务器测试组需要安装了 `speech-server/requirements-test.txt` 的 Python。

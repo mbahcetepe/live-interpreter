@@ -127,7 +127,7 @@ The computer you use must be on the same network as your own servers (Tailscale,
 
 **Connection test (no keys)** in the extension window checks, without translating anything, that the extension reaches the call's audio; **Send test sound** sends the other side a short chime while a translation runs.
 
-Supported addresses: `teams.microsoft.com`, `teams.cloud.microsoft` (work/school), `teams.live.com` (personal) and Google Meet.
+Supported addresses: `teams.microsoft.com`, `teams.cloud.microsoft` (work/school), `teams.live.com` (personal), Google Meet and Zoom on the web (`*.zoom.us/wc/`).
 
 | When they speak | What happens | ElevenLabs credits |
 | --- | --- | --- |
@@ -148,7 +148,15 @@ A small **Live Interpreter** button shows at the bottom left of the page; click 
 
 When the meeting ends the translation stops by itself 30 seconds after the last connection closes. Use the popup or `Alt+Shift+T` to stop it at once.
 
-## 8. On a video or radio tab (YouTube, X, online radio)
+## 8. In a Zoom call
+
+1. Open the meeting link and join from your browser rather than the Zoom app (the address then starts with `app.zoom.us/wc/`). Zoom's web app, installed from the browser, works the same way.
+2. Put on headphones, join the meeting and its audio.
+3. On the Zoom tab click the extension icon and press **Start translation**. The first time, the browser asks for access to `zoom.us`: allow it, press **Reload the tab**, then start again. The extension asks for this only when you use it on Zoom.
+
+Zoom's desktop app is not supported.
+
+## 9. On a video or radio tab (YouTube, X, online radio)
 
 1. Open the video or the radio and start it.
 2. On that tab click the extension icon. The window shows "This tab's sound".
@@ -161,7 +169,7 @@ When the meeting ends the translation stops by itself 30 seconds after the last 
 - The translation comes 1.5–3 s behind the speech. With fast, continuous speech, voice translation shortens what it says to keep up.
 - **Films and noisy sound:** your own speech server finds speech with a voice detector (Silero VAD) that tells a voice from music and effects. When the music drowns the dialogue, some sentences can still be missed.
 
-## 9. Transcripts
+## 10. Transcripts
 
 Every translation, of a call or a video, keeps a transcript: each sentence with its time, who said it (you or them; on a video, the speaker) and its translation. It is saved every few seconds while the translation runs and once more when it stops.
 

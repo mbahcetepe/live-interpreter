@@ -4,7 +4,7 @@
 
 # Live Interpreter
 
-### Live speech translation for Microsoft Teams on the web, Google Meet and any video or radio tab
+### Live speech translation for Microsoft Teams on the web, Google Meet, Zoom on the web and any video or radio tab
 
 **English** · [中文](README.zh.md)
 
@@ -13,7 +13,7 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
 **[Add to Chrome from the Chrome Web Store](https://chromewebstore.google.com/detail/opaicinhommdnfhikkmlgjcalkohnkhl)** · free and open source (MIT)
 
 <table>
-  <tr><td><b>Calls</b></td><td>Microsoft Teams in the browser (work/school and personal), Google Meet</td></tr>
+  <tr><td><b>Calls</b></td><td>Microsoft Teams in the browser (work/school and personal), Google Meet, Zoom in the browser</td></tr>
   <tr><td><b>Other tabs</b></td><td>YouTube, X, online radio, any web page with sound</td></tr>
   <tr><td><b>Browsers</b></td><td>Chrome, Edge, Brave and other Chromium browsers</td></tr>
   <tr><td><b>Languages</b></td><td>20, any two of them; the first start follows your browser's language; on video tabs the spoken language can be detected automatically</td></tr>
@@ -25,18 +25,18 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
 
 </div>
 
-> **Status.** Published on the Chrome Web Store. Teams on the web and Google Meet have been used in real calls in both directions (English and Turkish); in Teams the mute detection and the caption area are still being checked ([TEAMS.md](TEAMS.md)). Translation has been used on real videos, Chinese among them, in both directions. Run a test before an important meeting.
+> **Status.** Published on the Chrome Web Store. Teams on the web, Google Meet and Zoom on the web have been used in real calls in both directions (English and Turkish); in Teams the mute detection and the caption area are still being checked ([TEAMS.md](TEAMS.md)). Translation has been used on real videos, Chinese among them, in both directions. Run a test before an important meeting.
 >
-> The desktop Teams app is not supported: browser extensions only run in the browser. Join the meeting with **"Continue on this browser"**.
+> The desktop Teams and Zoom apps are not supported: browser extensions only run in the browser. Join a Teams meeting with **"Continue on this browser"**, a Zoom meeting with **"Join from your browser"** (Zoom's web app, installed from the browser, works too).
 
 ---
 
 ## What it does
 
-**In a Teams or Meet call**
+**In a Teams, Meet or Zoom call**
 
 - Listens to the call through tab capture and to you through your microphone, transcribes both sides, translates them and speaks the result.
-- Your translated voice goes into the call in place of your microphone. Teams keeps working as usual, and muting in Teams stops everything that would reach the call.
+- Your translated voice goes into the call in place of your microphone. The call keeps working as usual, and muting in the call stops everything that would reach it.
 - A mode for each direction: spoken translation, subtitles only or off, switchable mid-call from the popup or the panel on the page. In voice mode you hear only the translation; with subtitles only or off you hear them normally.
 - Your own voice clone (ElevenLabs), recorded on the settings page. The other person's voice is cloned only after you confirm they agreed, and the clone is deleted when the call ends.
 - Optional call recording: the call tab's picture with both sides' audio, saved as MP4 on this computer only.
@@ -207,7 +207,7 @@ node test/ollama/live.mjs 100.101.102.103 gemma4:12b   # live check of an Ollama
 cd speech-server && python -m pytest tests           # the speech server: protocol, segmenting, keys, web page refusal
 ```
 
-- The end-to-end tests need no keys and cost nothing. Besides mock Meet calls they cover recording, free translation, a mock Ollama server (which refuses any `Origin` header, like a real one), mock OpenAI translation and speech, a mock Soniox stream, the real speech server with stand-in engines, a call with no ElevenLabs and no Claude at all, and a video tab. With keys in `.env` they also make one round trip through the real ElevenLabs and Claude; `SKIP_REAL=1` leaves that out.
+- The end-to-end tests need no keys and cost nothing. Besides mock Meet and Zoom calls they cover recording, free translation, a mock Ollama server (which refuses any `Origin` header, like a real one), mock OpenAI translation and speech, a mock Soniox stream, the real speech server with stand-in engines, a call with no ElevenLabs and no Claude at all, and a video tab. With keys in `.env` they also make one round trip through the real ElevenLabs and Claude; `SKIP_REAL=1` leaves that out.
 - `test/meet/` holds slower checks with the real services: a real Google Meet call (`live.mjs`), a four-person stand-in call (`group-call.mjs`) and a recorded two-way demo (`mock-call-demo.mjs`).
 - They build with `--test` (`npm run build:test`), which leaves the panel's shadow root open for them and gives access to `127.0.0.1` and the mock video site; a normal build has neither.
 - Their speech samples are made with the macOS `say` command and ffmpeg, and their certificate with openssl. On Windows, put ready-made `english.wav`, `turkish.wav` and `tone.wav` (48 kHz mono) in `test/e2e/fixtures` and Git's `usr\bin` on the PATH for openssl. The speech server suite needs Python with `speech-server/requirements-test.txt`.

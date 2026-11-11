@@ -4,7 +4,7 @@
 
 Son güncelleme: 8 Kasım 2026
 
-Canlı Tercüman, web'deki Microsoft Teams ve Google Meet görüşmelerinde ve video ya da radyo sekmelerinde konuşmayı çeviren bir tarayıcı eklentisidir. Bu sayfa verilerinle ne yaptığını anlatır.
+Canlı Tercüman, web'deki Microsoft Teams, Google Meet ve Zoom görüşmelerinde ve video ya da radyo sekmelerinde konuşmayı çeviren bir tarayıcı eklentisidir. Bu sayfa verilerinle ne yaptığını anlatır.
 
 **Kısaca:** Eklentinin kendine ait bir sunucusu yoktur ve geliştiricisi için hiçbir veri toplamaz. Ses ve metin, yalnızca çeviriyi yapmak için, ayarlarda seçtiğin ses ve çeviri servislerine, senin anahtarlarınla gider. Eklentinin sakladığı her şey bilgisayarındaki tarayıcıda kalır.
 
@@ -12,7 +12,7 @@ Canlı Tercüman, web'deki Microsoft Teams ve Google Meet görüşmelerinde ve v
 
 | Veri | Ne zaman | Nereye gider |
 | --- | --- | --- |
-| Görüşme sekmesinin sesi (karşı tarafın konuşması) ve mikrofonun | Teams ya da Meet sekmesinde çeviri sürerken | Seçtiğin ses tanıma servisine |
+| Görüşme sekmesinin sesi (karşı tarafın konuşması) ve mikrofonun | Teams, Meet ya da Zoom sekmesinde çeviri sürerken | Seçtiğin ses tanıma servisine |
 | Video ya da radyo sekmesinin sesi | Yalnızca o sekmede Bu sekmeyi çevir düğmesine bastıktan sonra | Seçtiğin ses tanıma servisine |
 | Tanınan metin | Çeviri sürerken | Seçtiğin çeviri servisine; çeviri, seslendirilmek için seçtiğin ses servisine |
 | Ses klonu için ses örnekleri | Yalnızca ayarlarda kendi sesini kaydettiğinde ya da karşı tarafın onay verdiğini doğruladıktan sonra | Klonu oluşturmak için ElevenLabs'e. Karşı tarafın klonu, bu ayarı değiştirmedikçe görüşme bitince silinir |
@@ -35,7 +35,7 @@ Kendi ses sunucun ve kendi Ollama sunucunla ses ve metin, senin denetimindeki bi
 
 - Kendine ait bir sunucusu yoktur ve geliştiricisine hiçbir şey göndermez: istatistik, hata raporu, izleme ya da reklam yoktur.
 - Verilerini satmaz ya da paylaşmaz; başlattığın çeviri dışında hiçbir iş için kullanmaz.
-- Ziyaret ettiğin sayfaları okumaz. Teams ve Meet sayfalarında yalnızca görüşmenin sesini yönlendirir, panelini ve altyazılarını gösterir; başka bir sekmede, orada çeviri başlatana kadar hiçbir şey yapmaz.
+- Ziyaret ettiğin sayfaları okumaz. Teams, Meet ve Zoom sayfalarında yalnızca görüşmenin sesini yönlendirir, panelini ve altyazılarını gösterir; başka bir sekmede, orada çeviri başlatana kadar hiçbir şey yapmaz. Zoom'a (`zoom.us`) erişim izni yalnızca orada ilk kez çeviri başlattığında istenir ve tarayıcının eklenti ayarlarından geri alınabilir.
 - İnternetten indirilen kodu çalıştırmaz.
 
 ## Denetim sende
