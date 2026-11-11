@@ -16,6 +16,10 @@ export const OPENAI_TTS_MODEL = { openai: 'gpt-4o-mini-tts', custom: 'tts-1' };
 const AUDIO_BASE = { openai: 'https://api.openai.com/v1', groq: 'https://api.groq.com/openai/v1' };
 
 export function speechAccount(settings) {
+  // Soniox's voices, while Soniox hears and translates (see isSonioxSpeech).
+  if (settings?.speechProvider === 'soniox' && settings?.useSoniox === true) {
+    return { kind: 'soniox', local: false, key: String(settings.sonioxKey || '').trim(), base: '' };
+  }
   if (settings?.speechProvider === 'openai') {
     const sttServer = settings.oaiSttServer || 'openai';
     const ttsServer = settings.oaiTtsServer || 'openai';

@@ -6,6 +6,7 @@ import {
   isLocalSpeech,
   isOpenAISpeech,
   isSoniox,
+  isSonioxSpeech,
   missingKeys,
   missingServers,
   PROVIDERS,
@@ -25,6 +26,7 @@ import { OpenAITranslator, listOpenAIModels } from '../offscreen/openai-translat
 import { OpenAITranscriber, openaiSynthesize, listAudioModels, listAudioVoices } from '../offscreen/openai-speech.js';
 import { StreamResampler } from '../shared/dsp.js';
 import { SONIOX_WS, sonioxConfig } from '../offscreen/soniox.js';
+import { sonioxSynthesize, listSonioxVoices, SONIOX_VOICES, SONIOX_DEFAULT_VOICES } from '../offscreen/soniox-tts.js';
 import { serverBase, originPattern, originRules } from '../shared/servers.js';
 import { localPairs, localTranslationState, prepareLocalTranslation } from '../shared/local-translation.js';
 import { PcmByteAligner, encodeWav, float32ToInt16 } from '../shared/pcm.js';
@@ -156,12 +158,12 @@ async function micGranted() {
 async function refreshStatus() {
   const provider = translationProvider(settings);
   const missing = [...missingKeys(settings), ...missingServers(settings)];
-  const speechOk = isLocalSpeech(settings) || isOpenAISpeech(settings) ? !missing.includes('speech') && !(isOpenAISpeech(settings) && missing.some((m) => m === 'Groq')) : !missing.includes('ElevenLabs');
+  const speechOk = isSonioxSpeech(settings) ? !missing.includes('Soniox') : isLocalSpeech(settings) || isOpenAISpeech(settings) ? !missing.includes('speech') && !(isOpenAISpeech(settings) && missing.some((m) => m === 'Groq')) : !missing.includes('ElevenLabs');
   const translationOk =
     provider === 'free' ? localState === 'ready' || FREE_KEY_NAMES.some((k) => settings[k]) : !missing.some((m) => m !== 'ElevenLabs' && m !== 'speech');
-  const speechName = isLocalSpeech(settings) ? t('opt.speech.local') : isOpenAISpeech(settings) ? t('opt.speech.openai') : 'ElevenLabs';
+  const speechName = isSonioxSpeech(settings) ? 'Soniox' : isLocalSpeech(settings) ? t('opt.speech.local') : isOpenAISpeech(settings) ? t('opt.speech.openai') : 'ElevenLabs';
   const soniox = isSoniox(settings);
-  $('check-speech').textContent = `${t('opt.speech.title')}: ${soniox ? `Soniox + ${speechName}` : speechName}`;
+  $('check-speech').textContent = `${t('opt.speech.title')}: ${soniox && speechName !== 'Soniox' ? `Soniox + ${speechName}` : speechName}`;
   $('check-translation').textContent = `${t('opt.tr.title')}: ${soniox ? 'Soniox' : t(PROVIDERS.find((p) => p.id === provider).labelKey)}`;
   $('check-speech').classList.toggle('done', speechOk && !missing.includes('Soniox'));
   $('check-translation').classList.toggle('done', soniox ? !missing.includes('Soniox') : translationOk);
@@ -387,19 +389,21 @@ async function testSoniox() {
 // hidden, and a line says which service does what.
 function renderSonioxRoles() {
   const on = isSoniox(settings);
+  $('speechSonioxOption').hidden = !on;
   for (const el of document.querySelectorAll('[data-stt]')) el.hidden = on;
   const service = ($('speechProvider').selectedOptions[0]?.textContent || '').replace(/\s*\(.*\)\s*$/, '');
-  $('sonioxActive').textContent = on ? t('opt.soniox.active', { service }) : '';
+  $('sonioxActive').textContent = !on ? '' : isSonioxSpeech(settings) ? t('opt.soniox.activeAll') : t('opt.soniox.active', { service });
   $('sonioxActive').hidden = !on;
 }
 
 function renderSpeech() {
-  const provider = isLocalSpeech(settings) ? 'local' : isOpenAISpeech(settings) ? 'openai' : 'elevenlabs';
+  const provider = isSonioxSpeech(settings) ? 'soniox' : isLocalSpeech(settings) ? 'local' : isOpenAISpeech(settings) ? 'openai' : 'elevenlabs';
   $('speechProvider').value = provider;
   for (const box of document.querySelectorAll('[data-speech]')) box.hidden = box.dataset.speech !== provider;
   renderSonioxRoles();
   result('speechResult', '');
-  if (provider === 'local') loadLocalSpeech({ quiet: true });
+  if (provider === 'soniox') loadSonioxVoices();
+  else if (provider === 'local') loadLocalSpeech({ quiet: true });
   else if (provider === 'openai') loadOpenAISpeech({ quiet: true });
   else loadVoices();
 }
@@ -535,6 +539,7 @@ async function loadLocalSpeech({ quiet = false } = {}) {
 
 async function testSpeech() {
   result('speechResult', t('opt.testing'));
+  if (isSonioxSpeech(settings)) return testSonioxSpeech();
   if (isOpenAISpeech(settings)) {
     try {
       return await testOpenAISpeech();
@@ -594,6 +599,7 @@ async function testSpeech() {
 let previewCtx;
 async function preview(voiceId, languageCode) {
   const account = speechAccount(settings);
+  if (account.kind === 'soniox') return previewSoniox(voiceId, languageCode);
   if (account.kind === 'openai') return previewOpenAI(voiceId, languageCode);
   if (!account.key && !account.local) return toast(t('opt.voice.needKey'));
   if (!voiceId && !account.local) return toast(t('opt.voice.needVoice'));
@@ -634,6 +640,65 @@ async function previewOpenAI(voice, languageCode) {
   } catch (err) {
     toast(err?.message || String(err));
   }
+}
+
+// ---- Soniox voices -----------------------------------------------------------------------
+
+let sonioxVoices = SONIOX_VOICES;
+
+function renderSonioxVoices() {
+  const gender = (g) => (g === 'female' ? t('opt.voice.female') : t('opt.voice.male'));
+  const items = sonioxVoices.map((v) => [v.id, `${v.id}, ${gender(v.gender)}`]);
+  fillSelect($('sonioxMyVoice'), items, settings.sonioxMyVoice || SONIOX_DEFAULT_VOICES.mine);
+  fillSelect($('sonioxTheirVoice'), items, settings.sonioxTheirVoice || SONIOX_DEFAULT_VOICES.theirs);
+  $('sonioxMyVoiceLabel').textContent = t('opt.voice.mineIn', { language: languageLabel(settings.theirLanguage) });
+  $('sonioxTheirVoiceLabel').textContent = t('opt.voice.theirsIn', { language: languageLabel(settings.myLanguage) });
+}
+
+async function loadSonioxVoices() {
+  renderSonioxVoices();
+  if (!String(settings.sonioxKey || '').trim()) return;
+  sonioxVoices = await listSonioxVoices(settings.sonioxKey);
+  renderSonioxVoices();
+}
+
+function describeSonioxSpeechError(err) {
+  if (err?.status === 402) return t('soniox.balance');
+  if (err?.status === 401) return t('soniox.key');
+  return t('soniox.stopped', { message: err?.message || String(err) });
+}
+
+async function previewSoniox(voice, languageCode) {
+  try {
+    previewCtx ||= new AudioContext();
+    await previewCtx.resume();
+    const player = new PcmScheduler(previewCtx, previewCtx.destination);
+    const id = `preview-${Date.now()}`;
+    for await (const chunk of sonioxSynthesize({ key: settings.sonioxKey, voice, language: languageCode, text: PREVIEW_TEXT[languageCode] || PREVIEW_TEXT.en })) player.push(id, chunk);
+    player.end(id);
+  } catch (err) {
+    toast(describeSonioxSpeechError(err));
+  }
+}
+
+// Speaks a sentence with my voice in their language and times its first sound.
+async function testSonioxSpeech() {
+  if (!String(settings.sonioxKey || '').trim()) return result('speechResult', t('opt.soniox.noKey'), 'bad');
+  const started = performance.now();
+  let first = 0;
+  let samples = 0;
+  try {
+    const language = settings.theirLanguage;
+    const voice = settings.sonioxMyVoice || SONIOX_DEFAULT_VOICES.mine;
+    for await (const chunk of sonioxSynthesize({ key: settings.sonioxKey, voice, language, text: PREVIEW_TEXT[language] || PREVIEW_TEXT.en })) {
+      first ||= performance.now() - started;
+      samples += chunk.length;
+    }
+  } catch (err) {
+    return result('speechResult', describeSonioxSpeechError(err), 'bad');
+  }
+  if (!samples) return result('speechResult', t('soniox.stopped', { message: 'no audio' }), 'bad');
+  result('speechResult', t('opt.sonioxVoice.ok', { seconds: (samples / 24000).toFixed(1), ms: Math.round(first) }), 'ok');
 }
 
 // ---- my own voice (ElevenLabs clone) ---------------------------------------------------
@@ -853,8 +918,11 @@ async function init() {
   bindCheck('pronounceForeign');
   bindText('pronunciations');
   $('useSoniox').addEventListener('change', async () => {
-    await save({ useSoniox: $('useSoniox').checked });
+    const on = $('useSoniox').checked;
+    // Soniox's voices go with Soniox listening; without it the voice falls back to ElevenLabs.
+    await save(on || settings.speechProvider !== 'soniox' ? { useSoniox: on } : { useSoniox: on, speechProvider: 'elevenlabs' });
     renderSoniox();
+    renderSpeech();
     refreshStatus();
   });
   $('testSoniox').addEventListener('click', async () => {
@@ -866,7 +934,7 @@ async function init() {
   $('elevenLabsKey').addEventListener('change', loadVoices);
   $('localSpeechUrl').addEventListener('change', () => loadLocalSpeech());
   bindSelect('ttsModel');
-  for (const id of ['localWhisperModel', 'localMyVoice', 'localTheirVoice', 'oaiSttModel', 'oaiTtsModel', 'oaiMyVoice', 'oaiTheirVoice']) bindSelect(id);
+  for (const id of ['localWhisperModel', 'localMyVoice', 'localTheirVoice', 'oaiSttModel', 'oaiTtsModel', 'oaiMyVoice', 'oaiTheirVoice', 'sonioxMyVoice', 'sonioxTheirVoice']) bindSelect(id);
   for (const id of ['oaiSttServer', 'oaiTtsServer']) {
     $(id).value = settings[id] || 'openai';
     bindSelect(id, { onChange: () => loadOpenAISpeech({ quiet: true }) });
@@ -887,6 +955,8 @@ async function init() {
   });
   $('previewMine').addEventListener('click', () => preview(settings.myVoiceId, settings.theirLanguage));
   $('previewTheirs').addEventListener('click', () => preview(settings.theirVoiceId || voices.find((v) => v.category === 'premade')?.voice_id, settings.myLanguage));
+  $('previewSonioxMine').addEventListener('click', () => preview(settings.sonioxMyVoice || SONIOX_DEFAULT_VOICES.mine, settings.theirLanguage));
+  $('previewSonioxTheirs').addEventListener('click', () => preview(settings.sonioxTheirVoice || SONIOX_DEFAULT_VOICES.theirs, settings.myLanguage));
   $('previewLocalMine').addEventListener('click', () => preview(settings.localMyVoice || 'local-1', settings.theirLanguage));
   $('previewLocalTheirs').addEventListener('click', () => preview(settings.localTheirVoice || 'local-2', settings.myLanguage));
   $('recordBtn').addEventListener('click', toggleRecording);

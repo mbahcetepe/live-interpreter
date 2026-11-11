@@ -13,7 +13,7 @@ import net from 'node:net';
 import { WebSocketServer } from 'ws';
 import { LANGUAGES } from '../../src/shared/languages.js';
 
-export const API_HOSTS = ['api.elevenlabs.io', 'api.anthropic.com', 'api-free.deepl.com', 'api.mistral.ai', 'api.groq.com', 'stt-rt.soniox.com'];
+export const API_HOSTS = ['api.elevenlabs.io', 'api.anthropic.com', 'api-free.deepl.com', 'api.mistral.ai', 'api.groq.com', 'stt-rt.soniox.com', 'tts-rt.soniox.com'];
 const HOSTS = new Set(API_HOSTS);
 
 const HEARD = {
@@ -235,6 +235,38 @@ async function route(req, res, stats, faults, options = {}) {
   json(res, { error: 'not mocked' }, 404);
 }
 
+// Soniox's voices: each stream's config, then its text; answers a short tone in
+// base64 pieces, then audio_end and terminated. Stream errors use the stream's id.
+function sonioxSpeech(ws, req, stats, faults) {
+  const key = String(req.headers['sec-websocket-protocol'] || '').split(',').map((x) => x.trim())[1] || '';
+  const configs = new Map();
+  ws.on('message', (raw) => {
+    let msg;
+    try {
+      msg = JSON.parse(raw.toString());
+    } catch {
+      return;
+    }
+    if (msg.keep_alive) return;
+    if (msg.model) configs.set(msg.stream_id, msg);
+    if (!msg.text_end) return;
+    const config = configs.get(msg.stream_id) || {};
+    stats.sonioxTts.push({ ...config, text: msg.text, key });
+    const send = (m) => ws.readyState === 1 && ws.send(JSON.stringify({ stream_id: msg.stream_id, ...m }));
+    if (key !== 'mock-soniox') return send({ error_code: 401, error_type: 'unauthenticated', error_message: 'Invalid API key.', terminated: true });
+    const audio = tone(0.6);
+    const step = Math.floor(audio.length / 3 / 2) * 2 + 1;
+    (async () => {
+      for (let at = 0; at < audio.length; at += step) {
+        await sleep(20);
+        send({ audio: audio.subarray(at, at + step).toString('base64') });
+      }
+      send({ audio_end: true });
+      send({ terminated: true });
+    })();
+  });
+}
+
 // `passthrough` hosts are tunnelled to the real service instead (for example the real
 // ElevenLabs while Claude stays mocked).
 // `mockOnly` turns it around for the live Meet test: only those hosts are mocked and
@@ -242,7 +274,7 @@ async function route(req, res, stats, faults, options = {}) {
 export async function startMockApi({ cert, key, passthrough = [], mockOnly = null, translator = null }) {
   const real = new Set(passthrough);
   const options = { translator };
-  const stats = { requests: [], stt: [], tts: [], claude: [], free: [], soniox: [] };
+  const stats = { requests: [], stt: [], tts: [], claude: [], free: [], soniox: [], sonioxTts: [] };
   const faults = { deepl: 0, mistral: 0, groq: 0, tts: 0, claude: 0, stt: null, soniox: 0 };
   const api = https.createServer({ cert, key }, (req, res) => {
     route(req, res, stats, faults, options).catch((err) => {
@@ -255,9 +287,11 @@ export async function startMockApi({ cert, key, passthrough = [], mockOnly = nul
   wss.on('connection', (ws, req) => scribe(ws, req, stats, faults));
   const sonioxWss = new WebSocketServer({ noServer: true, handleProtocols: (protocols) => (protocols.has('soniox-api-key') ? 'soniox-api-key' : false) });
   sonioxWss.on('connection', (ws, req) => soniox(ws, req, stats, faults));
+  const sonioxTtsWss = new WebSocketServer({ noServer: true, handleProtocols: (protocols) => (protocols.has('soniox-api-key') ? 'soniox-api-key' : false) });
+  sonioxTtsWss.on('connection', (ws, req) => sonioxSpeech(ws, req, stats, faults));
   api.on('upgrade', (req, socket, head) => {
     const path = new URL(req.url, 'https://x').pathname;
-    const target = path === '/v1/speech-to-text/realtime' ? wss : path === '/transcribe-websocket' ? sonioxWss : null;
+    const target = path === '/v1/speech-to-text/realtime' ? wss : path === '/transcribe-websocket' ? sonioxWss : path === '/tts-websocket' ? sonioxTtsWss : null;
     if (!target) return socket.destroy();
     target.handleUpgrade(req, socket, head, (ws) => target.emit('connection', ws, req));
   });

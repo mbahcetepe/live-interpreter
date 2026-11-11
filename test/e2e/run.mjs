@@ -668,6 +668,22 @@ async function sonioxTest() {
     const kept = await waitFor(async () => (await readTranscripts(control)).find((t) => t.endedAt && t.lines?.length), 10000, 300);
     check('the transcript keeps the whole sentence and its translation', kept?.lines?.some((l) => l.source === 'Hi, thanks for joining the call today.' && l.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.'), JSON.stringify(kept?.lines?.slice(0, 2)));
 
+    // Soniox speaks the translation too: no ElevenLabs request, its own voices.
+    await setSettings({ speechProvider: 'soniox', elevenLabsKey: '' });
+    const ttsBefore = mock.stats.tts.length;
+    const voiced = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('Soniox hears, translates and speaks with no ElevenLabs key', voiced?.ok === true, voiced?.error);
+    const sonioxSpoke = await waitFor(() => mock.stats.sonioxTts.find((r) => /Merhaba/.test(r.text || '')), 30000, 300);
+    check('the translation is spoken by a Soniox voice, in Turkish, 24 kHz PCM', sonioxSpoke?.language === 'tr' && sonioxSpoke?.voice === 'Emma' && sonioxSpoke?.audio_format === 'pcm_s16le' && sonioxSpoke?.sample_rate === 24000, JSON.stringify(sonioxSpoke));
+    const mine = await waitFor(() => mock.stats.sonioxTts.find((r) => /Friday/.test(r.text || '')), 30000, 300);
+    check('my translation is spoken in English with my Soniox voice', mine?.language === 'en' && mine?.voice === 'Daniel', JSON.stringify(mine));
+    check('ElevenLabs was not asked to speak', mock.stats.tts.length === ttsBefore, `${mock.stats.tts.length - ttsBefore} requests`);
+    const speaks = await waitFor(() => servicesLine(meet), 4000);
+    check('the panel says Soniox speaks too', speaks === 'Hears and translates: Soniox · speaks: Soniox', speaks);
+    await send(control, { type: 'stop' });
+    await setSettings({ speechProvider: 'elevenlabs', elevenLabsKey: 'mock-el' });
+    await sleep(500);
+
     // An empty balance ends the session with a clear reason.
     mock.faults.soniox = 402;
     const again = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'off' } });

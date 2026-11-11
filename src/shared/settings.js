@@ -59,6 +59,9 @@ export const isOpenAISpeech = (settings) => settings.speechProvider === 'openai'
 // Soniox hears and translates in one stream; the speech service then only speaks.
 export const isSoniox = (settings) => settings.useSoniox === true;
 
+// Soniox speaks the translation too. Offered only while Soniox hears and translates.
+export const isSonioxSpeech = (settings) => settings.speechProvider === 'soniox' && isSoniox(settings);
+
 export const OPENAI_URL = 'https://api.openai.com/v1';
 export const OPENROUTER_URL = 'https://openrouter.ai/api/v1';
 
@@ -121,6 +124,8 @@ export const DEFAULT_SETTINGS = {
   speechProvider: 'elevenlabs',
   useSoniox: false,
   sonioxKey: '',
+  sonioxMyVoice: '',
+  sonioxTheirVoice: '',
   localSpeechUrl: '',
   localSpeechKey: '',
   // On the local speech server: the recognition model ('' = the server's own) and the
@@ -206,7 +211,7 @@ export function missingKeys(settings) {
   const provider = translationProvider(settings);
   const soniox = isSoniox(settings);
   if (soniox && !String(settings.sonioxKey || '').trim()) missing.push('Soniox');
-  if (!settings.elevenLabsKey && !isLocalSpeech(settings) && !isOpenAISpeech(settings)) missing.push('ElevenLabs');
+  if (!settings.elevenLabsKey && !isLocalSpeech(settings) && !isOpenAISpeech(settings) && !isSonioxSpeech(settings)) missing.push('ElevenLabs');
   if (isOpenAISpeech(settings)) {
     const stt = settings.oaiSttServer || 'openai';
     // With Soniox listening, only the voice is needed from here.

@@ -203,6 +203,7 @@
             <option value="elevenlabs">ElevenLabs</option>
             <option value="local" data-i18n="opt.speech.local">My own speech server</option>
             <option value="openai" data-i18n="opt.speech.openai">OpenAI-compatible (OpenAI, Groq, your own server)</option>
+            <option value="soniox" id="speechSonioxOption" hidden>Soniox</option>
           </select>
         </label>
         <p class="hint" id="sonioxActive" role="status" hidden></p>
@@ -277,6 +278,26 @@
               <button id="previewOaiTheirs" type="button" class="refresh" data-i18n-title="opt.voice.preview">▶</button>
             </div>
           </div>
+        </div>
+
+        <div class="box" data-speech="soniox">
+          <div class="grid2">
+            <div class="picker">
+              <label class="field">
+                <span id="sonioxMyVoiceLabel" data-i18n="opt.voice.mine">My voice</span>
+                <select id="sonioxMyVoice"></select>
+              </label>
+              <button id="previewSonioxMine" type="button" class="refresh" data-i18n-title="opt.voice.preview">&#9654;</button>
+            </div>
+            <div class="picker">
+              <label class="field">
+                <span id="sonioxTheirVoiceLabel" data-i18n="opt.voice.theirs">Their voice</span>
+                <select id="sonioxTheirVoice"></select>
+              </label>
+              <button id="previewSonioxTheirs" type="button" class="refresh" data-i18n-title="opt.voice.preview">&#9654;</button>
+            </div>
+          </div>
+          <p class="hint" data-i18n="opt.sonioxVoice.hint">Every Soniox voice speaks every language. Uses the Soniox key above.</p>
         </div>
 
         <div class="box" data-speech="elevenlabs">

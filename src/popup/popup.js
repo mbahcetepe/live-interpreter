@@ -1,4 +1,4 @@
-import { loadSettings, saveSettings, missingKeys, missingServers, isFreeTranslation, isLocalSpeech, isOpenAISpeech } from '../shared/settings.js';
+import { loadSettings, saveSettings, missingKeys, missingServers, isFreeTranslation, isLocalSpeech, isOpenAISpeech, isSonioxSpeech } from '../shared/settings.js';
 import { localPairs, localTranslationState, prepareLocalTranslation } from '../shared/local-translation.js';
 import { formatUsage } from '../shared/usage.js';
 import { setLanguage, t, applyI18n, languageLabel, joinNames, locale, UI_LANGUAGES } from '../shared/i18n.js';
@@ -67,7 +67,7 @@ function render() {
   $('incoming').querySelector('[data-value="off"]').hidden = media;
 
   // The local speech server cannot clone a voice.
-  $('consentRow').hidden = media || !settings.offerTheirClone || settings.incomingMode !== 'voice' || isLocalSpeech(settings) || isOpenAISpeech(settings);
+  $('consentRow').hidden = media || !settings.offerTheirClone || settings.incomingMode !== 'voice' || isLocalSpeech(settings) || isOpenAISpeech(settings) || isSonioxSpeech(settings);
   // A video with spoken translation can go without subtitles.
   $('mediaSubsRow').hidden = !media || settings.incomingMode !== 'voice';
   $('mediaSubs').checked = settings.mediaSubtitles !== false;

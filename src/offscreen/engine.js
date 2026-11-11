@@ -24,6 +24,7 @@ import { describeMissingServers } from '../shared/setup-messages.js';
 import { cleanModes } from '../background/message-policy.js';
 import { ScribeRealtime } from './stt.js';
 import { SonioxSession, sonioxConfig } from './soniox.js';
+import { sonioxSynthesize, closeSonioxTts, SONIOX_DEFAULT_VOICES } from './soniox-tts.js';
 import { OpenAITranscriber, openaiSynthesize, listAudioModels } from './openai-speech.js';
 import { Translator, describeClaudeError, claudeRestMs } from './translator.js';
 import { FreeTranslator, freeKeys } from './free-translator.js';
@@ -199,7 +200,7 @@ class Session {
     // ElevenLabs, or the person's own local speech server (speech-server/).
     this.speech = speechAccount(settings);
     // The local server costs nothing; OpenAI's and Groq's prices are not in the estimate.
-    this.usage = new Usage({ freeSpeech: this.speech.local || this.speech.kind === 'openai' });
+    this.usage = new Usage({ freeSpeech: this.speech.local || this.speech.kind === 'openai' || this.speech.kind === 'soniox' });
     this.latencies = [];
     // The delay in its parts, for the panel: waiting for the speech to end, the first
     // translated words, the first sound of the voice (last few segments each).
@@ -514,6 +515,11 @@ class Session {
     const s = this.settings;
     if (this.speech.local) return this.resolveLocalVoices();
     if (this.speech.kind === 'openai') return this.resolveOpenAIVoices();
+    if (this.speech.kind === 'soniox') {
+      this.myVoiceId = s.sonioxMyVoice || SONIOX_DEFAULT_VOICES.mine;
+      this.theirVoiceId = s.sonioxTheirVoice || SONIOX_DEFAULT_VOICES.theirs;
+      return;
+    }
     this.myVoiceId = s.myVoiceId;
     this.theirVoiceId = s.theirVoiceId;
     let voices;
@@ -736,9 +742,16 @@ class Session {
     (dir === 'in' ? this.incoming : this.outgoing)?.onCommitted(text, meta);
   }
 
+  // The voice for a piece of speech. speaker is the label speech recognition gave the
+  // person who said it, once speakers are told apart; until then each side has one voice.
+  voiceFor(dir, speaker = null) {
+    void speaker;
+    return dir === 'in' ? this.theirCloneId || this.theirVoiceId : this.myVoiceId;
+  }
+
   speak(item, dir) {
     const s = this.settings;
-    const voiceId = dir === 'in' ? this.theirCloneId || this.theirVoiceId : this.myVoiceId;
+    const voiceId = this.voiceFor(dir, item.segment?.speaker ?? null);
     // Speech waiting to play, queued or already in the player: catch up by speaking faster.
     const queued = (dir === 'in' ? this.incoming : this.outgoing)?.speaker.pendingSeconds() || 0;
     const backlog = (dir === 'in' ? this.localPlayer.backlog() : this.page.backlog) + queued;
@@ -752,6 +765,7 @@ class Session {
       const instructions = s.pronounceForeign !== false ? `Speak naturally in ${languageName(language)}. Say technical terms, acronyms, and brand and personal names from other languages the way they are said in their own language.` : '';
       return openaiSynthesize({ ...this.speech.tts, voice: voiceId, text, speed, instructions, signal: item.signal });
     }
+    if (this.speech.kind === 'soniox') return sonioxSynthesize({ key: this.speech.key, voice: voiceId, language, text, speed, signal: item.signal });
     return synthesize({
       apiKey: this.speech,
       voiceId,
@@ -815,7 +829,8 @@ class Session {
   // The translation stays readable; the line only says it could not be spoken.
   onSpeechError(dir, item, err) {
     log('error', `speech ${dir}`, err);
-    this.caption(dir, { id: item.segment.id, phase: 'speech-error', error: t('speech.failed', { error: describeElevenLabsError(err, this.speech) }) });
+    const error = this.speech.kind === 'soniox' && err?.name === 'SonioxError' ? describeSonioxError(err) : describeElevenLabsError(err, this.speech);
+    this.caption(dir, { id: item.segment.id, phase: 'speech-error', error: t('speech.failed', { error }) });
   }
 
   caption(dir, event) {
@@ -863,7 +878,7 @@ class Session {
       theirLanguage: this.sourceLanguage(this.settings),
       incomingMode: this.incomingMode,
       outgoingMode: this.outgoingMode,
-      offerClone: this.settings.offerTheirClone && !this.diagnostic && !this.speech.local && this.speech.kind !== 'openai' && !this.media,
+      offerClone: this.settings.offerTheirClone && !this.diagnostic && !this.speech.local && !this.speech.kind && !this.media,
       subtitleBar: this.showSubtitles(),
       cloneConsent: this.cloneConsent,
       media: this.media,
@@ -1039,7 +1054,7 @@ class Session {
     // A new ElevenLabs key is used from the next connection on (speech takes it right away).
     const speechBefore = this.speech;
     this.speech = speechAccount(next);
-    this.usage.freeSpeech = this.speech.local || this.speech.kind === 'openai';
+    this.usage.freeSpeech = this.speech.local || this.speech.kind === 'openai' || this.speech.kind === 'soniox';
     for (const stt of [this.sttIn, this.sttOut]) if (stt && !(stt instanceof SonioxSession)) stt.apiKey = this.speech;
     const sonioxChanged = isSoniox(next) !== isSoniox(prev) || (isSoniox(next) && next.sonioxKey !== prev.sonioxKey);
     const pairChanged = next.myLanguage !== prev.myLanguage || this.sourceLanguage(next) !== this.sourceLanguage(prev) || next.theirLanguage !== prev.theirLanguage;
@@ -1060,7 +1075,10 @@ class Session {
       this.warnings.delete('my-voice');
     }
     if (next.theirVoiceId && next.theirVoiceId !== prev.theirVoiceId) this.theirVoiceId = next.theirVoiceId;
-    if (this.speech.kind === 'openai') {
+    if (this.speech.kind === 'soniox') {
+      this.myVoiceId = next.sonioxMyVoice || SONIOX_DEFAULT_VOICES.mine;
+      if (!this.theirCloneId) this.theirVoiceId = next.sonioxTheirVoice || SONIOX_DEFAULT_VOICES.theirs;
+    } else if (this.speech.kind === 'openai') {
       this.myVoiceId = next.oaiMyVoice || 'alloy';
       if (!this.theirCloneId) this.theirVoiceId = next.oaiTheirVoice || 'nova';
     } else if (this.speech.local) {
@@ -1076,7 +1094,7 @@ class Session {
 
   startClone() {
     if (this.diagnostic || this.incomingMode !== 'voice' || this.theirCloneId || this.collector) return;
-    if (!this.settings.offerTheirClone || this.speech.local || this.speech.kind === 'openai' || this.clone.state === 'creating') return;
+    if (!this.settings.offerTheirClone || this.speech.local || this.speech.kind || this.clone.state === 'creating') return;
     this.collector = new CloneCollector({ targetSeconds: this.settings.cloneSeconds });
     this.tabNode.port.postMessage({ type: 'collect-raw', on: true });
     this.clone = { state: 'collecting', seconds: 0, target: this.settings.cloneSeconds };
@@ -1150,7 +1168,7 @@ class Session {
   servicesLabel() {
     const s = this.settings;
     const plain = (label) => label.replace(/\s*\(.*\)\s*$/, '');
-    const voice = this.speech.local ? t('opt.speech.local') : this.speech.kind === 'openai' ? (s.oaiTtsServer === 'custom' ? t('opt.oaiSpeech.custom') : 'OpenAI') : 'ElevenLabs';
+    const voice = this.speech.kind === 'soniox' ? 'Soniox' : this.speech.local ? t('opt.speech.local') : this.speech.kind === 'openai' ? (s.oaiTtsServer === 'custom' ? t('opt.oaiSpeech.custom') : 'OpenAI') : 'ElevenLabs';
     if (isSoniox(s)) return t('overlay.servicesSoniox', { voice });
     const hear = this.speech.local ? t('opt.speech.local') : this.speech.kind === 'openai' ? (s.oaiSttServer === 'groq' ? 'Groq' : s.oaiSttServer === 'custom' ? t('opt.oaiSpeech.custom') : 'OpenAI') : 'ElevenLabs';
     const provider = PROVIDERS.find((p) => p.id === translationProvider(s));
@@ -1295,6 +1313,7 @@ class Session {
     clearTimeout(this.sttRestartTimer);
     clearTimeout(this.backupTimer);
     clearTimeout(this.transcriptTimer);
+    closeSonioxTts();
     await this.saveTranscriptNow({ endedAt: Date.now() });
     this.debugSink?.close();
     this.incoming?.flush();
