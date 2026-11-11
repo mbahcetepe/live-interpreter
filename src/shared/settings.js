@@ -20,6 +20,8 @@ export const PROVIDERS = [
   { id: 'openrouter', labelKey: 'provider.openrouter' },
   { id: 'ollama', labelKey: 'provider.ollama' },
   { id: 'free', labelKey: 'provider.free' },
+  // Soniox hears and translates in one stream, so it also does the listening.
+  { id: 'soniox', labelKey: 'provider.soniox' },
 ];
 
 // Whisper models that know only English: Distil-Whisper (distil-large-v3 and the like) and
@@ -56,11 +58,16 @@ export const isOpenAITranslation = (settings) => ['openai', 'openrouter'].includ
 export const isLocalSpeech = (settings) => settings.speechProvider === 'local';
 // Speech recognition and speech through OpenAI's audio API (offscreen/openai-speech.js).
 export const isOpenAISpeech = (settings) => settings.speechProvider === 'openai';
-// Soniox hears and translates in one stream; the speech service then only speaks.
-export const isSoniox = (settings) => settings.useSoniox === true;
+// Soniox translates (Translation › Service): it hears and translates in one stream, so it
+// does the listening too, and the speech service only speaks.
+export const isSoniox = (settings) => translationProvider(settings) === 'soniox';
 
-// Soniox speaks the translation too. Offered only while Soniox hears and translates.
-export const isSonioxSpeech = (settings) => settings.speechProvider === 'soniox' && isSoniox(settings);
+// Soniox is the speech service: it listens (without translating, unless it translates
+// too) and speaks.
+export const isSonioxSpeech = (settings) => settings.speechProvider === 'soniox';
+
+// Soniox listens: it translates, or it is the speech service.
+export const isSonioxListening = (settings) => isSoniox(settings) || isSonioxSpeech(settings);
 
 export const OPENAI_URL = 'https://api.openai.com/v1';
 export const OPENROUTER_URL = 'https://openrouter.ai/api/v1';
@@ -195,6 +202,12 @@ export function migrateSettings(stored) {
     merged.originalVolume = 0;
     merged.duckVolume = 0;
   }
+  // Before 2.6 Soniox was a tick box under Speech recognition and voices; it is now a
+  // translation service like the others.
+  if (merged.useSoniox === true) {
+    merged.translationProvider = 'soniox';
+    merged.useSoniox = false;
+  }
   return merged;
 }
 
@@ -210,7 +223,7 @@ export function missingKeys(settings) {
   const missing = [];
   const provider = translationProvider(settings);
   const soniox = isSoniox(settings);
-  if (soniox && !String(settings.sonioxKey || '').trim()) missing.push('Soniox');
+  if (isSonioxListening(settings) && !String(settings.sonioxKey || '').trim()) missing.push('Soniox');
   if (!settings.elevenLabsKey && !isLocalSpeech(settings) && !isOpenAISpeech(settings) && !isSonioxSpeech(settings)) missing.push('ElevenLabs');
   if (isOpenAISpeech(settings)) {
     const stt = settings.oaiSttServer || 'openai';
@@ -231,7 +244,7 @@ export function missingKeys(settings) {
 // What else the chosen setup needs: a server address or a model ('ollama', 'speech', 'model').
 export function missingServers(settings) {
   const missing = [];
-  const provider = isSoniox(settings) ? 'soniox' : translationProvider(settings);
+  const provider = translationProvider(settings);
   if (provider === 'ollama' && !(String(settings.ollamaUrl || '').trim() && String(settings.ollamaModel || '').trim())) missing.push('ollama');
   if (provider === 'openai' && !String(settings.openaiModel || '').trim()) missing.push('model');
   if (provider === 'openrouter' && !String(settings.openrouterModel || '').trim()) missing.push('model');

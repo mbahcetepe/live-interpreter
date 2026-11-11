@@ -2,6 +2,17 @@
 
 Versions follow [semantic versioning](https://semver.org): MAJOR for changes that need something done (new settings, a server update), MINOR for new features, PATCH for fixes. The version lives in `package.json`; the build writes it into the extension's manifest, and the popup and the settings page show it. The speech server has its own version and a protocol number (`/health`); the extension warns when the server is older than it needs.
 
+## Unreleased
+
+### New
+
+- **Soniox speaks too.** Soniox is a speech service like the others (Speech recognition and voices › Service): its own voices (about 230, each speaking every language) over one WebSocket kept open, the first sound of a piece about 0.35–0.5 s after it is asked for. With another translator Soniox listens (without translating) and speaks.
+- **The panel names the services at work**: which one hears, translates and speaks.
+
+### Changed
+
+- **Soniox is chosen like any other service**, under Translation (it hears and translates in one stream) or under Speech recognition and voices; the separate tick box is gone, and a setup that had it ticked now shows Soniox under Translation. While Soniox translates, the settings page says that it also does the listening and that the speech service only speaks; that service's speech recognition settings are hidden.
+
 ## 2.5.0 (2026-11-11)
 
 ### New

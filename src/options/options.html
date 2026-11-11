@@ -49,11 +49,24 @@
 
       <section class="card">
         <h2 data-i18n="opt.tr.title">Translation</h2>
-        <p class="hint" id="sonioxTranslationNote" hidden data-i18n="opt.soniox.translationNote">Soniox is on (Speech recognition and voices): it translates as it hears, and the service below is not used.</p>
         <label class="field">
           <span data-i18n="opt.tr.provider">Service</span>
           <select id="translationProvider"></select>
         </label>
+
+        <div class="box" data-provider="soniox">
+          <div class="grid2">
+            <label class="field">
+              <span data-i18n="opt.soniox.key">Soniox API key</span>
+              <input type="password" id="sonioxKey" class="key" autocomplete="off" spellcheck="false" />
+            </label>
+            <div class="actions">
+              <button id="testSoniox" type="button" data-i18n="opt.test">Test</button>
+            </div>
+          </div>
+          <p class="result" id="sonioxResult" role="status"></p>
+          <p class="hint" data-i18n="opt.soniox.trHint">Soniox recognizes the speech and translates it in the same stream, before the sentence ends. So Soniox also does the listening; the voice is the service under Speech recognition and voices.</p>
+        </div>
 
         <div class="box" data-provider="claude">
           <div class="grid2">
@@ -178,32 +191,13 @@
 
       <section class="card">
         <h2 data-i18n="opt.speech.title">Speech recognition and voices</h2>
-        <label class="check">
-          <input type="checkbox" id="useSoniox" />
-          <span>
-            <span data-i18n="opt.soniox.use">Hear and translate with Soniox (fastest)</span>
-            <small data-i18n="opt.soniox.hint">Soniox recognizes the speech and translates it in the same stream, before the sentence ends. The service below then only speaks the translation.</small>
-          </span>
-        </label>
-        <div class="box" id="sonioxBox" hidden>
-          <div class="grid2">
-            <label class="field">
-              <span data-i18n="opt.soniox.key">Soniox API key</span>
-              <input type="password" id="sonioxKey" class="key" autocomplete="off" spellcheck="false" />
-            </label>
-            <div class="actions">
-              <button id="testSoniox" type="button" data-i18n="opt.test">Test</button>
-            </div>
-          </div>
-          <p class="result" id="sonioxResult" role="status"></p>
-        </div>
         <label class="field">
           <span id="speechServiceLabel" data-i18n="opt.tr.provider">Service</span>
           <select id="speechProvider">
             <option value="elevenlabs">ElevenLabs</option>
             <option value="local" data-i18n="opt.speech.local">My own speech server</option>
             <option value="openai" data-i18n="opt.speech.openai">OpenAI-compatible (OpenAI, Groq, your own server)</option>
-            <option value="soniox" id="speechSonioxOption" hidden>Soniox</option>
+            <option value="soniox">Soniox</option>
           </select>
         </label>
         <p class="hint" id="sonioxActive" role="status" hidden></p>
@@ -281,6 +275,10 @@
         </div>
 
         <div class="box" data-speech="soniox">
+          <label class="field" id="sonioxSpeechKeyField">
+            <span data-i18n="opt.soniox.key">Soniox API key</span>
+            <input type="password" id="sonioxSpeechKey" class="key" autocomplete="off" spellcheck="false" />
+          </label>
           <div class="grid2">
             <div class="picker">
               <label class="field">
@@ -297,7 +295,7 @@
               <button id="previewSonioxTheirs" type="button" class="refresh" data-i18n-title="opt.voice.preview">&#9654;</button>
             </div>
           </div>
-          <p class="hint" data-i18n="opt.sonioxVoice.hint">Every Soniox voice speaks every language. Uses the Soniox key above.</p>
+          <p class="hint" id="sonioxVoiceHint"></p>
         </div>
 
         <div class="box" data-speech="elevenlabs">

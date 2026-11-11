@@ -76,7 +76,7 @@ Ayarlar sayfası dört bölümden oluşur: **Diller**, **Çeviri**, **Ses tanım
 
 ## 5. Ses tanıma ve sesler
 
-**Soniox (en hızlısı, isteğe bağlı):** **Soniox ile dinle ve çevir** kutusunu işaretle, [soniox.com](https://soniox.com) panelinden aldığın API anahtarını (Console › API keys; hesapta bakiye ya da otomatik ödeme olmalı) yapıştır ve **Test et** düğmesine bas. Soniox iki tarafı dinler ve cümle bitmeden, duyduğu anda çevirir. Aşağıdan yine bir **Servis** seç: o yalnızca çeviriyi seslendirir. Soniox açıkken Çeviri bölümü kullanılmaz.
+**Soniox (en hızlısı, isteğe bağlı):** **Çeviri** altında servis olarak **Soniox**'u seç (4. adım), [soniox.com](https://soniox.com) panelinden aldığın API anahtarını (Console › API keys; hesapta bakiye ya da otomatik ödeme olmalı) yapıştır ve **Test et** düğmesine bas. Soniox iki tarafı dinler ve cümle bitmeden, duyduğu anda çevirir; bu yüzden dinlemeyi de o yapar: burada seçilen **Servis** yalnızca çeviriyi seslendirir ve ses tanıma ayarları gizlenir. Soniox'un seslendirmesi için burada da **Soniox**'u seç; her taraf için bir ses seçilir. Soniox başka bir çevirmenle burada da seçilebilir: o zaman dinler ve seslendirir.
 
 **Servis**'i seç.
 

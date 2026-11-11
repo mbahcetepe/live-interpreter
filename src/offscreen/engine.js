@@ -9,7 +9,7 @@
 // worker with each message, and everything for the Meet tab goes through a port the
 // tab's content script opens.
 
-import { PROVIDERS, isSoniox, whisperModelFor, isFreeTranslation, isOllamaTranslation, translationProvider, claudeModelOf, missingKeys, missingServers, parseKeyterms, OPENAI_URL, OPENROUTER_URL } from '../shared/settings.js';
+import { PROVIDERS, isSoniox, isSonioxListening, whisperModelFor, isFreeTranslation, isOllamaTranslation, translationProvider, claudeModelOf, missingKeys, missingServers, parseKeyterms, OPENAI_URL, OPENROUTER_URL } from '../shared/settings.js';
 import { OpenAITranslator, openaiRestMs } from './openai-translator.js';
 import { serverBase } from '../shared/servers.js';
 import { OllamaTranslator, ollamaRestMs } from './ollama-translator.js';
@@ -589,6 +589,7 @@ class Session {
 
   createStt(dir, languageCode, keyterms) {
     if (isSoniox(this.settings)) return this.createSoniox(dir, keyterms);
+    if (this.speech.kind === 'soniox') return this.createSonioxListener(dir, languageCode, keyterms);
     if (this.speech.kind === 'openai') {
       return new OpenAITranscriber({
         name: dir === 'in' ? 'stt-in' : 'stt-out',
@@ -654,6 +655,28 @@ class Session {
         this.debugSink?.event({ kind: 'committed', dir, text: done.source });
         segment?.end(done);
         segment = null;
+      },
+      onStatus: (status) => {
+        this.stt[dir] = status;
+        this.debugSink?.event({ kind: 'stt', dir, status });
+        this.report();
+      },
+      onFatal: (err) => this.fail(new UserError(describeSonioxError(err), 'stt')),
+      log,
+    });
+  }
+
+  // Soniox as the speech service, with another service translating: it only listens, and
+  // its words go the way any speech recognition's do.
+  createSonioxListener(dir, languageCode, keyterms) {
+    const s = this.settings;
+    return new SonioxSession({
+      name: `soniox-${dir}`,
+      apiKey: s.sonioxKey,
+      config: sonioxConfig({ source: languageCode === AUTO_LANGUAGE ? '' : languageCode, terms: keyterms, endpointDelayMs: (s.vadSilenceSecs || 0.7) * 1000 }),
+      onOriginal: (text) => this.onPartial(dir, text),
+      onSegmentEnd: (done) => {
+        if (done.source) this.onCommitted(dir, done.source);
       },
       onStatus: (status) => {
         this.stt[dir] = status;
@@ -1056,7 +1079,7 @@ class Session {
     this.speech = speechAccount(next);
     this.usage.freeSpeech = this.speech.local || this.speech.kind === 'openai' || this.speech.kind === 'soniox';
     for (const stt of [this.sttIn, this.sttOut]) if (stt && !(stt instanceof SonioxSession)) stt.apiKey = this.speech;
-    const sonioxChanged = isSoniox(next) !== isSoniox(prev) || (isSoniox(next) && next.sonioxKey !== prev.sonioxKey);
+    const sonioxChanged = isSoniox(next) !== isSoniox(prev) || (isSonioxListening(next) && next.sonioxKey !== prev.sonioxKey);
     const pairChanged = next.myLanguage !== prev.myLanguage || this.sourceLanguage(next) !== this.sourceLanguage(prev) || next.theirLanguage !== prev.theirLanguage;
     if (pairChanged && this.incoming) {
       // A new language pair mid-call: both sides are heard and translated in it from now on.
@@ -1170,7 +1193,7 @@ class Session {
     const plain = (label) => label.replace(/\s*\(.*\)\s*$/, '');
     const voice = this.speech.kind === 'soniox' ? 'Soniox' : this.speech.local ? t('opt.speech.local') : this.speech.kind === 'openai' ? (s.oaiTtsServer === 'custom' ? t('opt.oaiSpeech.custom') : 'OpenAI') : 'ElevenLabs';
     if (isSoniox(s)) return t('overlay.servicesSoniox', { voice });
-    const hear = this.speech.local ? t('opt.speech.local') : this.speech.kind === 'openai' ? (s.oaiSttServer === 'groq' ? 'Groq' : s.oaiSttServer === 'custom' ? t('opt.oaiSpeech.custom') : 'OpenAI') : 'ElevenLabs';
+    const hear = this.speech.kind === 'soniox' ? 'Soniox' : this.speech.local ? t('opt.speech.local') : this.speech.kind === 'openai' ? (s.oaiSttServer === 'groq' ? 'Groq' : s.oaiSttServer === 'custom' ? t('opt.oaiSpeech.custom') : 'OpenAI') : 'ElevenLabs';
     const provider = PROVIDERS.find((p) => p.id === translationProvider(s));
     return t('overlay.services', { hear, translate: provider ? plain(t(provider.labelKey)) : '', voice });
   }

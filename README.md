@@ -69,7 +69,7 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
 | | Speech recognition and voices | Translation |
 | --- | --- | --- |
 | **Hosted** | ElevenLabs (Scribe v2 Realtime, Flash v2.5 / v4 Turbo); OpenAI (Whisper, gpt-4o-transcribe, gpt-4o-mini-tts); Groq Whisper (recognition, fast and cheap) | Claude Opus, Sonnet or Haiku 5.5; OpenAI; OpenRouter (hundreds of models, one key) |
-| **Recognition and translation in one** | Soniox (`stt-rt-v6`): hears and translates in the same stream, the fastest setup; any of the voices above speaks the translation | |
+| **Recognition and translation in one** | Soniox (`stt-rt-v6`): hears and translates in the same stream, the fastest setup; Soniox's own voices (`tts-rt-v2`) or any of the voices above speak the translation | Soniox |
 | **Free services** | | DeepL Free, Mistral, Groq, Chrome's built-in translator |
 | **Your own servers** | The speech server in [speech-server/](speech-server/README.md) (faster-whisper and Piper), or any server with OpenAI's audio API (Speaches, LocalAI, Kokoro-FastAPI) | Ollama (for example `gemma4:12b`), or any server with OpenAI's API (LM Studio, vLLM) |
 
@@ -77,7 +77,7 @@ The two columns are chosen separately. With your own servers in both, nothing of
 
 ### Soniox: recognition and translation in one stream
 
-Under **Speech recognition and voices** tick **Hear and translate with Soniox** and paste a [Soniox](https://soniox.com) API key; **Test** opens a stream and reports a refused key or an empty balance. Soniox recognizes the speech and translates it in the same stream, word by word, so the translation starts before the sentence is over: there is no wait for the end of the sentence and no separate translation request. The service chosen below it (ElevenLabs, OpenAI or your own speech server) only speaks the translation; the Translation section is not used. Soniox charges per hour of audio (about $0.12/h at the time of writing, translation included in the same stream); each side of a call is its own stream.
+Choose **Soniox** as the service under **Translation** and paste a [Soniox](https://soniox.com) API key; **Test** opens a stream and reports a refused key or an empty balance. Soniox recognizes the speech and translates it in the same stream, word by word, so the translation starts before the sentence is over: there is no wait for the end of the sentence and no separate translation request. Since it translates what it hears, Soniox also does the listening; the service under **Speech recognition and voices** only speaks the translation, and the settings page says so. That service can be Soniox too: about 230 voices, each speaking every language, over one connection kept open (the first sound of a piece about 0.35–0.5 s after it is asked for). Soniox can also be the speech service with another translator: it then listens and speaks, and the Translation service translates. Soniox charges per hour of audio (about $0.12/h for recognition with translation, about $0.70/h of generated speech at the time of writing); each side of a call is its own stream. The panel names the service that hears, translates and speaks.
 
 ### How fast it is
 

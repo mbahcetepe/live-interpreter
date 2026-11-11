@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { SonioxSession, sonioxConfig, sonioxLanguage, SONIOX_WS } from '../../src/offscreen/soniox.js';
 import { DirectionPipeline, History, Speaker } from '../../src/offscreen/pipeline.js';
 import { TranscriptLog } from '../../src/shared/transcript.js';
-import { missingKeys, missingServers, DEFAULT_SETTINGS } from '../../src/shared/settings.js';
+import { missingKeys, missingServers, migrateSettings, DEFAULT_SETTINGS } from '../../src/shared/settings.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -160,10 +160,36 @@ test('a streamed segment is shown, spoken clause by clause and kept in the trans
   ]);
 });
 
-test('with Soniox on, only its key and the voice are needed', () => {
-  const base = { ...DEFAULT_SETTINGS, useSoniox: true, translationProvider: 'claude', anthropicKey: '', elevenLabsKey: 'el' };
+test('with Soniox translating, only its key and the voice are needed', () => {
+  const base = { ...DEFAULT_SETTINGS, translationProvider: 'soniox', anthropicKey: '', elevenLabsKey: 'el' };
   assert.deepEqual(missingKeys(base), ['Soniox']);
   assert.deepEqual(missingKeys({ ...base, sonioxKey: 's' }), []);
-  assert.deepEqual(missingServers({ ...base, sonioxKey: 's', translationProvider: 'ollama', ollamaUrl: '' }), []);
+  assert.deepEqual(missingServers({ ...base, sonioxKey: 's', ollamaUrl: '' }), []);
   assert.deepEqual(missingKeys({ ...base, sonioxKey: 's', speechProvider: 'openai', openaiKey: '' }), ['OpenAI'], 'OpenAI still speaks');
+  // Soniox as the speech service with another translator: Soniox's key and the translator's.
+  const listening = { ...DEFAULT_SETTINGS, translationProvider: 'claude', speechProvider: 'soniox', anthropicKey: 'an', elevenLabsKey: '' };
+  assert.deepEqual(missingKeys(listening), ['Soniox']);
+  assert.deepEqual(missingKeys({ ...listening, sonioxKey: 's' }), []);
+});
+
+test('the old Soniox tick box becomes Soniox as the translation service', () => {
+  const moved = migrateSettings({ useSoniox: true, translationProvider: 'ollama', speechProvider: 'local' });
+  assert.equal(moved.translationProvider, 'soniox');
+  assert.equal(moved.useSoniox, false);
+  assert.equal(moved.speechProvider, 'local');
+  assert.equal(migrateSettings({ useSoniox: false, translationProvider: 'ollama' }).translationProvider, 'ollama');
+});
+
+test('Soniox only listens when another service translates', () => {
+  const listen = sonioxConfig({ source: 'en', terms: [] });
+  assert.equal(listen.translation, undefined);
+  assert.deepEqual(listen.language_hints, ['en']);
+  assert.equal(sonioxConfig({ target: 'tr', source: 'en' }).translation.target_language, 'tr');
+});
+
+test('listening only: a segment ends at its endpoint, with no wait for a translation', () => {
+  const ended = [];
+  const s = new SonioxSession({ apiKey: 'k', config: sonioxConfig({ source: 'en' }), onSegmentEnd: (d) => ended.push(d), WebSocketImpl: class {} });
+  s.onMessage({ tokens: [{ text: 'Hello there.', is_final: true }, { text: '<end>', is_final: true }] });
+  assert.deepEqual(ended, [{ source: 'Hello there.', translation: '' }]);
 });

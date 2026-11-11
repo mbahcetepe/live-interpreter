@@ -162,19 +162,22 @@ function soniox(ws, req, stats, faults) {
     if (peak < 300) return;
     session.voiced += 1;
     const target = session.config.translation?.target_language;
-    const heard = target === 'tr' ? HEARD.en : HEARD.tr;
+    // Listening only (no translation asked for): the language hint says what is spoken.
+    const spoken = target ? (target === 'tr' ? 'en' : 'tr') : session.config.language_hints?.[0] || 'en';
+    const heard = HEARD[spoken] || HEARD.en;
     const translated = translate(heard.committed);
     const cut = translated.indexOf(',') > 0 ? translated.indexOf(',') + 1 : Math.ceil(translated.length / 2);
     const send = (tokens) => ws.send(JSON.stringify({ tokens, final_audio_proc_ms: session.voiced * 100, total_audio_proc_ms: session.voiced * 100 }));
     if (session.voiced === 6) send([{ text: heard.partial, is_final: false }]);
-    if (session.voiced === 12) send([{ text: heard.partial, is_final: true }, { text: translated.slice(0, cut), translation_status: 'translation', is_final: true }]);
+    const translation = (text) => (target ? [{ text, translation_status: 'translation', is_final: true }] : []);
+    if (session.voiced === 12) send([{ text: heard.partial, is_final: true }, ...translation(translated.slice(0, cut))]);
     if (session.voiced >= 22) {
       session.voiced = 0;
       session.segments += 1;
       send([
         { text: heard.committed.slice(heard.partial.length), is_final: true },
         { text: '<end>', is_final: true },
-        { text: translated.slice(cut), translation_status: 'translation', is_final: true },
+        ...translation(translated.slice(cut)),
       ]);
     }
   });

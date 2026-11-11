@@ -643,7 +643,7 @@ async function sonioxTest() {
       await chrome.storage.local.set({ settings: { ...(settings || {}), ...p } });
     }, patch);
   try {
-    await setSettings({ useSoniox: true, sonioxKey: '', elevenLabsKey: 'mock-el', speechProvider: 'elevenlabs', translationProvider: 'claude', anthropicKey: '' });
+    await setSettings({ sonioxKey: '', elevenLabsKey: 'mock-el', speechProvider: 'elevenlabs', translationProvider: 'soniox', anthropicKey: '' });
     const bare = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
     check('Soniox without a key does not start and names it', bare?.ok === false && /soniox/i.test(bare?.error || ''), bare?.error);
 
@@ -681,7 +681,23 @@ async function sonioxTest() {
     const speaks = await waitFor(() => servicesLine(meet), 4000);
     check('the panel says Soniox speaks too', speaks === 'Hears and translates: Soniox · speaks: Soniox', speaks);
     await send(control, { type: 'stop' });
-    await setSettings({ speechProvider: 'elevenlabs', elevenLabsKey: 'mock-el' });
+    await sleep(500);
+
+    // Soniox as the speech service with Claude translating: Soniox only listens and speaks.
+    await setSettings({ translationProvider: 'claude', anthropicKey: 'mock-an', claudeModel: 'claude-haiku-5-5' });
+    const streamsBefore = mock.stats.soniox.length;
+    const claudeBefore = mock.stats.claude.length;
+    const spokenBefore = mock.stats.sonioxTts.length;
+    const listening = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'off' } });
+    check('Soniox listens and speaks while Claude translates', listening?.ok === true, listening?.error);
+    const claudeSpoke = await waitFor(() => mock.stats.sonioxTts.slice(spokenBefore).find((r) => /Merhaba/.test(r.text || '')), 30000, 300);
+    const listenStreams = mock.stats.soniox.slice(streamsBefore);
+    check('the Soniox stream only listens (no translation asked of it)', listenStreams.length > 0 && listenStreams.every((x) => x.config && !x.config.translation && x.config.language_hints?.includes('en')), JSON.stringify(listenStreams.map((x) => x.config?.translation || null)));
+    check('Claude translates what Soniox heard, and Soniox speaks it', mock.stats.claude.length > claudeBefore && Boolean(claudeSpoke), `${mock.stats.claude.length - claudeBefore} claude, ${JSON.stringify(claudeSpoke?.text)}`);
+    const roles = await waitFor(() => servicesLine(meet), 4000);
+    check('the panel names each service', roles === 'Hears: Soniox · translates: Claude · speaks: Soniox', roles);
+    await send(control, { type: 'stop' });
+    await setSettings({ speechProvider: 'elevenlabs', elevenLabsKey: 'mock-el', translationProvider: 'soniox' });
     await sleep(500);
 
     // An empty balance ends the session with a clear reason.

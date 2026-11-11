@@ -71,7 +71,7 @@ Görüşmede iki yönlü: karşı taraf İspanyolca konuşur, sen Türkçe duyar
 | | Ses tanıma ve sesler | Çeviri |
 | --- | --- | --- |
 | **Barındırılan** | ElevenLabs (Scribe v2 Realtime, Flash v2.5 / v4 Turbo); OpenAI (Whisper, gpt-4o-transcribe, gpt-4o-mini-tts); Groq Whisper (tanıma, hızlı ve ucuz) | Claude Opus, Sonnet ya da Haiku 5.5; OpenAI; OpenRouter (yüzlerce model, tek anahtar) |
-| **Tanıma ve çeviri bir arada** | Soniox (`stt-rt-v6`): aynı akışta duyar ve çevirir, en hızlı kurulum; çeviriyi yukarıdaki seslerden biri seslendirir | |
+| **Tanıma ve çeviri bir arada** | Soniox (`stt-rt-v6`): aynı akışta duyar ve çevirir, en hızlı kurulum; çeviriyi Soniox'un kendi sesleri (`tts-rt-v2`) ya da yukarıdaki seslerden biri seslendirir | Soniox |
 | **Ücretsiz servisler** | | DeepL Free, Mistral, Groq, Chrome'un yerleşik çevirmeni |
 | **Kendi sunucuların** | [speech-server/](speech-server/README.tr.md) içindeki ses sunucusu (faster-whisper ve Piper) ya da OpenAI'nin ses API'sini sunan herhangi bir sunucu (Speaches, LocalAI, Kokoro-FastAPI) | Ollama (örneğin `gemma4:12b`) ya da OpenAI API'sini sunan herhangi bir sunucu (LM Studio, vLLM) |
 
@@ -79,7 +79,7 @@ Görüşmede iki yönlü: karşı taraf İspanyolca konuşur, sen Türkçe duyar
 
 ### Soniox: tanıma ve çeviri tek akışta
 
-**Ses tanıma ve sesler** altında **Soniox ile dinle ve çevir** kutusunu işaretle ve bir [Soniox](https://soniox.com) API anahtarı yapıştır; **Test et** bir akış açar ve reddedilen anahtarı ya da biten bakiyeyi bildirir. Soniox konuşmayı tanır ve aynı akışta, kelime kelime çevirir; çeviri cümle bitmeden başlar: cümle sonunu beklemek ve ayrı bir çeviri isteği yoktur. Altında seçilen servis (ElevenLabs, OpenAI ya da kendi ses sunucun) yalnızca çeviriyi seslendirir; Çeviri bölümü kullanılmaz. Soniox ses saati başına ücret alır (bu yazı yazılırken saatte yaklaşık 0,12 $, çeviri aynı akışa dahil); görüşmenin her tarafı ayrı bir akıştır.
+**Çeviri** altında servis olarak **Soniox**'u seç ve bir [Soniox](https://soniox.com) API anahtarı yapıştır; **Test et** bir akış açar ve reddedilen anahtarı ya da biten bakiyeyi bildirir. Soniox konuşmayı tanır ve aynı akışta, kelime kelime çevirir; çeviri cümle bitmeden başlar: cümle sonunu beklemek ve ayrı bir çeviri isteği yoktur. Duyduğunu çevirdiği için dinlemeyi de Soniox yapar; **Ses tanıma ve sesler** altındaki servis yalnızca çeviriyi seslendirir ve ayarlar sayfası bunu yazar. O servis de Soniox olabilir: her biri her dili konuşan yaklaşık 230 ses, açık tutulan tek bir bağlantı üzerinden (bir parçanın ilk sesi istendikten yaklaşık 0,35–0,5 sn sonra). Soniox başka bir çevirmenle ses servisi olarak da seçilebilir: o zaman dinler ve seslendirir, çeviriyi Çeviri bölümündeki servis yapar. Soniox ses saati başına ücret alır (bu yazı yazılırken çeviriyle tanıma saatte yaklaşık 0,12 $, üretilen konuşma saatte yaklaşık 0,70 $); görüşmenin her tarafı ayrı bir akıştır. Panel dinleyen, çeviren ve seslendiren servisi yazar.
 
 ### Ne kadar hızlı
 

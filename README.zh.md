@@ -69,7 +69,7 @@
 | | 语音识别和声音 | 翻译 |
 | --- | --- | --- |
 | **托管服务** | ElevenLabs（Scribe v2 Realtime、Flash v2.5 / v4 Turbo）；OpenAI（Whisper、gpt-4o-transcribe、gpt-4o-mini-tts）；Groq Whisper（识别，快且便宜） | Claude Opus、Sonnet 或 Haiku 5.5；OpenAI；OpenRouter（数百个模型，一个密钥） |
-| **识别和翻译合一** | Soniox（`stt-rt-v6`）：在同一个流中听和翻译，最快的配置；上面任一种声音朗读译文 | |
+| **识别和翻译合一** | Soniox（`stt-rt-v6`）：在同一个流中听和翻译，最快的配置；译文由 Soniox 自己的声音（`tts-rt-v2`）或上面任一种声音朗读 | Soniox |
 | **免费服务** | | DeepL Free、Mistral、Groq、Chrome 内置翻译 |
 | **你自己的服务器** | [speech-server/](speech-server/README.md) 中的语音服务器（faster-whisper 和 Piper），或任何提供 OpenAI 音频 API 的服务器（Speaches、LocalAI、Kokoro-FastAPI） | Ollama（例如 `gemma4:12b`），或任何提供 OpenAI API 的服务器（LM Studio、vLLM） |
 
@@ -77,7 +77,7 @@
 
 ### Soniox：识别和翻译在同一个流中
 
-在 **语音识别和声音** 下勾选 **使用 Soniox 识别并翻译**，并粘贴 [Soniox](https://soniox.com) API 密钥；**测试** 会打开一个流，并报告密钥被拒或余额用完。Soniox 在同一个流中逐词识别并翻译语音，因此翻译在句子结束前就开始了：不必等句子结束，也没有单独的翻译请求。下面选择的服务（ElevenLabs、OpenAI 或你自己的语音服务器）只负责朗读译文；“翻译”部分不会被使用。Soniox 按音频时长收费（撰写本文时约 $0.12/小时，翻译包含在同一个流中）；通话的每一方各是一个流。
+在 **翻译** 下选择 **Soniox** 作为服务，并粘贴 [Soniox](https://soniox.com) API 密钥；**测试** 会打开一个流，并报告密钥被拒或余额用完。Soniox 在同一个流中逐词识别并翻译语音，因此翻译在句子结束前就开始了：不必等句子结束，也没有单独的翻译请求。因为它翻译自己听到的内容，识别也由 Soniox 完成；**语音识别和声音** 下的服务只负责朗读译文，设置页面会说明这一点。该服务也可以是 Soniox：约 230 个声音，每个都能说所有语言，通过一条保持打开的连接（一段语音的第一个声音约在请求后 0.35–0.5 秒）。Soniox 也可以在使用其他翻译服务时作为语音服务：此时它负责识别和朗读，由“翻译”中的服务翻译。Soniox 按音频时长收费（撰写本文时，带翻译的识别约 $0.12/小时，生成语音约 $0.70/小时）；通话的每一方各是一个流。面板会显示负责识别、翻译和朗读的服务。
 
 ### 速度
 

@@ -76,7 +76,7 @@ Press **Test**: one sentence is translated and timed. If the chosen service fail
 
 ## 5. Speech recognition and voices
 
-**Soniox (fastest, optional):** tick **Hear and translate with Soniox**, paste the API key from [soniox.com](https://soniox.com) (Console › API keys; the account needs a balance or autopay) and press **Test**. Soniox then hears both sides and translates as it hears, before the sentence ends. Still choose a **Service** below: it only speaks the translation. The Translation section is not used while Soniox is on.
+**Soniox (fastest, optional):** choose **Soniox** as the service under **Translation** (step 4), paste the API key from [soniox.com](https://soniox.com) (Console › API keys; the account needs a balance or autopay) and press **Test**. Soniox then hears both sides and translates as it hears, before the sentence ends, so it does the listening too: the **Service** chosen here only speaks the translation, and its speech recognition settings are hidden. Choose **Soniox** here as well to have Soniox speak, with a voice for each side. Soniox can also be chosen here with another translator: it then listens and speaks.
 
 Choose the **Service**.
 

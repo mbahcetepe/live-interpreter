@@ -31,7 +31,8 @@ export function sonioxLanguage(code) {
 }
 
 // The first message of a stream.
-export function sonioxConfig({ model = SONIOX_MODEL, target, source = '', endpointDelayMs = 1000, terms = [] }) {
+// Without a target it only listens: the words come back, nothing is translated.
+export function sonioxConfig({ model = SONIOX_MODEL, target = '', source = '', endpointDelayMs = 1000, terms = [] }) {
   const config = {
     model,
     audio_format: 'pcm_s16le',
@@ -40,8 +41,8 @@ export function sonioxConfig({ model = SONIOX_MODEL, target, source = '', endpoi
     enable_endpoint_detection: true,
     max_endpoint_delay_ms: Math.min(3000, Math.max(500, Math.round(endpointDelayMs))),
     enable_language_identification: true,
-    translation: { type: 'one_way', target_language: sonioxLanguage(target) },
   };
+  if (target) config.translation = { type: 'one_way', target_language: sonioxLanguage(target) };
   const hints = [...new Set([sonioxLanguage(source), sonioxLanguage(target)].filter((x) => x && x !== 'auto'))];
   if (hints.length) config.language_hints = hints;
   if (terms.length) config.context = { terms: terms.slice(0, 100) };
@@ -195,7 +196,9 @@ export class SonioxSession {
     this.closeSegment();
     this.closing = this.segment;
     this.segment = null;
-    this.armSettle();
+    // Listening only: no translation to wait for.
+    if (!this.config?.translation) this.closeSegment();
+    else this.armSettle();
   }
 
   armSettle() {

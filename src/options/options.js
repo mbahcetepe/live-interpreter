@@ -177,8 +177,10 @@ function renderProvider() {
   $('translationProvider').value = provider;
   for (const box of document.querySelectorAll('[data-provider]')) box.hidden = box.dataset.provider !== provider;
   result('translationResult', '');
+  // Soniox has its own Test next to its key.
+  $('testTranslation').hidden = provider === 'soniox';
   if (provider === 'free') renderFree();
-  else loadModels(provider, { quiet: true });
+  else if (provider !== 'soniox') loadModels(provider, { quiet: true });
 }
 
 // The model lists: what each server offers, filled into its select. The chosen model
@@ -332,9 +334,6 @@ async function prepareFree() {
 
 function renderSoniox() {
   const on = isSoniox(settings);
-  $('useSoniox').checked = on;
-  $('sonioxBox').hidden = !on;
-  $('sonioxTranslationNote').hidden = !on;
   $('speechServiceLabel').textContent = on ? t('opt.soniox.voiceService') : t('opt.tr.provider');
   renderSonioxRoles();
 }
@@ -389,11 +388,14 @@ async function testSoniox() {
 // hidden, and a line says which service does what.
 function renderSonioxRoles() {
   const on = isSoniox(settings);
-  $('speechSonioxOption').hidden = !on;
   for (const el of document.querySelectorAll('[data-stt]')) el.hidden = on;
   const service = ($('speechProvider').selectedOptions[0]?.textContent || '').replace(/\s*\(.*\)\s*$/, '');
   $('sonioxActive').textContent = !on ? '' : isSonioxSpeech(settings) ? t('opt.soniox.activeAll') : t('opt.soniox.active', { service });
   $('sonioxActive').hidden = !on;
+  // The key is asked for once: under Translation when Soniox translates.
+  $('sonioxSpeechKeyField').hidden = on;
+  $('sonioxSpeechKey').value = settings.sonioxKey || '';
+  $('sonioxVoiceHint').textContent = on ? t('opt.sonioxVoice.hint') : `${t('opt.sonioxVoice.listens')} ${t('opt.sonioxVoice.hint')}`;
 }
 
 function renderSpeech() {
@@ -884,6 +886,8 @@ async function init() {
       // A Claude model left over from before the providers existed.
       if (translationProvider(settings) === 'claude' && claudeModelOf(settings) !== settings.claudeModel) save({ claudeModel: claudeModelOf(settings) });
       renderProvider();
+      // Soniox translating changes what the speech service does.
+      renderSoniox();
     },
   });
   bindSelect('claudeModel');
@@ -915,16 +919,12 @@ async function init() {
   // Speech.
   bindSelect('speechProvider', { onChange: renderSpeech });
   bindText('sonioxKey', () => result('sonioxResult', ''));
+  $('sonioxSpeechKey').addEventListener('input', () => {
+    save({ sonioxKey: $('sonioxSpeechKey').value.trim() });
+    $('sonioxKey').value = $('sonioxSpeechKey').value.trim();
+  });
   bindCheck('pronounceForeign');
   bindText('pronunciations');
-  $('useSoniox').addEventListener('change', async () => {
-    const on = $('useSoniox').checked;
-    // Soniox's voices go with Soniox listening; without it the voice falls back to ElevenLabs.
-    await save(on || settings.speechProvider !== 'soniox' ? { useSoniox: on } : { useSoniox: on, speechProvider: 'elevenlabs' });
-    renderSoniox();
-    renderSpeech();
-    refreshStatus();
-  });
   $('testSoniox').addEventListener('click', async () => {
     $('testSoniox').disabled = true;
     await testSoniox();

@@ -118,13 +118,13 @@ test('the voice list comes from Soniox, or the built-in one', async () => {
   assert.ok(SONIOX_VOICES.some((v) => v.id === 'Emma' && v.gender === 'female'));
 });
 
-test('Soniox speaks only while Soniox hears and translates; no ElevenLabs key needed then', () => {
-  const on = { ...DEFAULT_SETTINGS, useSoniox: true, sonioxKey: 'sk', speechProvider: 'soniox' };
+test('Soniox as the speech service needs no ElevenLabs key', () => {
+  const on = { ...DEFAULT_SETTINGS, sonioxKey: 'sk', speechProvider: 'soniox', translationProvider: 'soniox' };
   assert.equal(isSonioxSpeech(on), true);
   assert.deepEqual(speechAccount(on), { kind: 'soniox', local: false, key: 'sk', base: '' });
   assert.deepEqual(missingKeys(on), []);
-  const off = { ...on, useSoniox: false };
-  assert.equal(isSonioxSpeech(off), false);
-  assert.equal(speechAccount(off).kind, undefined);
-  assert.ok(missingKeys(off).includes('ElevenLabs'));
+  const elevenlabs = { ...on, speechProvider: 'elevenlabs' };
+  assert.equal(isSonioxSpeech(elevenlabs), false);
+  assert.equal(speechAccount(elevenlabs).kind, undefined);
+  assert.ok(missingKeys(elevenlabs).includes('ElevenLabs'));
 });
