@@ -488,3 +488,71 @@ details > summary {
   display: none;
 }
 
+
+/* Recommended setups and tips. */
+.help summary {
+  cursor: pointer;
+  list-style: revert;
+}
+
+.help summary h2 {
+  display: inline;
+  margin: 0;
+}
+
+.help details[open] summary {
+  margin-bottom: 8px;
+}
+
+.presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.preset {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.preset.in-use {
+  border-color: var(--accent);
+}
+
+.preset h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.preset p {
+  margin: 0;
+  flex: 1;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.preset button,
+.preset .pill {
+  align-self: flex-start;
+}
+
+.help details > h3 {
+  font-size: 14px;
+  margin: 14px 0 6px;
+}
+
+.tips {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text);
+}
+
+.tips li + li {
+  margin-top: 4px;
+}

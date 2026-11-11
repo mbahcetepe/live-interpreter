@@ -52,6 +52,8 @@ Ayarlar sayfası kendiliğinden, İngilizce açılır; sağ üstteki menüden T�
 
 Ayarlar sayfası dört bölümden oluşur: **Diller**, **Çeviri**, **Ses tanıma ve sesler**, **Mikrofon ve ses**. Her bölüm yalnızca orada seçilen servisin alanlarını gösterir ve kendi **Test et** düğmesi vardır.
 
+**Ne seçeceğinden emin değil misin?** Ayarlar sayfasının en üstündeki **Önerilen kurulumlar ve ipuçları** dört kurulum sunar (en hızlı, tek anahtar, en doğal sesler, hiçbir şey ağından çıkmasın) ve her birinin neye ihtiyaç duyduğunu yazar; **Bunu kullan** servislerini seçer ve eksik kalanı söyler. Kurulum henüz başlayamıyorsa kendiliğinden açılır.
+
 ## 3. Diller
 
 **Benim dilim**'i (ilk açılışta tarayıcının dili gelir) ve **Karşı tarafın dili (görüşmeler)**'ni seç. **Video ve radyo sekmeleri** sen bir dil seçmedikçe **Otomatik algıla**dır.

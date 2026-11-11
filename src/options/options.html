@@ -29,6 +29,24 @@
         <button id="showKeys" type="button" class="link" data-i18n="opt.keys.show">Show keys</button>
       </section>
 
+      <section class="card help">
+        <details id="help">
+          <summary><h2 data-i18n="help.title">Recommended setups and tips</h2></summary>
+          <p class="hint" data-i18n="help.intro">Four setups that work well, each with what it needs. Apply one to choose its services; your keys and voices stay as they are, and anything can be changed below afterwards.</p>
+          <div id="helpPresets" class="presets"></div>
+          <p id="helpResult" class="result" role="status"></p>
+          <h3 data-i18n="help.tips">Tips</h3>
+          <ul class="tips">
+              <li data-i18n="help.tip.headset">Wear headphones. Without them the translation you hear leaks into your microphone and goes back to the call; if you have none, turn on Speaker mode.</li>
+              <li data-i18n="help.tip.silence">Choose 0.5 s of silence and speak in short sentences: a sentence is translated once you pause.</li>
+              <li data-i18n="help.tip.media">On a video or radio tab, choose the language it speaks if you know it; it saves the first sentences from being heard in the wrong language.</li>
+              <li data-i18n="help.tip.backup">With an Anthropic key set, Claude Haiku translates the sentences Ollama, OpenAI, OpenRouter or Gemini could not.</li>
+              <li data-i18n="help.tip.delay">The panel shows where the time goes (listening, translation, voice): change the service of the slowest step.</li>
+              <li data-i18n="help.tip.cost">The panel's cost estimate counts ElevenLabs and Claude only; the other services bill in their own consoles.</li>
+          </ul>
+        </details>
+      </section>
+
       <section class="card">
         <h2 data-i18n="opt.lang.title">Languages</h2>
         <div class="grid3">

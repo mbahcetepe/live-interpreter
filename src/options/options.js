@@ -18,7 +18,7 @@ import {
   isEnglishOnlyWhisper,
 } from '../shared/settings.js';
 import { LANGUAGES, AUTO_LANGUAGE } from '../shared/languages.js';
-import { setLanguage, t, applyI18n, languageLabel, UI_LANGUAGES } from '../shared/i18n.js';
+import { setLanguage, t, applyI18n, languageLabel, UI_LANGUAGES, joinNames } from '../shared/i18n.js';
 import { listVoices, createVoiceClone, deleteVoice, speechStream, describeElevenLabsError, speechAccount, fetchScribeToken, realtimeUrl, speechHealth, speechModels, SPEECH_PROTOCOL } from '../shared/elevenlabs.js';
 import { Translator, describeClaudeError } from '../offscreen/translator.js';
 import { OllamaTranslator, listOllamaModels } from '../offscreen/ollama-translator.js';
@@ -728,6 +728,65 @@ async function testGeminiSpeech() {
   result('speechResult', t('opt.geminiVoice.ok', { seconds: (samples / 24000).toFixed(1), ms: Math.round(first) }), 'ok');
 }
 
+// ---- recommended setups --------------------------------------------------------------------
+
+// Each one chooses services only: keys, voices and the rest stay as they are.
+const PRESETS = [
+  { id: 'fast', patch: { translationProvider: 'soniox', speechProvider: 'soniox' } },
+  { id: 'gemini', patch: { translationProvider: 'gemini', geminiModel: 'gemini-3.5-flash-lite', speechProvider: 'gemini' } },
+  { id: 'quality', patch: { translationProvider: 'claude', claudeModel: 'claude-haiku-5-5', speechProvider: 'elevenlabs' } },
+  { id: 'private', patch: { translationProvider: 'ollama', speechProvider: 'local' } },
+];
+
+const presetInUse = (preset) => Object.entries(preset.patch).every(([name, value]) => (name === 'translationProvider' ? translationProvider(settings) : settings[name]) === value);
+
+// What the current setup still needs, in words.
+function setupNeeds() {
+  const servers = { ollama: t('server.ollama'), speech: t('opt.speech.local'), model: t('opt.tr.model') };
+  const names = [...missingKeys(settings), ...missingServers(settings).map((m) => servers[m] || m)];
+  return names.length ? t('help.needs', { names: joinNames(names) }) : t('help.ready');
+}
+
+function renderHelp() {
+  const box = $('helpPresets');
+  box.textContent = '';
+  for (const preset of PRESETS) {
+    const card = document.createElement('div');
+    const used = presetInUse(preset);
+    card.className = used ? 'preset in-use' : 'preset';
+    const title = document.createElement('h3');
+    title.textContent = t(`help.${preset.id}.title`);
+    const text = document.createElement('p');
+    text.textContent = t(`help.${preset.id}.text`);
+    card.append(title, text);
+    if (used) {
+      const pill = document.createElement('span');
+      pill.className = 'pill ok';
+      pill.textContent = t('help.inUse');
+      card.append(pill);
+    } else {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = t('help.apply');
+      button.addEventListener('click', () => applyPreset(preset));
+      card.append(button);
+    }
+    box.append(card);
+  }
+}
+
+function applyPreset(preset) {
+  save(preset.patch);
+  $('translationProvider').value = translationProvider(settings);
+  if (preset.patch.claudeModel) $('claudeModel').value = settings.claudeModel;
+  renderProvider();
+  renderSoniox();
+  renderSpeech();
+  renderHelp();
+  refreshStatus();
+  result('helpResult', `${t('help.applied', { name: t(`help.${preset.id}.title`) })} ${setupNeeds()}`, missingKeys(settings).length || missingServers(settings).length ? 'bad' : 'ok');
+}
+
 // ---- my own voice (ElevenLabs clone) ---------------------------------------------------
 
 async function createMyVoice(files) {
@@ -886,6 +945,7 @@ async function init() {
     settings = await saveSettings({ uiLanguage: $('uiLanguage').value });
     renderTexts();
     renderProvider();
+    renderHelp();
   });
   $('showKeys').addEventListener('click', () => {
     const show = document.querySelector('.key').type === 'password';
@@ -912,6 +972,7 @@ async function init() {
       // Soniox translating changes what the speech service does.
       renderSoniox();
       if (isGeminiSpeech(settings)) renderGeminiSpeech();
+      renderHelp();
     },
   });
   bindSelect('claudeModel');
@@ -939,7 +1000,12 @@ async function init() {
   });
 
   // Speech.
-  bindSelect('speechProvider', { onChange: renderSpeech });
+  bindSelect('speechProvider', {
+    onChange: () => {
+      renderSpeech();
+      renderHelp();
+    },
+  });
   bindText('sonioxKey', () => result('sonioxResult', ''));
   // A pasted Gemini key fills the model list (keys are longer than 30 characters).
   bindText('geminiKey', () => {
@@ -1019,6 +1085,9 @@ async function init() {
   renderProvider();
   renderSoniox();
   renderSpeech();
+  renderHelp();
+  // A setup that cannot start yet opens the recommendations.
+  if (missingKeys(settings).length || missingServers(settings).length) $('help').open = true;
   refreshStatus();
 }
 

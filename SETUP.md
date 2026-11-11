@@ -52,6 +52,8 @@ The settings page opens by itself, in English; the menu at the top right switche
 
 The settings page has four parts: **Languages**, **Translation**, **Speech recognition and voices**, and **Microphone and sound**. Each part shows only the fields of the service chosen in it, and has its own **Test** button.
 
+**Not sure what to choose?** **Recommended setups and tips**, at the top of the settings page, offers four setups (fastest, one key, most natural voices, nothing leaves your network) with what each needs; **Use this** chooses its services and says what is still missing. It opens by itself while the setup cannot start yet.
+
 ## 3. Languages
 
 Choose **My language** (the first start takes your browser's) and **Their language (calls)**. **Video and radio tabs** is **Detect automatically** unless you set a language there.
