@@ -3,7 +3,7 @@
     "message": "Live Interpreter"
   },
   "extDescription": {
-    "message": "Traducción de voz en vivo en ambos sentidos para Teams (web) y Google Meet, y subtítulos o voz para pestañas de vídeo y radio."
+    "message": "Traducción de voz en vivo en ambos sentidos para Teams, Google Meet y Zoom en la web, y subtítulos o voz para pestañas de vídeo."
   },
   "cmdToggle": {
     "message": "Iniciar o detener la traducción"

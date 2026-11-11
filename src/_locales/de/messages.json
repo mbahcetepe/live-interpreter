@@ -3,7 +3,7 @@
     "message": "Live Interpreter"
   },
   "extDescription": {
-    "message": "Live-Sprachübersetzung in beide Richtungen für Teams (Web) und Google Meet, dazu Untertitel oder Voice-over für Video-Tabs."
+    "message": "Live-Sprachübersetzung in beide Richtungen für Teams, Google Meet und Zoom im Web, dazu Untertitel oder Voice-over für Video-Tabs."
   },
   "cmdToggle": {
     "message": "Übersetzung starten oder beenden"

@@ -118,7 +118,7 @@ Kullandığın bilgisayar kendi sunucularınla aynı ağda (örneğin Tailscale'
 
 ---
 
-## 7. Teams görüşmesinde
+## 7. Teams ya da Meet görüşmesinde
 
 1. Toplantı bağlantısını aç. Teams uygulamayı açmayı önerirse **Bu tarayıcıda devam et** seç.
 2. Kulaklığı tak, toplantıya katıl.

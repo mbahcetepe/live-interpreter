@@ -1,7 +1,7 @@
 {
   "extName": { "message": "Live Interpreter" },
   "extDescription": {
-    "message": "Two-way live voice translation for Teams (web) and Google Meet calls, plus subtitles or voice-over for any video or radio tab."
+    "message": "Two-way live voice translation for Teams, Google Meet and Zoom calls on the web, plus subtitles or voice-over for video tabs."
   },
   "cmdToggle": { "message": "Start or stop translation" }
 }

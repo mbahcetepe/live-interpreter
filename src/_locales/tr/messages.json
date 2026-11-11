@@ -1,7 +1,7 @@
 {
   "extName": { "message": "Canlı Tercüman" },
   "extDescription": {
-    "message": "Teams (web) ve Google Meet görüşmelerinde iki yönlü canlı sesli çeviri; video ve radyo sekmelerine altyazı ya da sesli çeviri."
+    "message": "Web'de Teams, Google Meet ve Zoom görüşmelerinde iki yönlü canlı sesli çeviri; video sekmelerine altyazı ya da sesli çeviri."
   },
   "cmdToggle": { "message": "Çeviriyi başlat ya da durdur" }
 }

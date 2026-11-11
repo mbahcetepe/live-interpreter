@@ -118,7 +118,7 @@ The computer you use must be on the same network as your own servers (Tailscale,
 
 ---
 
-## 7. In a Teams call
+## 7. In a Teams or Meet call
 
 1. Open the meeting link. If Teams offers to open the app, choose **Continue on this browser**.
 2. Put on headphones and join.
