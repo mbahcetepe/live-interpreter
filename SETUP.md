@@ -92,6 +92,8 @@ Choose the **Service**.
 2. Under **Voice**, the same for speech, then **My voice** and **Their voice**.
 3. Press **Test**: a sentence is spoken and heard back. Recognition comes once a sentence has ended (no live drafts).
 
+**Google Gemini:** choose **Google Gemini** here; the key is the one under **Translation › Google Gemini** (if Gemini does not translate, paste it here). Choose a voice for each side and press **Test**: it speaks a sentence and checks that speech recognition may connect.
+
 **My own speech server** (free, the audio stays on your network):
 
 1. On an Ubuntu computer with an NVIDIA GPU:

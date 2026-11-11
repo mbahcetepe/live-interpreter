@@ -421,8 +421,9 @@ audio {
   margin: 4px 0 8px;
 }
 
-.box[hidden] {
-  display: none;
+/* hidden wins over display: flex and grid (.field, .grid2 …). */
+[hidden] {
+  display: none !important;
 }
 
 .grid3 {

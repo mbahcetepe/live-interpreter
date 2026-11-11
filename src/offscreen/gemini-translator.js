@@ -140,9 +140,11 @@ export class GeminiTranslator {
         const err = await geminiError(res, this.model);
         if (err.kind !== 'http' || err.status !== 400 || step >= THINKING_STEPS.length - 1) throw err;
         this.log('info', `Gemini: ${this.model} refused ${JSON.stringify(THINKING_STEPS[step])} (${err.detail}), trying the next thinking setting`);
-        step += 1;
+        // Remembered at once: a sentence asked for meanwhile skips what was refused.
+        step = Math.max(step + 1, THINKING_STEP.get(this.model) ?? 0);
+        THINKING_STEP.set(this.model, step);
       }
-      THINKING_STEP.set(this.model, step);
+      THINKING_STEP.set(this.model, Math.max(step, THINKING_STEP.get(this.model) ?? 0));
       yield* this.read(res, limit);
     } finally {
       limit.done();

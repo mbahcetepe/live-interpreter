@@ -26,7 +26,7 @@ Live Interpreter (Canlı Tercüman in Turkish) is a browser extension that trans
 The extension sends audio or text only to the services selected in its settings, and only while a translation runs or when you press a Test button. Each one handles the data under its own privacy policy:
 
 - Speech recognition and translation in one stream: Soniox.
-- Speech: ElevenLabs, OpenAI, Groq, or a speech server you run yourself (for example the one in this project, Speaches, LocalAI or Kokoro).
+- Speech: ElevenLabs, Google (Gemini), Soniox, OpenAI, Groq, or a speech server you run yourself (for example the one in this project, Speaches, LocalAI or Kokoro).
 - Translation: Anthropic (Claude), OpenAI or a server with the same API, OpenRouter, Google (Gemini), an Ollama server you run yourself, or Soniox.
 
 With your own speech server and your own Ollama server, the audio and text never leave the computers you control.

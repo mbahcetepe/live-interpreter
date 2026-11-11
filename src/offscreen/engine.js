@@ -25,6 +25,9 @@ import { cleanModes } from '../background/message-policy.js';
 import { ScribeRealtime } from './stt.js';
 import { SonioxSession, sonioxConfig } from './soniox.js';
 import { sonioxSynthesize, closeSonioxTts, SONIOX_DEFAULT_VOICES } from './soniox-tts.js';
+import { geminiSynthesize, GEMINI_DEFAULT_VOICES } from './gemini-tts.js';
+import { GeminiListener } from './gemini-stt.js';
+import { OpenAIError } from './openai-translator.js';
 import { OpenAITranscriber, openaiSynthesize, listAudioModels } from './openai-speech.js';
 import { Translator, describeClaudeError, claudeRestMs } from './translator.js';
 import { FallbackTranslator } from './fallback-translator.js';
@@ -200,7 +203,7 @@ class Session {
     // ElevenLabs, or the person's own local speech server (speech-server/).
     this.speech = speechAccount(settings);
     // The local server costs nothing; OpenAI's and Groq's prices are not in the estimate.
-    this.usage = new Usage({ freeSpeech: this.speech.local || this.speech.kind === 'openai' || this.speech.kind === 'soniox' });
+    this.usage = new Usage({ freeSpeech: this.speech.local || ['openai', 'soniox', 'gemini'].includes(this.speech.kind) });
     this.latencies = [];
     // The delay in its parts, for the panel: waiting for the speech to end, the first
     // translated words, the first sound of the voice (last few segments each).
@@ -481,6 +484,11 @@ class Session {
     const s = this.settings;
     if (this.speech.local) return this.resolveLocalVoices();
     if (this.speech.kind === 'openai') return this.resolveOpenAIVoices();
+    if (this.speech.kind === 'gemini') {
+      this.myVoiceId = s.geminiMyVoice || GEMINI_DEFAULT_VOICES.mine;
+      this.theirVoiceId = s.geminiTheirVoice || GEMINI_DEFAULT_VOICES.theirs;
+      return;
+    }
     if (this.speech.kind === 'soniox') {
       this.myVoiceId = s.sonioxMyVoice || SONIOX_DEFAULT_VOICES.mine;
       this.theirVoiceId = s.sonioxTheirVoice || SONIOX_DEFAULT_VOICES.theirs;
@@ -556,6 +564,7 @@ class Session {
   createStt(dir, languageCode, keyterms) {
     if (isSoniox(this.settings)) return this.createSoniox(dir, keyterms);
     if (this.speech.kind === 'soniox') return this.createSonioxListener(dir, languageCode, keyterms);
+    if (this.speech.kind === 'gemini') return this.createGeminiListener(dir, languageCode);
     if (this.speech.kind === 'openai') {
       return new OpenAITranscriber({
         name: dir === 'in' ? 'stt-in' : 'stt-out',
@@ -650,6 +659,25 @@ class Session {
         this.report();
       },
       onFatal: (err) => this.fail(new UserError(describeSonioxError(err), 'stt')),
+      log,
+    });
+  }
+
+  // Gemini as the speech service: the Live API hears one side.
+  createGeminiListener(dir, languageCode) {
+    return new GeminiListener({
+      name: `gemini-${dir}`,
+      key: this.speech.key,
+      languageCode: languageCode === AUTO_LANGUAGE ? '' : languageCode,
+      silenceMs: (this.settings.vadSilenceSecs || 0.7) * 1000,
+      onPartial: (text) => this.onPartial(dir, text),
+      onCommitted: (text) => this.onCommitted(dir, text),
+      onStatus: (status) => {
+        this.stt[dir] = status;
+        this.debugSink?.event({ kind: 'stt', dir, status });
+        this.report();
+      },
+      onFatal: (err) => this.fail(new UserError(t('stt.stopped', { message: err.message }), 'stt')),
       log,
     });
   }
@@ -755,6 +783,8 @@ class Session {
       return openaiSynthesize({ ...this.speech.tts, voice: voiceId, text, speed, instructions, signal: item.signal });
     }
     if (this.speech.kind === 'soniox') return sonioxSynthesize({ key: this.speech.key, voice: voiceId, language, text, speed, signal: item.signal });
+    // Gemini has no speed setting; it finds the language in the text.
+    if (this.speech.kind === 'gemini') return geminiSynthesize({ key: this.speech.key, model: this.speech.ttsModel, voice: voiceId, text, signal: item.signal });
     return synthesize({
       apiKey: this.speech,
       voiceId,
@@ -818,7 +848,7 @@ class Session {
   // The translation stays readable; the line only says it could not be spoken.
   onSpeechError(dir, item, err) {
     log('error', `speech ${dir}`, err);
-    const error = this.speech.kind === 'soniox' && err?.name === 'SonioxError' ? describeSonioxError(err) : describeElevenLabsError(err, this.speech);
+    const error = this.speech.kind === 'soniox' && err?.name === 'SonioxError' ? describeSonioxError(err) : err instanceof OpenAIError ? err.message : describeElevenLabsError(err, this.speech);
     this.caption(dir, { id: item.segment.id, phase: 'speech-error', error: t('speech.failed', { error }) });
   }
 
@@ -1042,8 +1072,8 @@ class Session {
     // A new ElevenLabs key is used from the next connection on (speech takes it right away).
     const speechBefore = this.speech;
     this.speech = speechAccount(next);
-    this.usage.freeSpeech = this.speech.local || this.speech.kind === 'openai' || this.speech.kind === 'soniox';
-    for (const stt of [this.sttIn, this.sttOut]) if (stt && !(stt instanceof SonioxSession)) stt.apiKey = this.speech;
+    this.usage.freeSpeech = this.speech.local || ['openai', 'soniox', 'gemini'].includes(this.speech.kind);
+    for (const stt of [this.sttIn, this.sttOut]) if (stt && !(stt instanceof SonioxSession) && !(stt instanceof GeminiListener)) stt.apiKey = this.speech;
     const sonioxChanged = isSoniox(next) !== isSoniox(prev) || (isSonioxListening(next) && next.sonioxKey !== prev.sonioxKey);
     const pairChanged = next.myLanguage !== prev.myLanguage || this.sourceLanguage(next) !== this.sourceLanguage(prev) || next.theirLanguage !== prev.theirLanguage;
     if (pairChanged && this.incoming) {
@@ -1066,6 +1096,9 @@ class Session {
     if (this.speech.kind === 'soniox') {
       this.myVoiceId = next.sonioxMyVoice || SONIOX_DEFAULT_VOICES.mine;
       if (!this.theirCloneId) this.theirVoiceId = next.sonioxTheirVoice || SONIOX_DEFAULT_VOICES.theirs;
+    } else if (this.speech.kind === 'gemini') {
+      this.myVoiceId = next.geminiMyVoice || GEMINI_DEFAULT_VOICES.mine;
+      if (!this.theirCloneId) this.theirVoiceId = next.geminiTheirVoice || GEMINI_DEFAULT_VOICES.theirs;
     } else if (this.speech.kind === 'openai') {
       this.myVoiceId = next.oaiMyVoice || 'alloy';
       if (!this.theirCloneId) this.theirVoiceId = next.oaiTheirVoice || 'nova';
@@ -1156,9 +1189,9 @@ class Session {
   servicesLabel() {
     const s = this.settings;
     const plain = (label) => label.replace(/\s*\(.*\)\s*$/, '');
-    const voice = this.speech.kind === 'soniox' ? 'Soniox' : this.speech.local ? t('opt.speech.local') : this.speech.kind === 'openai' ? (s.oaiTtsServer === 'custom' ? t('opt.oaiSpeech.custom') : 'OpenAI') : 'ElevenLabs';
+    const voice = this.speech.kind === 'gemini' ? 'Gemini' : this.speech.kind === 'soniox' ? 'Soniox' : this.speech.local ? t('opt.speech.local') : this.speech.kind === 'openai' ? (s.oaiTtsServer === 'custom' ? t('opt.oaiSpeech.custom') : 'OpenAI') : 'ElevenLabs';
     if (isSoniox(s)) return t('overlay.servicesSoniox', { voice });
-    const hear = this.speech.kind === 'soniox' ? 'Soniox' : this.speech.local ? t('opt.speech.local') : this.speech.kind === 'openai' ? (s.oaiSttServer === 'groq' ? 'Groq' : s.oaiSttServer === 'custom' ? t('opt.oaiSpeech.custom') : 'OpenAI') : 'ElevenLabs';
+    const hear = this.speech.kind === 'gemini' ? 'Gemini' : this.speech.kind === 'soniox' ? 'Soniox' : this.speech.local ? t('opt.speech.local') : this.speech.kind === 'openai' ? (s.oaiSttServer === 'groq' ? 'Groq' : s.oaiSttServer === 'custom' ? t('opt.oaiSpeech.custom') : 'OpenAI') : 'ElevenLabs';
     const provider = PROVIDERS.find((p) => p.id === translationProvider(s));
     return t('overlay.services', { hear, translate: provider ? plain(t(provider.labelKey)) : '', voice });
   }

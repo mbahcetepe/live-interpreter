@@ -64,6 +64,8 @@ export const isSoniox = (settings) => translationProvider(settings) === 'soniox'
 // Soniox is the speech service: it listens (without translating, unless it translates
 // too) and speaks.
 export const isSonioxSpeech = (settings) => settings.speechProvider === 'soniox';
+// Gemini hears (Live API) and speaks (TTS) with the key under Translation › Gemini.
+export const isGeminiSpeech = (settings) => settings.speechProvider === 'gemini';
 
 // Soniox listens: it translates, or it is the speech service.
 export const isSonioxListening = (settings) => isSoniox(settings) || isSonioxSpeech(settings);
@@ -134,6 +136,10 @@ export const DEFAULT_SETTINGS = {
   sonioxKey: '',
   sonioxMyVoice: '',
   sonioxTheirVoice: '',
+  // Gemini as the speech service: it hears (Live API) and speaks (TTS) with geminiKey.
+  geminiMyVoice: '',
+  geminiTheirVoice: '',
+  geminiTtsModel: 'gemini-3.8-flash-lite-tts',
   localSpeechUrl: '',
   localSpeechKey: '',
   // On the local speech server: the recognition model ('' = the server's own) and the
@@ -227,7 +233,9 @@ export function missingKeys(settings) {
   const provider = translationProvider(settings);
   const soniox = isSoniox(settings);
   if (isSonioxListening(settings) && !String(settings.sonioxKey || '').trim()) missing.push('Soniox');
-  if (!settings.elevenLabsKey && !isLocalSpeech(settings) && !isOpenAISpeech(settings) && !isSonioxSpeech(settings)) missing.push('ElevenLabs');
+  if (!settings.elevenLabsKey && !isLocalSpeech(settings) && !isOpenAISpeech(settings) && !isSonioxSpeech(settings) && !isGeminiSpeech(settings)) missing.push('ElevenLabs');
+  // Gemini's key serves its speech and its translation alike, and is named once.
+  if ((isGeminiSpeech(settings) || (provider === 'gemini' && !soniox)) && !String(settings.geminiKey || '').trim()) missing.push('Gemini');
   if (isOpenAISpeech(settings)) {
     const stt = settings.oaiSttServer || 'openai';
     // With Soniox listening, only the voice is needed from here.
@@ -239,7 +247,6 @@ export function missingKeys(settings) {
   if (soniox) return missing;
   if (provider === 'claude' && !settings.anthropicKey) missing.push('Anthropic');
   if (provider === 'openrouter' && !String(settings.openrouterKey || '').trim()) missing.push('OpenRouter');
-  if (provider === 'gemini' && !String(settings.geminiKey || '').trim()) missing.push('Gemini');
   // OpenAI itself needs a key; a server of one's own with the same API may not.
   if (provider === 'openai' && !String(settings.openaiUrl || '').trim() && !String(settings.openaiKey || '').trim()) missing.push('OpenAI');
   return missing;

@@ -92,6 +92,8 @@ Ayarlar sayfası dört bölümden oluşur: **Diller**, **Çeviri**, **Ses tanım
 2. **Seslendirme** kısmında aynısını yap, sonra **Benim sesim** ve **Karşı tarafın sesi**'ni seç.
 3. **Test et** düğmesine bas: bir cümle seslendirilip geri duyulur. Metin cümle bitince gelir (canlı taslak yok).
 
+**Google Gemini:** burada **Google Gemini**'yi seç; anahtar **Çeviri › Google Gemini** altındakiyle aynıdır (Gemini çevirmiyorsa buraya yapıştır). Her taraf için bir ses seç ve **Test et**'e bas: bir cümle seslendirir ve ses tanımanın bağlanabildiğini denetler.
+
 **Kendi ses sunucum** (ücretsiz, ses ağının dışına çıkmaz):
 
 1. NVIDIA ekran kartlı bir Ubuntu bilgisayarda:

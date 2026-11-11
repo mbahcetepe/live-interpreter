@@ -188,6 +188,7 @@
           <select id="speechProvider">
             <option value="elevenlabs">ElevenLabs</option>
             <option value="soniox">Soniox</option>
+            <option value="gemini">Google Gemini</option>
             <option value="openai" data-i18n="opt.speech.openai">OpenAI-compatible (OpenAI, Groq, your own server)</option>
             <option value="local" data-i18n="opt.speech.local">My own speech server</option>
           </select>
@@ -288,6 +289,34 @@
             </div>
           </div>
           <p class="hint" id="sonioxVoiceHint"></p>
+        </div>
+
+        <div class="box" data-speech="gemini">
+          <label class="field" id="geminiSpeechKeyField">
+            <span data-i18n="opt.geminiVoice.key">Gemini API key</span>
+            <input type="password" id="geminiSpeechKey" class="key" autocomplete="off" spellcheck="false" />
+          </label>
+          <div class="grid2">
+            <div class="picker">
+              <label class="field">
+                <span id="geminiMyVoiceLabel" data-i18n="opt.voice.mine">My voice</span>
+                <select id="geminiMyVoice"></select>
+              </label>
+              <button id="previewGeminiMine" type="button" class="refresh" data-i18n-title="opt.voice.preview">&#9654;</button>
+            </div>
+            <div class="picker">
+              <label class="field">
+                <span id="geminiTheirVoiceLabel" data-i18n="opt.voice.theirs">Their voice</span>
+                <select id="geminiTheirVoice"></select>
+              </label>
+              <button id="previewGeminiTheirs" type="button" class="refresh" data-i18n-title="opt.voice.preview">&#9654;</button>
+            </div>
+          </div>
+          <label class="field">
+            <span data-i18n="opt.geminiVoice.model">Speech model</span>
+            <select id="geminiTtsModel"></select>
+          </label>
+          <p class="hint" data-i18n="opt.geminiVoice.hint">Gemini hears with the Live API (gemini-3.5-transcribe-live) and speaks with its TTS models; every voice speaks every language. There is no speed setting. The key is the one under Translation › Google Gemini.</p>
         </div>
 
         <div class="box" data-speech="elevenlabs">

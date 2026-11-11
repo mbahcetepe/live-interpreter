@@ -18,7 +18,7 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
   <tr><td><b>Browsers</b></td><td>Chrome, Edge, Brave and other Chromium browsers</td></tr>
   <tr><td><b>Languages</b></td><td>20, any two of them; the first start follows your browser's language; on video tabs the spoken language can be detected automatically</td></tr>
   <tr><td><b>Translation</b></td><td>Claude, OpenAI or a compatible server, OpenRouter, Google Gemini, your own Ollama, or Soniox; each one's models listed in the settings</td></tr>
-  <tr><td><b>Speech</b></td><td>ElevenLabs, OpenAI-compatible services (OpenAI, Groq Whisper, LocalAI, Speaches, Kokoro), or your own speech server (faster-whisper and Piper)</td></tr>
+  <tr><td><b>Speech</b></td><td>ElevenLabs, Google Gemini, Soniox, OpenAI-compatible services (OpenAI, Groq Whisper, LocalAI, Speaches, Kokoro), or your own speech server (faster-whisper and Piper)</td></tr>
   <tr><td><b>Delay</b></td><td>About 1.5–3 s after a sentence ends</td></tr>
   <tr><td><b>Interface</b></td><td>English (default), Turkish, German, Spanish, Chinese</td></tr>
 </table>
@@ -89,6 +89,8 @@ A voice reads everything with its own language's rules, so an English term in Tu
 ### Google Gemini for translation
 
 Choose **Google Gemini** as the translation service and paste a key from [Google AI Studio](https://aistudio.google.com/apikey); the list of models the key can use fills itself (models for speech, images, music and embeddings are left out). Most Gemini models think before they answer, which a live translation cannot wait for: the extension turns thinking down to the lowest level each model accepts, trying a budget of 0, then the MINIMAL and LOW levels, then a budget of 128 tokens, and remembers what the model took. Measured on 11 November 2026, first text after the request: `gemini-3.5-flash-lite` about 0.56 s (the default), `gemini-3.1-flash-lite` 0.56 s, `gemini-3.5-flash` 0.74 s, `gemini-3.8-flash` 1.4–2 s; `gemini-3.8-flash` with its own thinking took 5.6 s. Claude Haiku stands behind Gemini when a Claude key is set. Gemini's price is not in the panel's estimate.
+
+Gemini can also hear and speak: choose **Google Gemini** under **Speech recognition and voices** too. It hears each side with the Live API (`gemini-3.5-transcribe-live`): live drafts, then the final text once the speaker pauses for the silence set in the settings. The key never goes into the stream's address; a single-use token is fetched for each stream. It speaks with the TTS models (`gemini-3.8-flash-lite-tts` by default, 30 voices, each speaking every language, no speed setting). Measured: the first sound 0.45–0.73 s after it is asked for, the final text 0.64–0.7 s after the speech ends. A Live stream lasts about 10 minutes and is renewed between sentences. Gemini does not tell speakers apart.
 
 ### Ollama for translation
 

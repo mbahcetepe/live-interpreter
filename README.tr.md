@@ -20,7 +20,7 @@ Görüşmede iki yönlü: karşı taraf İspanyolca konuşur, sen Türkçe duyar
   <tr><td><b>Tarayıcılar</b></td><td>Chrome, Edge, Brave ve diğer Chromium tarayıcıları</td></tr>
   <tr><td><b>Diller</b></td><td>20 dil, herhangi ikisi; ilk açılışta tarayıcının dili seçilir; video sekmelerinde konuşulan dil kendiliğinden algılanabilir</td></tr>
   <tr><td><b>Çeviri</b></td><td>Claude, OpenAI ya da uyumlu bir sunucu, OpenRouter, Google Gemini, kendi Ollama sunucun ya da Soniox; her birinin modelleri ayarlarda listelenir</td></tr>
-  <tr><td><b>Ses</b></td><td>ElevenLabs, OpenAI uyumlu servisler (OpenAI, Groq Whisper, LocalAI, Speaches, Kokoro) ya da kendi ses sunucun (faster-whisper ve Piper)</td></tr>
+  <tr><td><b>Ses</b></td><td>ElevenLabs, Google Gemini, Soniox, OpenAI uyumlu servisler (OpenAI, Groq Whisper, LocalAI, Speaches, Kokoro) ya da kendi ses sunucun (faster-whisper ve Piper)</td></tr>
   <tr><td><b>Gecikme</b></td><td>Cümle bittikten yaklaşık 1,5–3 sn sonra</td></tr>
   <tr><td><b>Arayüz</b></td><td>İngilizce (varsayılan), Türkçe, Almanca, İspanyolca, Çince</td></tr>
 </table>
@@ -91,6 +91,8 @@ Bir ses her şeyi kendi dilinin kurallarıyla okur; Türkçe konuşmadaki İngil
 ### Çeviri için Google Gemini
 
 Çeviri servisi olarak **Google Gemini**'yi seç ve [Google AI Studio](https://aistudio.google.com/apikey)'dan aldığın anahtarı yapıştır; anahtarın kullanabildiği modellerin listesi kendiliğinden dolar (ses, görsel, müzik ve gömme modelleri dışarıda kalır). Gemini modellerinin çoğu cevap vermeden önce düşünür; canlı çeviri bunu bekleyemez. Eklenti düşünmeyi her modelin kabul ettiği en düşük seviyeye indirir: önce 0 bütçe, sonra MINIMAL ve LOW seviyeleri, sonra 128 jetonluk bütçe denenir ve modelin kabul ettiği hatırlanır. 11 Kasım 2026'da ölçülen, istekten ilk metne kadar geçen süre: `gemini-3.5-flash-lite` yaklaşık 0,56 sn (varsayılan), `gemini-3.1-flash-lite` 0,56 sn, `gemini-3.5-flash` 0,74 sn, `gemini-3.8-flash` 1,4–2 sn; kendi düşünmesiyle `gemini-3.8-flash` 5,6 sn sürdü. Claude anahtarı varsa Gemini'nin arkasında Claude Haiku durur. Gemini'nin fiyatı panelin tahminine dahil değildir.
+
+Gemini dinleyip seslendirebilir de: **Ses tanıma ve sesler** altında da **Google Gemini**'yi seç. Her tarafı Live API ile dinler (`gemini-3.5-transcribe-live`): canlı taslaklar, konuşan ayarlardaki sessizlik kadar durunca da kesin metin. Anahtar akışın adresine hiç yazılmaz; her akış için tek kullanımlık bir jeton alınır. TTS modelleriyle seslendirir (varsayılan `gemini-3.8-flash-lite-tts`, her biri her dili konuşan 30 ses, hız ayarı yok). Ölçülen: ilk ses istendikten 0,45–0,73 sn sonra, kesin metin konuşma bittikten 0,64–0,7 sn sonra. Bir Live akışı yaklaşık 10 dakika sürer ve cümle aralarında yenilenir. Gemini konuşmacıları ayırt etmez.
 
 ### Çeviri için Ollama
 

@@ -18,7 +18,7 @@
   <tr><td><b>浏览器</b></td><td>Chrome、Edge、Brave 以及其他 Chromium 浏览器</td></tr>
   <tr><td><b>语言</b></td><td>20 种，任意两种互译；首次启动时跟随浏览器语言；在视频标签页中可自动识别所说的语言</td></tr>
   <tr><td><b>翻译</b></td><td>Claude、OpenAI 或兼容服务器、OpenRouter、Google Gemini、你自己的 Ollama，或 Soniox；设置中会列出各服务的模型</td></tr>
-  <tr><td><b>语音</b></td><td>ElevenLabs、兼容 OpenAI 的服务（OpenAI、Groq Whisper、LocalAI、Speaches、Kokoro），或你自己的语音服务器（faster-whisper 和 Piper）</td></tr>
+  <tr><td><b>语音</b></td><td>ElevenLabs、Google Gemini、Soniox、兼容 OpenAI 的服务（OpenAI、Groq Whisper、LocalAI、Speaches、Kokoro），或你自己的语音服务器（faster-whisper 和 Piper）</td></tr>
   <tr><td><b>延迟</b></td><td>一句话结束后约 1.5–3 秒</td></tr>
   <tr><td><b>界面</b></td><td>英语（默认）、土耳其语、德语、西班牙语、中文</td></tr>
 </table>
@@ -89,6 +89,8 @@
 ### 用 Google Gemini 翻译
 
 选择 **Google Gemini** 作为翻译服务，并粘贴来自 [Google AI Studio](https://aistudio.google.com/apikey) 的密钥；该密钥可用的模型列表会自动填充（语音、图像、音乐和嵌入模型会被排除）。大多数 Gemini 模型会先思考再回答，而实时翻译等不起：扩展会把思考降到每个模型接受的最低级别，依次尝试预算 0、MINIMAL 和 LOW 级别、128 token 的预算，并记住模型接受的设置。2026 年 11 月 11 日实测，从请求到第一段文字：`gemini-3.5-flash-lite` 约 0.56 秒（默认），`gemini-3.1-flash-lite` 0.56 秒，`gemini-3.5-flash` 0.74 秒，`gemini-3.8-flash` 1.4–2 秒；`gemini-3.8-flash` 按自己的方式思考时用了 5.6 秒。设置了 Claude 密钥时，Claude Haiku 作为 Gemini 的后备。Gemini 的价格不在面板的估算中。
+
+Gemini 也可以识别和朗读：在 **语音识别和声音** 下同样选择 **Google Gemini**。它用 Live API（`gemini-3.5-transcribe-live`）识别每一方：实时草稿，说话人停顿达到设置中的静音时长后给出最终文字。密钥从不写进流的地址；每个流都会先获取一个一次性令牌。它用 TTS 模型朗读（默认 `gemini-3.8-flash-lite-tts`，30 个声音，每个都能说所有语言，没有语速设置）。实测：请求后 0.45–0.73 秒出现第一个声音，说话结束后 0.64–0.7 秒得到最终文字。一个 Live 流约持续 10 分钟，会在句子之间更新。Gemini 不区分说话人。
 
 ### 用 Ollama 翻译
 

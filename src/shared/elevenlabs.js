@@ -17,6 +17,10 @@ const AUDIO_BASE = { openai: 'https://api.openai.com/v1', groq: 'https://api.gro
 
 export function speechAccount(settings) {
   // Soniox's voices (and Soniox listening, see isSonioxSpeech).
+  // Gemini hears with the Live API and speaks with its TTS models.
+  if (settings?.speechProvider === 'gemini') {
+    return { kind: 'gemini', local: false, key: String(settings.geminiKey || '').trim(), base: '', ttsModel: settings.geminiTtsModel || 'gemini-3.8-flash-lite-tts' };
+  }
   if (settings?.speechProvider === 'soniox') {
     return { kind: 'soniox', local: false, key: String(settings.sonioxKey || '').trim(), base: '' };
   }

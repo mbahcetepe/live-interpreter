@@ -215,7 +215,11 @@ async function free(req, res, url, host, stats, faults, translator) {
 async function gemini(req, res, url, stats, faults) {
   const key = req.headers['x-goog-api-key'];
   if (key !== 'mock-gemini' || url.searchParams.has('key')) return json(res, { error: { code: 400, message: 'API key not valid. Please pass a valid API key.', details: [{ reason: 'API_KEY_INVALID' }] } }, 400);
-  if (req.method === 'GET' && url.pathname === '/v1beta/models') return json(res, { models: [{ name: 'models/gemini-3.5-flash-lite', displayName: 'Gemini 3.5 Flash Lite', supportedGenerationMethods: ['generateContent'], thinking: true }] });
+  if (req.method === 'POST' && url.pathname === '/v1alpha/auth_tokens') {
+    stats.geminiTokens.push(JSON.parse((await readBody(req)).toString() || '{}'));
+    return json(res, { name: `auth_tokens/mock-${stats.geminiTokens.length}` });
+  }
+  if (req.method === 'GET' && url.pathname === '/v1beta/models') return json(res, { models: [{ name: 'models/gemini-3.5-flash-lite', displayName: 'Gemini 3.5 Flash Lite', supportedGenerationMethods: ['generateContent'], thinking: true }, { name: 'models/gemini-3.8-flash-lite-tts', supportedGenerationMethods: ['generateContent'] }] });
   if (req.method === 'GET' && url.pathname.startsWith('/v1beta/models/')) {
     const id = url.pathname.split('/').pop();
     return id === 'gemini-3.5-flash-lite' ? json(res, { name: `models/${id}` }) : json(res, { error: { code: 404, message: `models/${id} is not found` } }, 404);
@@ -223,6 +227,18 @@ async function gemini(req, res, url, stats, faults) {
   const m = url.pathname.match(/^\/v1beta\/models\/([^:]+):streamGenerateContent$/);
   if (req.method !== 'POST' || !m) return json(res, { error: { message: 'not mocked' } }, 404);
   const body = JSON.parse((await readBody(req)).toString() || '{}');
+  // A speech model: 16-bit PCM at 24 kHz in three base64 pieces.
+  if (/-tts$/.test(m[1])) {
+    stats.geminiTts.push({ model: m[1], text: body.contents?.[0]?.parts?.[0]?.text, voice: body.generationConfig?.speechConfig?.voiceConfig?.prebuiltVoiceConfig?.voiceName, modalities: body.generationConfig?.responseModalities });
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    const audio = tone(0.6);
+    const step = Math.floor(audio.length / 3 / 2) * 2;
+    for (let at = 0; at < audio.length; at += step) {
+      await sleep(40);
+      res.write(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'audio/l16; rate=24000; channels=1', data: audio.subarray(at, at + step).toString('base64') } }] } }] })}\r\n\r\n`);
+    }
+    return res.end();
+  }
   const user = body.contents?.at(-1)?.parts?.[0]?.text || '';
   const utterance = (String(user).match(/<utterance>\n([\s\S]*?)\n<\/utterance>/) || [])[1] || '';
   const thinking = body.generationConfig?.thinkingConfig || null;
@@ -277,6 +293,39 @@ async function route(req, res, stats, faults, options = {}) {
 
 // Soniox's voices: each stream's config, then its text; answers a short tone in
 // base64 pieces, then audio_end and terminated. Stream errors use the stream's id.
+// Gemini Live (speech recognition only): opened with a single-use token, the setup first,
+// then base64 16 kHz audio as realtimeInput; a draft after a while and the final text once
+// enough voiced audio came in.
+function geminiLive(ws, req, stats) {
+  const url = new URL(req.url, 'wss://generativelanguage.googleapis.com');
+  const session = { token: url.searchParams.get('access_token'), key: url.searchParams.get('key'), setup: null, voiced: 0, finals: 0, open: true };
+  stats.geminiLive.push(session);
+  ws.on('close', () => (session.open = false));
+  if (!/^auth_tokens\/mock-/.test(session.token || '')) return ws.close(1008, 'Unauthenticated');
+  ws.on('message', (raw) => {
+    const msg = JSON.parse(raw.toString());
+    if (msg.setup) {
+      session.setup = msg.setup;
+      if (msg.setup.model !== 'models/gemini-3.5-transcribe-live') return ws.close(1008, 'model not found');
+      return ws.send(JSON.stringify({ setupComplete: {} }));
+    }
+    const data = msg.realtimeInput?.audio?.data;
+    if (!data || !session.setup) return;
+    const pcm = Buffer.from(data, 'base64');
+    let peak = 0;
+    for (let i = 0; i + 1 < pcm.length; i += 2) peak = Math.max(peak, Math.abs(pcm.readInt16LE(i)));
+    if (peak < 300) return;
+    session.voiced += 1;
+    const heard = HEARD[session.setup.inputAudioTranscription?.languageCodes?.[0]] || HEARD.en;
+    if (session.voiced === 12) ws.send(JSON.stringify({ serverContent: { interimInputTranscription: { text: heard.partial } } }));
+    if (session.voiced >= 22) {
+      session.voiced = 0;
+      session.finals += 1;
+      ws.send(JSON.stringify({ serverContent: { inputTranscription: { text: heard.committed } } }));
+    }
+  });
+}
+
 function sonioxSpeech(ws, req, stats, faults) {
   const key = String(req.headers['sec-websocket-protocol'] || '').split(',').map((x) => x.trim())[1] || '';
   const configs = new Map();
@@ -314,7 +363,7 @@ function sonioxSpeech(ws, req, stats, faults) {
 export async function startMockApi({ cert, key, passthrough = [], mockOnly = null, translator = null }) {
   const real = new Set(passthrough);
   const options = { translator };
-  const stats = { requests: [], stt: [], tts: [], claude: [], free: [], soniox: [], sonioxTts: [], gemini: [] };
+  const stats = { requests: [], stt: [], tts: [], claude: [], free: [], soniox: [], sonioxTts: [], gemini: [], geminiTts: [], geminiLive: [], geminiTokens: [] };
   const faults = { deepl: 0, mistral: 0, groq: 0, tts: 0, claude: 0, stt: null, soniox: 0, gemini: 0 };
   const api = https.createServer({ cert, key }, (req, res) => {
     route(req, res, stats, faults, options).catch((err) => {
@@ -329,9 +378,11 @@ export async function startMockApi({ cert, key, passthrough = [], mockOnly = nul
   sonioxWss.on('connection', (ws, req) => soniox(ws, req, stats, faults));
   const sonioxTtsWss = new WebSocketServer({ noServer: true, handleProtocols: (protocols) => (protocols.has('soniox-api-key') ? 'soniox-api-key' : false) });
   sonioxTtsWss.on('connection', (ws, req) => sonioxSpeech(ws, req, stats, faults));
+  const geminiWss = new WebSocketServer({ noServer: true });
+  geminiWss.on('connection', (ws, req) => geminiLive(ws, req, stats));
   api.on('upgrade', (req, socket, head) => {
     const path = new URL(req.url, 'https://x').pathname;
-    const target = path === '/v1/speech-to-text/realtime' ? wss : path === '/transcribe-websocket' ? sonioxWss : path === '/tts-websocket' ? sonioxTtsWss : null;
+    const target = path === '/v1/speech-to-text/realtime' ? wss : path === '/transcribe-websocket' ? sonioxWss : path === '/tts-websocket' ? sonioxTtsWss : path.endsWith('.BidiGenerateContentConstrained') ? geminiWss : null;
     if (!target) return socket.destroy();
     target.handleUpgrade(req, socket, head, (ws) => target.emit('connection', ws, req));
   });

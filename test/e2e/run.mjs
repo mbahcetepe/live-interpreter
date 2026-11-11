@@ -545,7 +545,10 @@ async function geminiTranslationTest() {
     const outgoing = await waitFor(async () => done((await readCaptions(meet)).outgoing), 30000, 300);
     check('my Turkish is translated into English by Gemini', outgoing?.translation === 'Friday at three works for us.', JSON.stringify(outgoing));
     const asked = mock.stats.gemini;
-    check('a refused thinking budget of 0 is followed by MINIMAL, which is then kept', asked[0]?.thinking?.thinkingBudget === 0 && asked.slice(1).every((g) => g.thinking?.thinkingLevel === 'MINIMAL') && asked.filter((g) => g.thinking?.thinkingBudget === 0).length === 1, JSON.stringify(asked.map((g) => g.thinking)));
+    // Both sides' first sentences may be asked for at once, before either refusal is known.
+    const firstOk = asked.findIndex((g) => g.thinking?.thinkingLevel === 'MINIMAL');
+    const refused = asked.filter((g) => g.thinking?.thinkingBudget === 0).length;
+    check('a refused thinking budget of 0 is followed by MINIMAL, which is then kept', asked[0]?.thinking?.thinkingBudget === 0 && firstOk > 0 && refused <= 2 && asked.slice(firstOk).filter((g) => g.thinking?.thinkingBudget === 0).length <= 1 && asked.at(-1)?.thinking?.thinkingLevel === 'MINIMAL', JSON.stringify(asked.map((g) => g.thinking)));
     check('Gemini gets the system prompt and the chosen model', asked.every((g) => g.system && g.model === 'gemini-3.5-flash-lite'), JSON.stringify(asked[0]));
     check('Claude was not needed while Gemini worked', mock.stats.claude.length === 0, String(mock.stats.claude.length));
     const services = await servicesLine(meet);
@@ -559,6 +562,51 @@ async function geminiTranslationTest() {
     const backup = await waitFor(() => mock.stats.claude.length > 0, 40000, 300);
     check('when Gemini fails, Claude translates', backup, `${mock.stats.claude.length} claude`);
     await send(control, { type: 'stop' });
+    check('no script errors on the Meet page', env.pageErrors.length === 0, env.pageErrors.join(' | '));
+  } finally {
+    await env.context.close();
+    await rm(env.userDataDir, { recursive: true, force: true });
+    mock.close();
+  }
+}
+
+// Google Gemini for everything: it hears (Live API), translates and speaks; no
+// ElevenLabs and no Claude.
+async function geminiSpeechTest() {
+  console.log('\n== Gemini hears, translates and speaks (mock, no ElevenLabs, no Claude) ==');
+  const mock = await startMockApi({
+    cert: readFileSync(path.join(fixtures, 'mock-cert.pem')),
+    key: readFileSync(path.join(fixtures, 'mock-key.pem')),
+  });
+  const env = await launch({ micWav: path.join(fixtures, 'turkish.wav'), remoteWav: path.join(fixtures, 'english.wav'), proxyPort: mock.port });
+  const { control, meet, tabId } = env;
+  const setSettings = (patch) =>
+    control.evaluate(async (p) => {
+      const { settings } = await chrome.storage.local.get('settings');
+      await chrome.storage.local.set({ settings: { ...(settings || {}), ...p } });
+    }, patch);
+  try {
+    await setSettings({ elevenLabsKey: '', anthropicKey: '', translationProvider: 'gemini', speechProvider: 'gemini', geminiKey: 'mock-gemini', geminiModel: 'gemini-3.5-flash-lite', geminiMyVoice: 'Charon', geminiTheirVoice: '' });
+    const start = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('Gemini starts with no ElevenLabs and no Claude key', start?.ok === true, start?.error);
+    if (!start?.ok) return;
+    const incoming = await waitFor(async () => done((await readCaptions(meet)).incoming), 30000, 300);
+    check('their English is heard by Gemini and translated into Turkish', incoming?.source === 'Hi, thanks for joining the call today.' && incoming?.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.', JSON.stringify(incoming));
+    const outgoing = await waitFor(async () => done((await readCaptions(meet)).outgoing), 30000, 300);
+    check('my Turkish is heard by Gemini and translated into English', outgoing?.translation === 'Friday at three works for us.', JSON.stringify(outgoing));
+    const live = mock.stats.geminiLive;
+    check('each side has its own Live stream, opened with a single-use token, never the key', live.length >= 2 && live.every((s) => /^auth_tokens\/mock-/.test(s.token) && !s.key) && mock.stats.geminiTokens.length >= 2, JSON.stringify(live.map((s) => ({ token: s.token, key: s.key }))));
+    const languages = live.map((s) => s.setup?.inputAudioTranscription?.languageCodes?.[0]).sort().join(',');
+    check('the Live streams listen for English (them) and Turkish (me), with the chosen silence', languages === 'en,tr' && live.every((s) => s.setup?.realtimeInputConfig?.automaticActivityDetection?.silenceDurationMs > 0), languages);
+    const spoken = await waitFor(() => mock.stats.geminiTts.length >= 2, 20000, 300);
+    const voices = mock.stats.geminiTts.map((x) => x.voice);
+    check('Gemini speaks both translations, my voice Charon and theirs the default Kore', spoken && voices.includes('Charon') && voices.includes('Kore') && mock.stats.geminiTts.every((x) => x.modalities?.[0] === 'AUDIO' && x.model === 'gemini-3.8-flash-lite-tts'), JSON.stringify(mock.stats.geminiTts));
+    check('no ElevenLabs or Claude request was made', mock.stats.tts.length === 0 && mock.stats.stt.length === 0 && mock.stats.claude.length === 0, `${mock.stats.tts.length} tts, ${mock.stats.stt.length} stt, ${mock.stats.claude.length} claude`);
+    const services = await servicesLine(meet);
+    check('the panel names Gemini for hearing, translating and speaking', /Hears: Gemini/.test(services) && /translates: Google Gemini/.test(services) && /speaks: Gemini/.test(services), services);
+    await send(control, { type: 'stop' });
+    const closed = await waitFor(() => mock.stats.geminiLive.every((s) => !s.open), 5000, 200);
+    check('the Live streams are closed when the call ends', closed, JSON.stringify(mock.stats.geminiLive.map((s) => s.open)));
     check('no script errors on the Meet page', env.pageErrors.length === 0, env.pageErrors.join(' | '));
   } finally {
     await env.context.close();
@@ -901,7 +949,7 @@ await mkdir(fixtures, { recursive: true });
 makeFixtures();
 // ONLY=local,media runs only the suites whose names contain one of these words.
 const only = (process.env.ONLY || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
-const suites = { connectionTest, zoomTest, recordingTest, mockTranslationTest, geminiTranslationTest, ollamaTranslationTest, openaiTranslationTest, openaiSpeechTest, sonioxTest, localServersTest, mediaTest };
+const suites = { connectionTest, zoomTest, recordingTest, mockTranslationTest, geminiTranslationTest, geminiSpeechTest, ollamaTranslationTest, openaiTranslationTest, openaiSpeechTest, sonioxTest, localServersTest, mediaTest };
 for (const [name, run] of Object.entries(suites)) {
   if (!only.length || only.some((w) => name.toLowerCase().includes(w))) await run();
 }
