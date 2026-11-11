@@ -23,7 +23,7 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
 
 </div>
 
-> **Status.** Published on the Chrome Web Store (version 2.4.1). Teams on the web has been used in real calls in both directions; the mute detection and the Teams caption area are still being checked ([TEAMS.md](TEAMS.md)). YouTube translation has been used on real videos. Google Meet is covered by the end-to-end tests with mock calls but has not been checked in a real call since 2.0. Run a test before an important meeting.
+> **Status.** Published on the Chrome Web Store. Teams on the web has been used in real calls in both directions; the mute detection and the Teams caption area are still being checked ([TEAMS.md](TEAMS.md)). YouTube translation has been used on real videos. Google Meet is covered by the end-to-end tests with mock calls but has not been checked in a real call since 2.0. Run a test before an important meeting.
 >
 > The desktop Teams app is not supported: browser extensions only run in the browser. Join the meeting with **"Continue on this browser"**.
 
