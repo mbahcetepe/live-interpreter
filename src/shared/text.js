@@ -4,11 +4,13 @@ import { insideMark } from './pronounce.js';
 // Chinese and Japanese are written without spaces, and their punctuation (。，、) has no
 // space after it either. A Latin full stop needs a space after it ("3.5" is no sentence
 // end); a CJK one does not, but it must not be the last character yet, so a closing
-// quote that follows in the next chunk stays with its sentence.
+// quote that follows in the next chunk stays with its sentence. Speech recognition often
+// writes Chinese with Latin punctuation and no space ("是什么?其实"), so a Latin mark
+// followed straight by a CJK character is a break too.
 const CJK = '\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}ー';
 const CLOSERS = `"'”’»)\\]」』`;
-const SENTENCE_END = new RegExp(`[.!?…]+[${CLOSERS}]*(?=\\s)|[。！？]+[${CLOSERS}]*(?=[^${CLOSERS}])`, 'gu');
-const SOFT_BREAK = /[,;:،]\s|[、，；：]/gu;
+const SENTENCE_END = new RegExp(`[.!?…]+[${CLOSERS}]*(?=\\s|[${CJK}])|[。！？]+[${CLOSERS}]*(?=[^${CLOSERS}])`, 'gu');
+const SOFT_BREAK = new RegExp(`[,;:،]\\s|[,;:](?=[${CJK}])|[、，；：]`, 'gu');
 const CJK_CHAR = new RegExp(`[${CJK}]`, 'u');
 
 // How long a piece of text sounds, in Latin characters: a Chinese or Japanese character
@@ -175,13 +177,17 @@ const ABBREVIATIONS = new Set(['mr', 'mrs', 'ms', 'dr', 'prof', 'st', 'vs', 'etc
 
 // Index just after the last sentence end that more words follow; 0 when there is none.
 export function finishedSentenceEnd(text) {
-  // A Latin sentence end needs a space and more words after it; a CJK one (。) only more words.
-  const re = new RegExp(`([\\p{L}\\p{N}]*)(?:([.!?…]+[${CLOSERS}]*)\\s+(?=\\S)|([。！？]+[${CLOSERS}]*)\\s*(?=[\\p{L}\\p{N}]))`, 'gu');
+  // A Latin sentence end needs a space and more words after it; a CJK one (。) only more
+  // words; a Latin one written in CJK text ("什么?其实") a CJK character right after it.
+  const re = new RegExp(
+    `([\\p{L}\\p{N}]*)(?:([.!?…]+[${CLOSERS}]*)\\s+(?=\\S)|([。！？]+[${CLOSERS}]*)\\s*(?=[\\p{L}\\p{N}])|([.!?…]+[${CLOSERS}]*)(?=[${CJK}]))`,
+    'gu',
+  );
   let cut = 0;
   let match;
   while ((match = re.exec(text))) {
     const word = match[1].toLocaleLowerCase();
-    const end = match[2] || match[3];
+    const end = match[2] || match[3] || match[4];
     if (match[2] && end[0] === '.' && (ABBREVIATIONS.has(word) || /^\p{L}$/u.test(word))) continue;
     cut = match.index + match[1].length + end.length;
   }

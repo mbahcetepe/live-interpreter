@@ -243,3 +243,57 @@ def test_a_session_can_ask_for_another_recognition_model(client):
     t = token(client)
     with client.websocket_connect(f'/v1/speech-to-text/realtime?token={t}&language_code=tr&whisper_model=tiny', headers=EXT) as ws:
         assert json.loads(ws.receive_text())['message_type'] == 'session_started'
+
+# ---- punctuation prompts for Chinese and Japanese ----------------------------------------
+
+from types import SimpleNamespace  # noqa: E402
+import threading  # noqa: E402
+
+from engines import PUNCTUATION_PROMPTS, WhisperRecognizer  # noqa: E402
+
+
+class StubWhisper:
+    """Answers like faster-whisper: detects `spoken`, says `text`, records each call."""
+
+    def __init__(self, spoken, text):
+        self.spoken, self.text, self.calls = spoken, text, []
+
+    def transcribe(self, audio, **options):
+        self.calls.append(options)
+        seg = SimpleNamespace(text=self.text, no_speech_prob=0.0, avg_logprob=-0.2)
+        return iter([seg]), SimpleNamespace(language=options.get('language') or self.spoken)
+
+
+def recognizer_with(stub):
+    rec = object.__new__(WhisperRecognizer)
+    rec.lock = threading.Lock()
+    rec._get = lambda name: stub
+    return rec
+
+
+AUDIO = np.zeros(16000, np.float32)
+
+
+def test_chinese_is_read_with_a_punctuated_prompt():
+    stub = StubWhisper('zh', '你好，我们开始吧。')
+    assert recognizer_with(stub).transcribe(AUDIO, 'zh') == '你好，我们开始吧。'
+    assert [c.get('initial_prompt') for c in stub.calls] == [PUNCTUATION_PROMPTS['zh']]
+
+
+def test_detected_chinese_is_read_again_with_the_prompt():
+    stub = StubWhisper('zh', '你好，我们开始吧。')
+    assert recognizer_with(stub).transcribe(AUDIO, None) == '你好，我们开始吧。'
+    assert [c.get('initial_prompt') for c in stub.calls] == [None, PUNCTUATION_PROMPTS['zh']]
+    assert stub.calls[1]['language'] == 'zh'
+
+
+def test_other_languages_get_no_prompt_and_one_pass():
+    for language in ('en', None):
+        stub = StubWhisper('en', 'Hello there.')
+        assert recognizer_with(stub).transcribe(AUDIO, language) == 'Hello there.'
+        assert len(stub.calls) == 1 and 'initial_prompt' not in stub.calls[0]
+
+
+def test_the_prompt_made_up_from_silence_is_dropped():
+    stub = StubWhisper('ja', PUNCTUATION_PROMPTS['ja'])
+    assert recognizer_with(stub).transcribe(AUDIO, 'ja') == ''

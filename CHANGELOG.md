@@ -2,6 +2,16 @@
 
 Versions follow [semantic versioning](https://semver.org): MAJOR for changes that need something done (new settings, a server update), MINOR for new features, PATCH for fixes. The version lives in `package.json`; the build writes it into the extension's manifest, and the popup and the settings page show it. The speech server has its own version and a protocol number (`/health`); the extension warns when the server is older than it needs.
 
+## Unreleased
+
+### Fixed
+
+- **Chinese and Japanese speech is translated sentence by sentence while the speaker goes on.** The speech recognition often writes Chinese with Latin punctuation and no space after it (`是什么?其实`), which was not seen as a sentence end, so nothing was sent ahead and each piece waited for a pause.
+
+### Speech server 2.0.1
+
+- Chinese and Japanese are recognized with punctuation: Whisper often left it out altogether. A punctuated sentence in that language is given to it before the audio; with the language set to detect automatically, a piece found to be Chinese or Japanese is read again with it. Update the server (`sudo ./install-ubuntu.sh`) to get this.
+
 ## 2.4.2 (2026-11-10)
 
 ### Fixed

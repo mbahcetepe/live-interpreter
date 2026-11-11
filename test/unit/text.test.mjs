@@ -213,3 +213,24 @@ test('a finished Chinese sentence is sent ahead while the speaker keeps talking'
   assert.equal(early.partial('谢谢大家参加今天的会议。我们'), '谢谢大家参加今天的会议。');
   assert.equal(early.committed('谢谢大家参加今天的会议。我们开始吧。'), '我们开始吧。');
 });
+
+// Speech recognition (Whisper) often writes Chinese with Latin punctuation and no space.
+test('Chinese with Latin punctuation from speech recognition is split too', () => {
+  // From a real transcript.
+  const heard = '那你觉得说好汉语的一个关键是什么?其实我觉得不是只是说汉语';
+  assert.equal(finishedSentenceEnd(heard), '那你觉得说好汉语的一个关键是什么?'.length);
+  assert.equal(finishedSentenceEnd('很多语言,其他语言也是这样的.它的关键'), '很多语言,其他语言也是这样的.'.length);
+  assert.equal(finishedSentenceEnd('这样的?'), 0);
+  const early = new EarlySentences();
+  assert.equal(early.partial('那你觉得是什么原因导致他们不愿意开口说呢?所以'), '');
+  assert.equal(early.partial('那你觉得是什么原因导致他们不愿意开口说呢?所以'), '那你觉得是什么原因导致他们不愿意开口说呢?');
+  const splitter = new SentenceSplitter();
+  assert.deepEqual(splitter.push('很多语言,其他语言也是这样的,它的关键就是你要敢开口,要多交流,多说'), ['很多语言,其他语言也是这样的,', '它的关键就是你要敢开口,要多交流,']);
+});
+
+test('Latin punctuation in Latin text still needs a space after it', () => {
+  assert.equal(finishedSentenceEnd('Version 3.5 is out'), 0);
+  assert.equal(finishedSentenceEnd('Hello,world. More'), 'Hello,world.'.length);
+  const splitter = new SentenceSplitter();
+  assert.deepEqual(splitter.push('A list of numbers 1,000,000 and 2,500,000 and more'), []);
+});

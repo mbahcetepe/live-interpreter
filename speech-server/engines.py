@@ -27,6 +27,15 @@ HALLUCINATIONS = re.compile(
     re.IGNORECASE,
 )
 
+# Whisper often writes Chinese and Japanese with no punctuation at all, and the extension
+# needs it to translate finished sentences while the speaker goes on. A punctuated
+# sentence in the same language given as the text before the audio makes it punctuate.
+PUNCTUATION_PROMPTS = {
+    'zh': '以下是普通话的句子，带有标点符号。',
+    'ja': '以下は、句読点のある日本語の文です。',
+}
+PROMPT_TRIM = ' 。，、.,'
+
 
 @dataclass
 class Voice:
@@ -116,19 +125,34 @@ class WhisperRecognizer:
         )
         if keyterms:
             options['hotwords'] = ', '.join(keyterms)[:200]
+        prompt = PUNCTUATION_PROMPTS.get(language or '')
+        if prompt:
+            options['initial_prompt'] = prompt
         with self.lock:
-            try:
-                segments, _info = whisper.transcribe(audio, **options)
-            except TypeError:
-                options.pop('hotwords', None)
-                segments, _info = whisper.transcribe(audio, **options)
+            segments, info = self._run(whisper, audio, options)
+            # Spoken language detected here: the prompt for it is only known now, so the
+            # audio is read again with it (only for the languages that have one).
+            detected = getattr(info, 'language', None)
+            if not language and detected in PUNCTUATION_PROMPTS:
+                prompt = PUNCTUATION_PROMPTS[detected]
+                segments, _info = self._run(whisper, audio, {**options, 'language': detected, 'initial_prompt': prompt})
             parts = []
             for seg in segments:
                 if seg.no_speech_prob > 0.6 and seg.avg_logprob < -1.0:
                     continue
                 parts.append(seg.text.strip())
         text = ' '.join(p for p in parts if p).strip()
+        if prompt and text.strip(PROMPT_TRIM) == prompt.strip(PROMPT_TRIM):
+            return ''  # the prompt made up from silence
         return '' if HALLUCINATIONS.search(text) else text
+
+    @staticmethod
+    def _run(whisper, audio: np.ndarray, options: dict):
+        try:
+            return whisper.transcribe(audio, **options)
+        except TypeError:
+            # An older faster-whisper without hotwords.
+            return whisper.transcribe(audio, **{k: v for k, v in options.items() if k != 'hotwords'})
 
 
 class FakeRecognizer:

@@ -39,7 +39,7 @@ from segmenter import Segmenter
 
 log = logging.getLogger('speech-server')
 
-VERSION = '2.0.0'
+VERSION = '2.0.1'
 # Raised when the extension needs something an older server cannot do.
 PROTOCOL = 2
 TOKEN_TTL = 60
