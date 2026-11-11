@@ -269,7 +269,9 @@ import { platformForUrl, MUTE_DETECTORS } from '../shared/platforms.js';
     if (this.kind === 'audio') schedulePost();
   };
 
-  const mediaDevices = navigator.mediaDevices;
+  // On the prototype, so a page that calls MediaDevices.prototype.getUserMedia directly
+  // (or keeps a reference to it) still goes through here.
+  const mediaDevices = window.MediaDevices?.prototype;
   if (mediaDevices?.getUserMedia) {
     const nativeGetUserMedia = mediaDevices.getUserMedia;
     mediaDevices.getUserMedia = function getUserMedia(constraints) {

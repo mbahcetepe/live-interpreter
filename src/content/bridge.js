@@ -7,6 +7,26 @@
 import { Overlay } from './overlay.js';
 import { SubtitleBar } from './subtitle-bar.js';
 import { setLanguage } from '../shared/i18n.js';
+import { platformForUrl } from '../shared/platforms.js';
+
+// On sites whose scripts go into every frame (Zoom), only the frame that holds the call
+// answers the extension and connects to the engine. The others (an empty helper page, or
+// the app's shell while the call runs in a frame inside it) stay silent.
+const platform = platformForUrl(location.href);
+
+function frameSrc(frame) {
+  try {
+    return frame.contentWindow?.location.href || frame.src;
+  } catch {
+    return frame.src; // another origin
+  }
+}
+
+function takesPart() {
+  if (!platform?.allFrames) return window === window.top;
+  if (!platform.callFrame(location.href)) return false;
+  return ![...document.querySelectorAll('iframe')].some((frame) => platform.callFrame(frameSrc(frame) || ''));
+}
 
 const state = {
   pagePort: null,
@@ -216,6 +236,12 @@ function onEngineMessage(msg) {
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg?.type === 'session-ended') {
+    endSession(msg.error);
+    if (takesPart()) sendResponse({ ok: true });
+    return false;
+  }
+  if (!takesPart()) return false;
   switch (msg?.type) {
     case 'ping':
       sendResponse({ hook: state.hookReady });
@@ -224,19 +250,21 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       connectEngine();
       sendResponse({ ok: true });
       return false;
-    case 'session-ended':
-      endSession(msg.error);
-      sendResponse({ ok: true });
-      return false;
     default:
       return false;
   }
 });
 
-// After a reload during a running session, rejoin it.
+// After a reload during a running session, rejoin it. Where every frame has these
+// scripts, the frames are known only once the page has loaded.
+function whenFramesKnown(callback) {
+  if (!platform?.allFrames || document.readyState === 'complete') callback();
+  else window.addEventListener('load', callback, { once: true });
+}
+
 chrome.runtime
   .sendMessage({ type: 'tab-hello' })
   .then((reply) => {
-    if (reply?.active) connectEngine();
+    if (reply?.active) whenFramesKnown(() => takesPart() && connectEngine());
   })
   .catch(() => {});

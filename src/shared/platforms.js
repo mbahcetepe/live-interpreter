@@ -41,6 +41,12 @@ export const PLATFORMS = [
     origins: ['https://*.zoom.us/*'],
     scriptMatches: ['https://*.zoom.us/wc/*'],
     matches: (url) => /^https:\/\/([a-z0-9-]+\.)*zoom\.us\/wc\//i.test(url),
+    // Zoom's installed app (and its own page) is a shell that runs the meeting in a frame
+    // of its own (/wc/<meeting>/join), next to frames such as /wc/pwa-empty-page. The
+    // extension works in the frame that holds the meeting: the scripts go into every
+    // frame, and only the meeting's frame takes part (bridge.js).
+    allFrames: true,
+    callFrame: (url) => /^https:\/\/([a-z0-9-]+\.)*zoom\.us\/wc\/\d+\//i.test(url),
     // The microphone is replaced where Zoom asks for it, not on a WebRTC sender.
     audioPath: 'microphone',
     subtitleBottom: 96,

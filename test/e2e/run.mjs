@@ -97,6 +97,13 @@ async function zoomTest() {
     check('a connection test session starts on Zoom', start?.ok === true, start?.error);
     const connected = await waitFor(async () => (await sessionState(control))?.engine?.page?.connected, 8000);
     check('the engine reaches the Zoom tab', Boolean(connected));
+    check('the call runs in a frame of the app shell, as in Zoom\'s app', zoom !== env.tab.mainFrame());
+    const panels = await waitFor(async () => {
+      const counts = await Promise.all(env.tab.frames().map((f) => f.evaluate(() => Boolean(document.getElementById('meet-tercuman-overlay'))).catch(() => false)));
+      return counts.filter(Boolean).length;
+    }, 4000);
+    const inCall = await zoom.evaluate(() => Boolean(document.getElementById('meet-tercuman-overlay')));
+    check('one panel, in the call\'s frame', panels === 1 && inCall, `panels ${panels}, in call frame ${inCall}`);
     const attached = await waitFor(async () => (await sessionState(control))?.engine?.page?.senders > 0, 5000);
     check('the microphone Zoom reads now carries the extension audio', Boolean(attached));
     await sleep(400);

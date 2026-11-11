@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mock Zoom app</title>
+    <style>
+      html, body { margin: 0; height: 100%; }
+      #webclient { border: 0; width: 100%; height: 100%; }
+      #chat { display: none; }
+    </style>
+  </head>
+  <body>
+    <!-- Like Zoom's installed app: the top page (/wc/<meeting>/start) is a shell, the call
+         runs in a frame of its own (/wc/<meeting>/join), next to an empty helper frame. -->
+    <iframe id="webclient" allow="microphone; camera; autoplay"></iframe>
+    <iframe id="chat" src="/wc/pwa-empty-page"></iframe>
+    <script>
+      const meeting = location.pathname.split('/')[2];
+      document.getElementById('webclient').src = `/wc/${meeting}/join?ref_from=launch&from=pwa`;
+    </script>
+  </body>
+</html>

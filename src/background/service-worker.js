@@ -90,8 +90,10 @@ async function startSession({ tabId, streamId, options = {} }) {
     await setState({ status: 'starting', tabId, error: null, engine: null });
     if (!streamId) streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tabId });
     await ensureOffscreen();
-    // The tab's title and address go into the transcript.
-    const response = await toEngine({ type: 'start', tabId, streamId, settings, options, tab: { title: tab.title || '', url: tab.url || '' } });
+    // The tab's title and address go into the transcript. A call's address goes without its
+    // query, which can hold the meeting password (Zoom's ?pwd=).
+    const url = media ? tab.url || '' : String(tab.url || '').replace(/[?#].*$/, '');
+    const response = await toEngine({ type: 'start', tabId, streamId, settings, options, tab: { title: tab.title || '', url } });
     if (!response?.ok) {
       await closeOffscreen();
       throw new Error(response?.error || t('err.engineFailed'));
@@ -150,13 +152,16 @@ async function syncSiteScripts() {
   for (const site of OPTIONAL_PLATFORMS) {
     const ids = [`${site.id}-hook`, `${site.id}-bridge`];
     const granted = await chrome.permissions.contains({ origins: site.origins }).catch(() => false);
+    const allFrames = Boolean(site.allFrames);
+    const scripts = [
+      { id: ids[0], matches: site.scriptMatches, js: ['page-hook.js'], runAt: 'document_start', world: 'MAIN', allFrames },
+      { id: ids[1], matches: site.scriptMatches, js: ['bridge.js'], runAt: 'document_start', allFrames },
+    ];
     try {
-      if (granted && !registered.has(ids[0])) {
-        await chrome.scripting.registerContentScripts([
-          { id: ids[0], matches: site.scriptMatches, js: ['page-hook.js'], runAt: 'document_start', world: 'MAIN' },
-          { id: ids[1], matches: site.scriptMatches, js: ['bridge.js'], runAt: 'document_start' },
-        ]);
-      } else if (!granted && registered.has(ids[0])) {
+      // Updated as well as added, so an earlier version's registration takes the new form.
+      if (granted && registered.has(ids[0])) await chrome.scripting.updateContentScripts(scripts);
+      else if (granted) await chrome.scripting.registerContentScripts(scripts);
+      else if (registered.has(ids[0])) {
         await chrome.scripting.unregisterContentScripts({ ids });
       }
     } catch (err) {

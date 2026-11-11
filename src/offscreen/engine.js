@@ -48,9 +48,13 @@ class UserError extends Error {
   }
 }
 
+// A debug build also copies the log to the local debug sink (debug-sink.js).
+let logSink = null;
+
 function log(level, ...args) {
   const fn = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
   fn('[tercuman]', ...args);
+  logSink?.event({ kind: 'log', level, text: args.map((a) => (a instanceof Error ? a.message : typeof a === 'string' ? a : JSON.stringify(a))).join(' ') });
 }
 
 function withTimeout(promise, ms) {
@@ -891,6 +895,7 @@ class Session {
       const url = debugSinkUrl(m.port);
       if (url && !this.debugSink) {
         this.debugSink = new DebugSink(url);
+        logSink = this.debugSink;
         this.debugSink.event({ kind: 'start', settings: { ...this.settings, elevenLabsKey: undefined, anthropicKey: undefined, deeplKey: undefined, mistralKey: undefined, groqKey: undefined, localSpeechKey: undefined }, recording: Boolean(this.recorder) });
         log('info', `debug copies go to ${url}`);
         // A recording that began before this carries its file header in the chunks already saved.
@@ -906,6 +911,7 @@ class Session {
     }
     if (m?.type === 'page-state') {
       const state = sanitizePageState(m.state);
+      this.debugSink?.event({ kind: 'page', state });
       const wasOpen = !this.page.muted && this.page.senders > 0;
       this.page = { ...this.page, ...state };
       // Only in a joined call: in the lobby the microphone shows on before any connection.

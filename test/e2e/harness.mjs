@@ -71,10 +71,17 @@ export function extensionIdFor(dir) {
   return [...hex].map((c) => String.fromCharCode(97 + parseInt(c, 16))).join('');
 }
 
-// site: 'meet' (default) or 'zoom' (the mock Zoom web client at app.zoom.us/wc/).
+// site: 'meet' (default) or 'zoom' (the mock Zoom web client at app.zoom.us/wc/, laid out
+// like Zoom's installed app: a shell page with the call in a frame).
 const SITES = {
   meet: { origin: 'https://meet.google.com', path: '/abc-defg-hij', page: 'mock-meet.html' },
-  zoom: { origin: 'https://app.zoom.us', path: '/wc/71219263145/start', page: 'mock-zoom.html' },
+  zoom: {
+    origin: 'https://app.zoom.us',
+    path: '/wc/71219263145/start',
+    page: 'mock-zoom.html',
+    pageFor: (pathname) => (/\/start$/.test(pathname) ? 'mock-zoom-shell.html' : /pwa-empty-page/.test(pathname) ? null : 'mock-zoom.html'),
+    callFrame: /\/wc\/\d+\/join/,
+  },
 };
 
 export async function launch({ micWav, remoteWav, proxyPort, site = 'meet' }) {
@@ -104,7 +111,9 @@ export async function launch({ micWav, remoteWav, proxyPort, site = 'meet' }) {
   await context.route(`${where.origin}/**`, (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === '/__fixtures/remote.wav') return route.fulfill({ path: remoteWav, contentType: 'audio/wav' });
-    return route.fulfill({ path: path.join(here, where.page), contentType: 'text/html' });
+    const page = where.pageFor ? where.pageFor(url.pathname) : where.page;
+    if (!page) return route.fulfill({ body: '<!doctype html><title>empty</title>', contentType: 'text/html' });
+    return route.fulfill({ path: path.join(here, page), contentType: 'text/html' });
   });
   let [worker] = context.serviceWorkers();
   if (!worker) worker = await context.waitForEvent('serviceworker');
@@ -118,20 +127,26 @@ export async function launch({ micWav, remoteWav, proxyPort, site = 'meet' }) {
     const { settings } = await chrome.storage.local.get('settings');
     await chrome.storage.local.set({ settings: { ...(settings || {}), myLanguage: 'tr', theirLanguage: 'en', uiLanguage: 'en' } });
   });
-  const meet = await context.newPage();
+  const tab = await context.newPage();
   const pageErrors = [];
-  meet.on('pageerror', (err) => pageErrors.push(err.message));
+  tab.on('pageerror', (err) => pageErrors.push(err.message));
+  // `meet` is where the call runs: the page, or the call's frame inside it.
+  let meet = tab;
   // Zoom's page hook is registered by the service worker once access is granted (the
   // test build grants it); it may land just after the first load.
   for (let attempt = 0; attempt < 5; attempt++) {
-    await meet.goto(`${where.origin}${where.path}`);
+    await tab.goto(`${where.origin}${where.path}`);
+    if (where.callFrame) {
+      await waitFor(() => tab.frames().find((f) => where.callFrame.test(f.url())), 15000, 100);
+      meet = tab.frames().find((f) => where.callFrame.test(f.url()));
+    }
     await meet.waitForFunction(() => window.__test, null, { timeout: 15000 });
     if (await meet.evaluate(() => window.__meetTercumanHook === true)) break;
     await sleep(500);
   }
-  await meet.bringToFront();
+  await tab.bringToFront();
   const tabId = await worker.evaluate(async (pattern) => (await chrome.tabs.query({ url: pattern }))[0].id, `${where.origin}/*`);
-  return { context, worker, control, meet, tabId, pageErrors, userDataDir };
+  return { context, worker, control, meet, tab, tabId, pageErrors, userDataDir };
 }
 
 export const send = (control, msg) => control.evaluate((m) => chrome.runtime.sendMessage(m), msg);
