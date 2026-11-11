@@ -299,16 +299,14 @@ button.recording {
   margin-bottom: 10px;
 }
 
-.recorder,
-.free-keys {
+.recorder {
   border: 1px dashed var(--border);
   border-radius: 10px;
   padding: 10px 12px;
   margin-bottom: 12px;
 }
 
-.recorder summary,
-.free-keys summary {
+.recorder summary {
   cursor: pointer;
   font-weight: 600;
 }

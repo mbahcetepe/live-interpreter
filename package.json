@@ -15,7 +15,6 @@
     "test:e2e": "node scripts/build.mjs --test && node test/e2e/run.mjs",
     "test:scenarios": "node scripts/build.mjs --test && node test/e2e/scenarios.mjs",
     "test:api": "node test/api/smoke.mjs",
-    "test:free": "node test/api/free.mjs",
     "test:soniox": "node test/api/soniox.mjs"
   },
   "dependencies": {

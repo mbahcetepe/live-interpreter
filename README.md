@@ -17,7 +17,7 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
   <tr><td><b>Other tabs</b></td><td>YouTube, X, online radio, any web page with sound</td></tr>
   <tr><td><b>Browsers</b></td><td>Chrome, Edge, Brave and other Chromium browsers</td></tr>
   <tr><td><b>Languages</b></td><td>20, any two of them; the first start follows your browser's language; on video tabs the spoken language can be detected automatically</td></tr>
-  <tr><td><b>Translation</b></td><td>Claude, OpenAI or a compatible server, OpenRouter, your own Ollama, or free services; each one's models listed in the settings</td></tr>
+  <tr><td><b>Translation</b></td><td>Claude, OpenAI or a compatible server, OpenRouter, your own Ollama, or Soniox; each one's models listed in the settings</td></tr>
   <tr><td><b>Speech</b></td><td>ElevenLabs, OpenAI-compatible services (OpenAI, Groq Whisper, LocalAI, Speaches, Kokoro), or your own speech server (faster-whisper and Piper)</td></tr>
   <tr><td><b>Delay</b></td><td>About 1.5–3 s after a sentence ends</td></tr>
   <tr><td><b>Interface</b></td><td>English (default), Turkish, German, Spanish, Chinese</td></tr>
@@ -53,14 +53,14 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
 
 - Twenty languages, any two of them, in either direction: English, Turkish, German, French, Spanish, Italian, Portuguese, Dutch, Polish, Russian, Ukrainian, Arabic, Greek, Romanian, Swedish, Indonesian, Hindi, Chinese, Japanese and Korean.
 - Subtitles like a film's, with the translation in large type and the original under it, and a panel with both sides, the live delay and a usage counter with an estimated cost.
-- A sentence is never lost to one failing service: translation falls back from Ollama to a second Ollama server, then to Claude Haiku (when a Claude key is set) and to free translation; from OpenAI or OpenRouter to Claude Haiku (with a key) and free translation; from Claude to free translation.
+- A sentence is not lost to one failing service: translation falls back from Ollama to a second Ollama server, then to Claude Haiku (when a Claude key is set); from OpenAI or OpenRouter to Claude Haiku (with a key).
 
 > **Read this first.**
 > - This is consecutive interpretation: the translation starts after a sentence ends. Speech recognition waits 0.7 s of silence (0.5 s can be set), translation takes 0.3–2 s, the voice 0.2–0.5 s. In a long turn, finished sentences are translated while the speaker keeps going.
 > - For the shortest delay translate on Ollama or with **Claude Haiku 5.5**, choose a **0.5 s** silence, and speak in short sentences.
 > - **Use headphones.** Without them the translation you hear leaks into your microphone and is sent back to them. If you have none, turn on **Speaker mode** in the settings.
 > - Two participants on the same computer garble each other's audio. Test with a second device (a phone) or a second person.
-> - The call's audio and text go to the services you choose (ElevenLabs, Anthropic, DeepL, Mistral, Groq). For a work meeting, tell the participants and check your company's rules, or keep everything on your own servers. Cloning someone's voice needs their consent.
+> - The call's audio and text go to the services you choose (ElevenLabs, Anthropic, OpenAI, Groq, Soniox). For a work meeting, tell the participants and check your company's rules, or keep everything on your own servers. Cloning someone's voice needs their consent.
 
 ---
 
@@ -70,7 +70,6 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
 | --- | --- | --- |
 | **Hosted** | ElevenLabs (Scribe v2 Realtime, Flash v2.5 / v4 Turbo); OpenAI (Whisper, gpt-4o-transcribe, gpt-4o-mini-tts); Groq Whisper (recognition, fast and cheap) | Claude Opus, Sonnet or Haiku 5.5; OpenAI; OpenRouter (hundreds of models, one key) |
 | **Recognition and translation in one** | Soniox (`stt-rt-v6`): hears and translates in the same stream, the fastest setup; Soniox's own voices (`tts-rt-v2`) or any of the voices above speak the translation | Soniox |
-| **Free services** | | DeepL Free, Mistral, Groq, Chrome's built-in translator |
 | **Your own servers** | The speech server in [speech-server/](speech-server/README.md) (faster-whisper and Piper), or any server with OpenAI's audio API (Speaches, LocalAI, Kokoro-FastAPI) | Ollama (for example `gemma4:12b`), or any server with OpenAI's API (LM Studio, vLLM) |
 
 The two columns are chosen separately. With your own servers in both, nothing of the call leaves your computers and nothing is billed.
@@ -85,11 +84,11 @@ The translation is spoken clause by clause: as soon as a translated clause is lo
 
 ### Foreign words said the right way
 
-A voice reads everything with its own language's rules, so an English term in Turkish speech ("API", "Apple") or a Turkish name in English speech ("Şükrü") can come out wrong. When the translation is spoken, the translator marks such words with how they sound, as `[[Apple|epıl]]` or `[[Şükrü|Shoo-kroo]]`. The screen and the transcript show only "Apple" and "Şükrü". Your own speech server, whose voices know one language each, reads the pronunciation; ElevenLabs and OpenAI get the word itself, since they handle mixed text, and OpenAI's `gpt-*-tts` voices are also told to say foreign words the way they are said in their own language. Where nothing is marked (free services, Soniox), a built-in list of common terms and brands and short-acronym spelling (SGK: "se ge ke") help the local voices, and a list of your own (**Speech recognition and voices › Pronunciation of foreign words**, one `word = how it sounds` per line) is used for every voice. Measured with `gemma4:12b` on Ollama: the marks came back well formed in both directions; a mark a small model breaks is cleaned up so it never shows on screen.
+A voice reads everything with its own language's rules, so an English term in Turkish speech ("API", "Apple") or a Turkish name in English speech ("Şükrü") can come out wrong. When the translation is spoken, the translator marks such words with how they sound, as `[[Apple|epıl]]` or `[[Şükrü|Shoo-kroo]]`. The screen and the transcript show only "Apple" and "Şükrü". Your own speech server, whose voices know one language each, reads the pronunciation; ElevenLabs and OpenAI get the word itself, since they handle mixed text, and OpenAI's `gpt-*-tts` voices are also told to say foreign words the way they are said in their own language. Where nothing is marked (Soniox), a built-in list of common terms and brands and short-acronym spelling (SGK: "se ge ke") help the local voices, and a list of your own (**Speech recognition and voices › Pronunciation of foreign words**, one `word = how it sounds` per line) is used for every voice. Measured with `gemma4:12b` on Ollama: the marks came back well formed in both directions; a mark a small model breaks is cleaned up so it never shows on screen.
 
 ### Ollama for translation
 
-Choose **Ollama** as the translation service in the settings and enter the server's address (for example `100.101.102.103`; port 11434 is added when none is given): the browser asks once for access to that address, and the list of its models fills itself (embedding-only models are left out). Press **Test** to time one sentence. Measured on a desktop NVIDIA GPU over Tailscale, `gemma4:12b` and `gemma4:26b` translate a sentence in 0.3–0.6 s once the model is loaded. A second server on another computer can stand behind it, then Claude Haiku (if a key is set) and free translation.
+Choose **Ollama** as the translation service in the settings and enter the server's address (for example `100.101.102.103`; port 11434 is added when none is given): the browser asks once for access to that address, and the list of its models fills itself (embedding-only models are left out). Press **Test** to time one sentence. Measured on a desktop NVIDIA GPU over Tailscale, `gemma4:12b` and `gemma4:26b` translate a sentence in 0.3–0.6 s once the model is loaded. A second server on another computer can stand behind it, then Claude Haiku (if a key is set).
 
 Ollama refuses requests whose `Origin` header it does not know, and browsers send one with every POST. The extension removes that header from its own requests to the servers in its settings (a `declarativeNetRequest` rule limited to this extension as the initiator), so **no `OLLAMA_ORIGINS` setting is needed**. A web page's request to the same server still carries its origin and is refused.
 
@@ -110,20 +109,6 @@ Under **Speech recognition and voices** choose **OpenAI-compatible**, then for r
 
 These services take whole recordings rather than a live stream: the extension cuts the speech into sentences itself and sends each one when it ends, so there are no live drafts and a long sentence is cut at 15 s. Their prices are not in the panel's estimate.
 
-### Free translation
-
-Choose **Free** as the translation service and no key is needed. The extension tries free services from the best quality down and moves on by itself when one runs out of quota, is slow or fails. The same chain stands behind Claude.
-
-| Order | Service | Free allowance | Needs |
-| --- | --- | --- | --- |
-| 1 | DeepL API Free | 500,000 characters a month | Your free DeepL key |
-| 2 | Mistral (`mistral-medium-latest`) | Free plan with rate limits | Your free Mistral key; turn off training on your data in Mistral's privacy settings |
-| 3 | Groq `openai/gpt-oss-120b` | Daily limits | Your free Groq key |
-| 4 | Groq `qwen/qwen3.8-27b` | Its own daily limits | The same Groq key |
-| 5 | Chrome's built-in translator | No limit, runs on your computer | Chrome 138 or newer on desktop; Brave and some other Chromium browsers may not have it |
-
-In Brave, add a free DeepL key, since Chrome's built-in translator may be missing there.
-
 ---
 
 ## Requirements
@@ -131,7 +116,7 @@ In Brave, add a free DeepL key, since Chrome's built-in translator may be missin
 - Chrome 116 or newer, Edge or Brave
 - Node.js 18 or newer, only to build the extension from source
 - For speech: an ElevenLabs API key (voice cloning needs a paid plan), an OpenAI or Groq key, or your own speech server; optionally a Soniox key to hear and translate in one stream
-- For translation: an API key for Claude, OpenAI or OpenRouter, or a server of your own (Ollama, LM Studio, vLLM), or nothing (free translation)
+- For translation: an API key for Claude, OpenAI, OpenRouter or Soniox, or a server of your own (Ollama, LM Studio, vLLM)
 - Headphones for calls
 
 ---
@@ -165,7 +150,7 @@ your microphone -> speech recognition (your language)  -> translation -> speech 
 video tab audio -> speech recognition                  -> translation -> subtitles, or speech over the original
 
 speech recognition and speech: ElevenLabs, an OpenAI-compatible service or the speech server
-translation: the chosen service (Claude, OpenAI/compatible, OpenRouter, Ollama -> second Ollama) -> Claude Haiku if a key is set -> free
+translation: the chosen service (Claude, OpenAI/compatible, OpenRouter, Ollama -> second Ollama) -> Claude Haiku if a key is set
 with Soniox: Soniox hears and translates in one stream -> speech
 ```
 
@@ -181,7 +166,7 @@ with Soniox: Soniox hears and translates in one stream -> speech
 | `src/offscreen/tts.js`, `pipeline.js` | Offscreen document | Speech, clause by clause, in order and with the delay kept in check |
 | `src/offscreen/fallback-translator.js` | Offscreen document | One translator in front of another |
 | `src/offscreen/translator.js` | Offscreen document | Claude, and the instructions and examples every translation service gets |
-| `src/offscreen/openai-translator.js`, `ollama-translator.js`, `free-translator.js` | Offscreen document | OpenAI, OpenRouter and compatible servers; Ollama, streamed sentence by sentence; the free services from the best down |
+| `src/offscreen/openai-translator.js`, `ollama-translator.js` | Offscreen document | OpenAI, OpenRouter and compatible servers; Ollama, streamed sentence by sentence |
 | `src/offscreen/voice-clone.js` | Offscreen document | ElevenLabs voice clones: yours, and theirs with consent |
 | `src/shared/pronounce.js` | Everywhere | Foreign words said the right way: the marks, the built-in list and yours |
 | `src/shared/transcript.js`, `recordings.js` | Everywhere | Transcripts and call recordings kept on this computer |
@@ -201,13 +186,12 @@ npm run test:e2e         # builds a test build, loads it into Chromium and drive
 ONLY=soniox,local npm run test:e2e   # only the suites whose names contain one of these words
 npm run test:scenarios   # one mock call through restarts, failures, settings changes and leaving
 npm run test:api         # live check of ElevenLabs and Claude (keys in .env)
-npm run test:free        # live check of DeepL, Mistral and Groq free plans (keys in .env)
 npm run test:soniox      # live check of a Soniox key (a fraction of a cent; key in .env)
 node test/ollama/live.mjs 100.101.102.103 gemma4:12b   # live check of an Ollama server through the settings page
 cd speech-server && python -m pytest tests           # the speech server: protocol, segmenting, keys, web page refusal
 ```
 
-- The end-to-end tests need no keys and cost nothing. Besides mock Meet and Zoom calls they cover recording, free translation, a mock Ollama server (which refuses any `Origin` header, like a real one), mock OpenAI translation and speech, a mock Soniox stream, the real speech server with stand-in engines, a call with no ElevenLabs and no Claude at all, and a video tab. With keys in `.env` they also make one round trip through the real ElevenLabs and Claude; `SKIP_REAL=1` leaves that out.
+- The end-to-end tests need no keys and cost nothing. Besides mock Meet and Zoom calls they cover recording, a mock Ollama server (which refuses any `Origin` header, like a real one), mock OpenAI translation and speech, a mock Soniox stream, the real speech server with stand-in engines, a call with no ElevenLabs and no Claude at all, and a video tab. With keys in `.env` they also make one round trip through the real ElevenLabs and Claude; `SKIP_REAL=1` leaves that out.
 - `test/meet/` holds slower checks with the real services: a real Google Meet call (`live.mjs`), a four-person stand-in call (`group-call.mjs`) and a recorded two-way demo (`mock-call-demo.mjs`).
 - They build with `--test` (`npm run build:test`), which leaves the panel's shadow root open for them and gives access to `127.0.0.1` and the mock video site; a normal build has neither.
 - Their speech samples are made with the macOS `say` command and ffmpeg, and their certificate with openssl. On Windows, put ready-made `english.wav`, `turkish.wav` and `tone.wav` (48 kHz mono) in `test/e2e/fixtures` and Git's `usr\bin` on the PATH for openssl. The speech server suite needs Python with `speech-server/requirements-test.txt`.
@@ -233,7 +217,7 @@ What the extension does with your data: [privacy policy](PRIVACY.md) ([Türkçe]
 
 ## Costs
 
-The panel counts what a call uses and estimates the cost from list prices (28 October 2026): Scribe v2 Realtime is $0.39 an hour per active direction, Flash v2.5 and v4 Turbo speech is $0.04 per 1,000 characters, and Claude is billed per token (Haiku 5.5 is the cheapest). Subtitles-only mode makes no speech. Free translation, Ollama and your own speech server cost nothing, and the panel counts them as $0. OpenAI and OpenRouter bill per token too, and Soniox per hour of audio, but their prices are not in the estimate.
+The panel counts what a call uses and estimates the cost from list prices (28 October 2026): Scribe v2 Realtime is $0.39 an hour per active direction, Flash v2.5 and v4 Turbo speech is $0.04 per 1,000 characters, and Claude is billed per token (Haiku 5.5 is the cheapest). Subtitles-only mode makes no speech. Ollama and your own speech server cost nothing, and the panel counts them as $0. OpenAI and OpenRouter bill per token too, and Soniox per hour of audio, but their prices are not in the estimate.
 
 ---
 

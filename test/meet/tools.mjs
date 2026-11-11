@@ -11,7 +11,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ScribeRealtime } from '../../src/offscreen/stt.js';
-import { matchCase } from '../../src/offscreen/free-translator.js';
+
+// Chrome's translator lowercases a sentence's first letter at times; it follows the source.
+function matchCase(source, translation, language) {
+  const first = String(source).match(/[\p{L}\p{N}]/u)?.[0];
+  if (!first || first === first.toLocaleLowerCase(language) || !translation) return translation;
+  const i = translation.search(/[\p{L}\p{N}]/u);
+  if (i < 0 || !/\p{L}/u.test(translation[i])) return translation;
+  return translation.slice(0, i) + translation[i].toLocaleUpperCase(language) + translation.slice(i + 1);
+}
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const root = path.resolve(here, '../..');

@@ -3,13 +3,12 @@
 //   Meet tab audio  -> Scribe (their language) -> Claude -> ElevenLabs -> my speakers
 //   my microphone   -> Scribe (my language)    -> Claude -> ElevenLabs -> Meet tab -> the call
 //
-// With free translation chosen, the free services in free-translator.js take Claude's place.
 //
 // Offscreen documents only get chrome.runtime, so settings arrive from the service
 // worker with each message, and everything for the Meet tab goes through a port the
 // tab's content script opens.
 
-import { PROVIDERS, isSoniox, isSonioxListening, whisperModelFor, isFreeTranslation, isOllamaTranslation, translationProvider, claudeModelOf, missingKeys, missingServers, parseKeyterms, OPENAI_URL, OPENROUTER_URL } from '../shared/settings.js';
+import { PROVIDERS, isSoniox, isSonioxListening, whisperModelFor, translationProvider, claudeModelOf, missingKeys, missingServers, parseKeyterms, OPENAI_URL, OPENROUTER_URL } from '../shared/settings.js';
 import { OpenAITranslator, openaiRestMs } from './openai-translator.js';
 import { serverBase } from '../shared/servers.js';
 import { OllamaTranslator, ollamaRestMs } from './ollama-translator.js';
@@ -27,7 +26,6 @@ import { SonioxSession, sonioxConfig } from './soniox.js';
 import { sonioxSynthesize, closeSonioxTts, SONIOX_DEFAULT_VOICES } from './soniox-tts.js';
 import { OpenAITranscriber, openaiSynthesize, listAudioModels } from './openai-speech.js';
 import { Translator, describeClaudeError, claudeRestMs } from './translator.js';
-import { FreeTranslator, freeKeys } from './free-translator.js';
 import { FallbackTranslator } from './fallback-translator.js';
 import { synthesize } from './tts.js';
 import { DirectionPipeline, History, Speaker } from './pipeline.js';
@@ -98,7 +96,7 @@ const OLLAMA_BACKUP_CLAUDE = 'claude-haiku-5-5';
 // What decides which translators are made; a change rebuilds them mid-call.
 function translationSetup(s) {
   const provider = translationProvider(s);
-  if (provider === 'free' || provider === 'claude') return provider;
+  if (provider === 'claude') return provider;
   if (provider === 'ollama') return ['ollama', serverBase(s.ollamaUrl), s.ollamaModel, serverBase(s.ollamaBackupUrl), s.ollamaBackupModel, Boolean(s.anthropicKey)].join('|');
   return [provider, s.openaiUrl, s.openaiKey, s.openaiModel, s.openrouterKey, s.openrouterModel, Boolean(s.anthropicKey)].join('|');
 }
@@ -420,30 +418,22 @@ class Session {
       meetingContext: s.meetingContext,
       keyterms: parseKeyterms(s.keyterms),
     };
-    const free = () => new FreeTranslator({ ...common, keys: freeKeys(s), log });
-    if (isFreeTranslation(s)) return free();
     const fallback = s.translationFallback !== false;
-    const claude = (model) =>
+    const claude = (model, quick = fallback) =>
       new Translator({
         ...common,
         apiKey: s.anthropicKey,
         model,
         onUsage: (used, usage) => this.usage.addClaude(used, usage),
-        ...(fallback ? { timeoutMs: 10_000, maxRetries: 1 } : {}),
+        ...(quick ? { timeoutMs: 10_000, maxRetries: 1 } : {}),
       });
     // A service that is out for the rest of the call says so once, in the panel.
     const onOff = (name, err) => this.warn(`off-${name}`, 'warn.serviceOff', { name, message: describeClaudeError(err) });
     const provider = translationProvider(s);
-    if (provider === 'claude') {
-      if (!fallback) return claude(claudeModelOf(s));
-      return new FallbackTranslator({ primary: claude(claudeModelOf(s)), backup: free(), restFor: claudeRestMs, onOff, log });
-    }
-    // Any other provider first, then Claude Haiku (with a key), then free translation. A
-    // Claude that is only the backup may fail its check without holding up the call.
-    const behind = () =>
-      s.anthropicKey
-        ? new FallbackTranslator({ primary: claude(OLLAMA_BACKUP_CLAUDE), backup: free(), restFor: claudeRestMs, name: 'Claude', requirePrimary: false, onOff, log })
-        : free();
+    // Claude alone has no backup, so it keeps its own retries.
+    if (provider === 'claude') return claude(claudeModelOf(s), false);
+    // Behind any other provider stands Claude Haiku, when a key is set.
+    const behind = fallback && s.anthropicKey ? claude(OLLAMA_BACKUP_CLAUDE) : null;
     if (provider === 'openai' || provider === 'openrouter') {
       const openrouter = provider === 'openrouter';
       const name = t(openrouter ? 'provider.openrouter' : 'provider.openai');
@@ -455,60 +445,29 @@ class Session {
         label: name,
         log,
       });
-      if (!fallback) return primary;
-      return new FallbackTranslator({ primary, backup: behind(), restFor: openaiRestMs, name, onOff, log });
+      if (!behind) return primary;
+      return new FallbackTranslator({ primary, backup: behind, restFor: openaiRestMs, name, onOff, log });
     }
-    if (isOllamaTranslation(s)) {
-      // Ollama first, then a second Ollama server, then Claude (with a key), then free.
-      let backup = behind();
-      if (serverBase(s.ollamaBackupUrl) && String(s.ollamaBackupModel || '').trim()) {
-        backup = new FallbackTranslator({
-          primary: new OllamaTranslator({ ...common, url: s.ollamaBackupUrl, model: s.ollamaBackupModel, label: t('server.ollamaBackup'), log }),
-          backup,
-          restFor: ollamaRestMs,
-          name: t('server.ollamaBackup'),
-          requirePrimary: false,
-          onOff,
-          log,
-        });
-      }
-      return new FallbackTranslator({
-        primary: new OllamaTranslator({ ...common, url: s.ollamaUrl, model: s.ollamaModel, label: t('server.ollama'), log }),
-        backup,
-        restFor: ollamaRestMs,
-        name: t('server.ollama'),
-        requirePrimary: false,
-        onOff,
-        log,
-      });
+    // Ollama first, then a second Ollama server, then Claude (with a key).
+    let backup = behind;
+    if (serverBase(s.ollamaBackupUrl) && String(s.ollamaBackupModel || '').trim()) {
+      const second = new OllamaTranslator({ ...common, url: s.ollamaBackupUrl, model: s.ollamaBackupModel, label: t('server.ollamaBackup'), log });
+      backup = backup
+        ? new FallbackTranslator({ primary: second, backup, restFor: ollamaRestMs, name: t('server.ollamaBackup'), requirePrimary: false, onOff, log })
+        : second;
     }
-    return free();
+    const ollama = new OllamaTranslator({ ...common, url: s.ollamaUrl, model: s.ollamaModel, label: t('server.ollama'), log });
+    if (!backup) return ollama;
+    return new FallbackTranslator({ primary: ollama, backup, restFor: ollamaRestMs, name: t('server.ollama'), requirePrimary: false, onOff, log });
   }
 
   async verifyTranslator() {
-    const free = this.translator instanceof FreeTranslator;
     try {
       const notes = await this.translator.verify();
       for (const note of notes || []) this.warn(note.id, note.key, note.params);
-      if (notes?.some((note) => note.id === 'backup')) this.watchBackup();
     } catch (err) {
-      throw new UserError(describeClaudeError(err), free ? 'free-translation' : 'translation');
+      throw new UserError(describeClaudeError(err), 'translation');
     }
-  }
-
-  // The popup downloads Chrome's language packs as the call starts; the warning goes once
-  // the backup can translate.
-  watchBackup(tries = 0) {
-    clearTimeout(this.backupTimer);
-    this.backupTimer = setTimeout(async () => {
-      if (this.stopped || !(this.translator instanceof FallbackTranslator)) return;
-      if (await this.translator.backupReady()) {
-        this.warnings.delete('backup');
-        this.report();
-      } else if (tries < 12) {
-        this.watchBackup(tries + 1);
-      }
-    }, 10_000);
   }
 
   async resolveVoices() {
@@ -934,7 +893,7 @@ class Session {
       if (url && !this.debugSink) {
         this.debugSink = new DebugSink(url);
         logSink = this.debugSink;
-        this.debugSink.event({ kind: 'start', settings: { ...this.settings, elevenLabsKey: undefined, anthropicKey: undefined, deeplKey: undefined, mistralKey: undefined, groqKey: undefined, localSpeechKey: undefined }, recording: Boolean(this.recorder) });
+        this.debugSink.event({ kind: 'start', settings: { ...this.settings, elevenLabsKey: undefined, anthropicKey: undefined, groqKey: undefined, localSpeechKey: undefined }, recording: Boolean(this.recorder) });
         log('info', `debug copies go to ${url}`);
         // A recording that began before this carries its file header in the chunks already saved.
         const rec = this.recording;
@@ -1051,14 +1010,14 @@ class Session {
     this.monitorGain?.gain.setTargetAtTime(next.monitorVolume, this.ctx.currentTime, 0.05);
     this.updateDucking();
     const switched = translationSetup(next) !== translationSetup(prev);
-    const newKey = !isFreeTranslation(next) && next.anthropicKey !== prev.anthropicKey;
+    const newKey = next.anthropicKey !== prev.anthropicKey;
     if (isSoniox(prev) && !isSoniox(next) && !this.translator && !missingKeys(next).length && !missingServers(next).length) {
       // Soniox turned off mid-call: the translation service takes over.
       this.translator = this.createTranslator(next);
       if (this.incoming) this.incoming.translator = this.translator;
       if (this.outgoing) this.outgoing.translator = this.translator;
     } else if (this.translator && (switched || newKey) && !missingKeys(next).length && !missingServers(next).length) {
-      // Switched between Claude, Ollama and free translation mid-call, another Ollama
+      // Switched between translation services mid-call, another Ollama
       // server or model, or a new Anthropic key.
       this.translator = this.createTranslator(next);
       if (this.incoming) this.incoming.translator = this.translator;
@@ -1071,7 +1030,6 @@ class Session {
         theirLanguage: next.theirLanguage,
         meetingContext: next.meetingContext,
         keyterms: parseKeyterms(next.keyterms),
-        keys: freeKeys(next),
       });
     }
     // A new ElevenLabs key is used from the next connection on (speech takes it right away).
@@ -1334,7 +1292,6 @@ class Session {
     clearTimeout(this.muteTimer);
     clearTimeout(this.callGoneTimer);
     clearTimeout(this.sttRestartTimer);
-    clearTimeout(this.backupTimer);
     clearTimeout(this.transcriptTimer);
     closeSonioxTts();
     await this.saveTranscriptNow({ endedAt: Date.now() });

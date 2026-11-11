@@ -344,75 +344,10 @@ function readTranscripts(control) {
   );
 }
 
-async function freeTranslationTest() {
-  console.log('\n== Free translation against a local mock (DeepL, Mistral, Groq; no Claude key) ==');
-  const mock = await startMockApi({
-    cert: readFileSync(path.join(fixtures, 'mock-cert.pem')),
-    key: readFileSync(path.join(fixtures, 'mock-key.pem')),
-  });
-  const env = await launch({ micWav: path.join(fixtures, 'turkish.wav'), remoteWav: path.join(fixtures, 'english.wav'), proxyPort: mock.port });
-  const { control, meet, tabId } = env;
-  const { stats, faults } = mock;
-  const setSettings = (patch) =>
-    control.evaluate(async (p) => {
-      const { settings } = await chrome.storage.local.get('settings');
-      await chrome.storage.local.set({ settings: { ...(settings || {}), ...p } });
-    }, patch);
-  const served = (from) => stats.free.slice(from).map((r) => r.service);
-  try {
-    // Chromium here has no language packs and the offscreen page cannot download them,
-    // so with no keys the start has to explain what to do.
-    await setSettings({ elevenLabsKey: 'mock-el', anthropicKey: '', claudeModel: 'free', deeplKey: '', mistralKey: '', groqKey: '' });
-    const bare = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
-    check('free translation with nothing ready explains how to prepare it', bare?.ok === false && /prepare|hazırla/i.test(bare?.error || ''), bare?.error);
-
-    await setSettings({ deeplKey: 'mock-deepl:fx', mistralKey: 'mock-mistral', groqKey: 'mock-groq' });
-    const start = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
-    check('free translation starts without an Anthropic key', start?.ok === true, start?.error);
-    if (!start?.ok) return;
-
-    const incoming = await waitFor(async () => done((await readCaptions(meet)).incoming), 30000, 300);
-    check('the counterpart is translated into Turkish by DeepL first', incoming?.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.' && stats.free[0]?.service === 'deepl', `${JSON.stringify(incoming)} ${served(0).join(',')}`);
-    const outgoing = await waitFor(async () => done((await readCaptions(meet)).outgoing), 30000, 300);
-    const toEnglish = stats.free.find((r) => r.service === 'deepl' && r.target === 'EN-US');
-    check('my Turkish is translated into English by DeepL', outgoing?.translation === 'Friday at three works for us.' && Boolean(toEnglish), JSON.stringify(outgoing));
-    const heard = await maxLevel(meet, 4000);
-    check('the far end receives my translated voice', heard > 0.01, `level ${heard.toFixed(3)}`);
-
-    faults.deepl = 456;
-    const atQuota = stats.free.length;
-    const mistral = await waitFor(() => served(atQuota).includes('mistral'), 30000, 300);
-    check('when DeepL runs out of characters, Mistral takes over by itself', mistral, served(atQuota).join(','));
-    const deeplAfter = await waitFor(() => served(atQuota).filter((x) => x === 'mistral').length >= 2, 30000, 300);
-    check('DeepL is not asked again after its quota error', deeplAfter && served(atQuota).filter((x) => x === 'deepl').length <= 2, served(atQuota).join(','));
-
-    faults.mistral = 429;
-    const atLimit = stats.free.length;
-    const groq = await waitFor(() => stats.free.slice(atLimit).some((r) => r.service === 'groq' && r.model === 'openai/gpt-oss-120b'), 30000, 300);
-    check('when Mistral is rate limited, Groq takes over', groq, served(atLimit).join(','));
-
-    const status = (await sessionState(control))?.engine;
-    check('the engine reported no error', !status?.error, status?.error || '');
-    check('no Claude request was made and no tokens are counted', stats.claude.length === 0 && status?.usage?.claudeTokens === 0, `${stats.claude.length} requests, ${status?.usage?.claudeTokens} tokens`);
-    const shown = await meet.evaluate(() => document.getElementById('meet-tercuman-overlay')?.shadowRoot?.textContent || '');
-    check('the page never names the service that translated', shown.length > 0 && !/deepl|mistral|groq/i.test(shown), shown.slice(0, 160));
-
-    await send(control, { type: 'stop' });
-    const kept = await waitFor(async () => (await readTranscripts(control)).find((t) => t.endedAt), 10000, 300);
-    const both = kept?.lines?.some((l) => l.dir === 'in' && l.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.') && kept?.lines?.some((l) => l.dir === 'out' && l.translation === 'Friday at three works for us.');
-    check('the call leaves a transcript of both sides with their translations', kept?.kind === 'call' && both, JSON.stringify(kept?.lines?.slice(0, 2)));
-    check('no script errors on the Meet page', env.pageErrors.length === 0, env.pageErrors.join(' | '));
-  } finally {
-    await env.context.close();
-    await rm(env.userDataDir, { recursive: true, force: true });
-    mock.close();
-  }
-}
-
 // Translation on a stand-in Ollama server (plain HTTP on 127.0.0.1, refusing any Origin
-// header), with DeepL behind it.
+// header), with Claude behind it.
 async function ollamaTranslationTest() {
-  console.log('\n== Translation on a local mock Ollama server (no Claude key) ==');
+  console.log('\n== Translation on a local mock Ollama server (Claude behind it) ==');
   const mock = await startMockApi({
     cert: readFileSync(path.join(fixtures, 'mock-cert.pem')),
     key: readFileSync(path.join(fixtures, 'mock-key.pem')),
@@ -426,7 +361,7 @@ async function ollamaTranslationTest() {
       await chrome.storage.local.set({ settings: { ...(settings || {}), ...p } });
     }, patch);
   try {
-    await setSettings({ elevenLabsKey: 'mock-el', anthropicKey: '', claudeModel: 'ollama', ollamaUrl: '', ollamaModel: 'mock-gemma:12b', deeplKey: 'mock-deepl:fx' });
+    await setSettings({ elevenLabsKey: 'mock-el', anthropicKey: 'mock-an', translationProvider: 'ollama', claudeModel: 'claude-haiku-5-5', ollamaUrl: '', ollamaModel: 'mock-gemma:12b' });
     const bare = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
     check('Ollama without a server address does not start and says so', bare?.ok === false && /address|adres/i.test(bare?.error || ''), bare?.error);
 
@@ -435,7 +370,7 @@ async function ollamaTranslationTest() {
     const rule = await waitFor(() => env.worker.evaluate(async () => (await chrome.declarativeNetRequest.getDynamicRules()).some((r) => r.condition.requestDomains?.includes('127.0.0.1'))), 5000, 200);
     check('a header rule is set for the Ollama server', rule);
     const start = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
-    check('translation on Ollama starts without an Anthropic key', start?.ok === true, start?.error);
+    check('translation on Ollama starts', start?.ok === true, start?.error);
     if (!start?.ok) return;
 
     const incoming = await waitFor(async () => done((await readCaptions(meet)).incoming), 30000, 300);
@@ -444,16 +379,14 @@ async function ollamaTranslationTest() {
     check('my Turkish is translated into English by Ollama', outgoing?.translation === 'Friday at three works for us.', JSON.stringify(outgoing));
     check('Ollama is asked with the chosen model and without thinking', ollama.stats.chats.every((c) => c.model === 'mock-gemma:12b' && c.think === false), JSON.stringify(ollama.stats.chats[0]));
     check('no request reached Ollama with an Origin header', ollama.stats.refused === 0, `${ollama.stats.refused} refused`);
-    check('no free service was needed', mock.stats.free.length === 0, mock.stats.free.map((r) => r.service).join(','));
+    check('Claude was not needed while Ollama worked', mock.stats.claude.length === 0, `${mock.stats.claude.length}`);
 
-    // The server goes away: the next sentences are translated by the backup (DeepL).
+    // The server goes away: the next sentences are translated by the backup (Claude).
     ollama.faults.down = true;
-    const before = mock.stats.free.length;
-    const backup = await waitFor(() => mock.stats.free.slice(before).some((r) => r.service === 'deepl'), 40000, 300);
-    check('when the Ollama server is gone, the backup translates', backup, mock.stats.free.slice(before).map((r) => r.service).join(','));
+    const backup = await waitFor(() => mock.stats.claude.length > 0, 40000, 300);
+    check('when the Ollama server is gone, Claude translates', backup, `${mock.stats.claude.length} claude`);
     const status = (await sessionState(control))?.engine;
     check('the call goes on without an error', !status?.error, status?.error || '');
-    check('no Claude request was made', mock.stats.claude.length === 0, `${mock.stats.claude.length}`);
 
     await send(control, { type: 'stop' });
     check('no script errors on the Meet page', env.pageErrors.length === 0, env.pageErrors.join(' | '));
@@ -755,7 +688,7 @@ async function localServersTest() {
     }, patch);
   try {
     await setSettings({
-      elevenLabsKey: '', anthropicKey: '', deeplKey: '', mistralKey: '', groqKey: '',
+      elevenLabsKey: '', anthropicKey: '', groqKey: '',
       claudeModel: 'ollama', ollamaUrl: ollama.url, ollamaModel: 'mock-gemma:12b',
       speechProvider: 'local', localSpeechUrl: speech.url, localSpeechKey: 'wrong-key', myVoiceId: '', theirVoiceId: '',
     });
@@ -913,7 +846,7 @@ await mkdir(fixtures, { recursive: true });
 makeFixtures();
 // ONLY=local,media runs only the suites whose names contain one of these words.
 const only = (process.env.ONLY || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
-const suites = { connectionTest, zoomTest, recordingTest, mockTranslationTest, freeTranslationTest, ollamaTranslationTest, openaiTranslationTest, openaiSpeechTest, sonioxTest, localServersTest, mediaTest };
+const suites = { connectionTest, zoomTest, recordingTest, mockTranslationTest, ollamaTranslationTest, openaiTranslationTest, openaiSpeechTest, sonioxTest, localServersTest, mediaTest };
 for (const [name, run] of Object.entries(suites)) {
   if (!only.length || only.some((w) => name.toLowerCase().includes(w))) await run();
 }

@@ -7,7 +7,7 @@
 //    the transcript show "Apple"; a voice that knows only one language (the local speech
 //    server) reads "epıl"; ElevenLabs and OpenAI, which handle mixed text, get "Apple".
 //  - A pronunciation list (built in for the local voices, plus the user's own) covers what
-//    the translator did not mark: free translation services and Soniox mark nothing.
+//    the translator did not mark: Soniox marks nothing.
 //  - Short Turkish acronyms (SGK, THY) are read letter by letter in Turkish.
 
 const MARK = /\[\[([^[\]|]*)(?:\|+([^[\]]*))?\]\]/g;

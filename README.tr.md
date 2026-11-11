@@ -19,7 +19,7 @@ Görüşmede iki yönlü: karşı taraf İspanyolca konuşur, sen Türkçe duyar
   <tr><td><b>Diğer sekmeler</b></td><td>YouTube, X, çevrimiçi radyo, sesi olan her web sayfası</td></tr>
   <tr><td><b>Tarayıcılar</b></td><td>Chrome, Edge, Brave ve diğer Chromium tarayıcıları</td></tr>
   <tr><td><b>Diller</b></td><td>20 dil, herhangi ikisi; ilk açılışta tarayıcının dili seçilir; video sekmelerinde konuşulan dil kendiliğinden algılanabilir</td></tr>
-  <tr><td><b>Çeviri</b></td><td>Claude, OpenAI ya da uyumlu bir sunucu, OpenRouter, kendi Ollama sunucun ya da ücretsiz servisler; her birinin modelleri ayarlarda listelenir</td></tr>
+  <tr><td><b>Çeviri</b></td><td>Claude, OpenAI ya da uyumlu bir sunucu, OpenRouter, kendi Ollama sunucun ya da Soniox; her birinin modelleri ayarlarda listelenir</td></tr>
   <tr><td><b>Ses</b></td><td>ElevenLabs, OpenAI uyumlu servisler (OpenAI, Groq Whisper, LocalAI, Speaches, Kokoro) ya da kendi ses sunucun (faster-whisper ve Piper)</td></tr>
   <tr><td><b>Gecikme</b></td><td>Cümle bittikten yaklaşık 1,5–3 sn sonra</td></tr>
   <tr><td><b>Arayüz</b></td><td>İngilizce (varsayılan), Türkçe, Almanca, İspanyolca, Çince</td></tr>
@@ -55,14 +55,14 @@ Görüşmede iki yönlü: karşı taraf İspanyolca konuşur, sen Türkçe duyar
 
 - Yirmi dil, herhangi ikisi, iki yönde: İngilizce, Türkçe, Almanca, Fransızca, İspanyolca, İtalyanca, Portekizce, Felemenkçe, Lehçe, Rusça, Ukraynaca, Arapça, Yunanca, Rumence, İsveççe, Endonezce, Hintçe, Çince, Japonca ve Korece.
 - Film altyazısı gibi: çeviri büyük harflerle, orijinal altında; iki tarafı, anlık gecikmeyi ve tahmini maliyetli bir kullanım sayacını gösteren bir panel.
-- Bir servis hata verdi diye cümle kaybolmaz: çeviri Ollama'dan ikinci bir Ollama sunucusuna, oradan Claude Haiku'ya (Claude anahtarı varsa) ve ücretsiz çeviriye geçer; OpenAI ya da OpenRouter'dan Claude Haiku'ya (anahtar varsa) ve ücretsiz çeviriye; Claude'dan ücretsiz çeviriye.
+- Bir servis hata verdi diye cümle kaybolmaz: çeviri Ollama'dan ikinci bir Ollama sunucusuna, oradan Claude Haiku'ya (Claude anahtarı varsa) geçer; OpenAI ya da OpenRouter'dan Claude Haiku'ya (anahtar varsa).
 
 > **Önce bunu oku.**
 > - Bu ardıl çeviridir: çeviri cümle bittikten sonra başlar. Ses tanıma 0,7 sn sessizlik bekler (0,5 sn seçilebilir), çeviri 0,3–2 sn, seslendirme 0,2–0,5 sn sürer. Uzun bir konuşmada biten cümleler, konuşan devam ederken çevrilir.
 > - En kısa gecikme için Ollama ile ya da **Claude Haiku 5.5** ile çevir, **0,5 sn** sessizlik seç ve kısa cümlelerle konuş.
 > - **Kulaklık kullan.** Kulaklık yoksa duyduğun çeviri mikrofonuna sızar ve karşı tarafa geri gider. Kulaklığın yoksa ayarlarda **Hoparlör modu**nu aç.
 > - Aynı bilgisayardaki iki katılımcı birbirinin sesini bozar. İkinci bir cihazla (telefon) ya da ikinci bir kişiyle dene.
-> - Görüşmenin sesi ve metni seçtiğin servislere gider (ElevenLabs, Anthropic, DeepL, Mistral, Groq). İş toplantısında katılımcılara söyle ve şirketinin kurallarına bak ya da her şeyi kendi sunucularında tut. Birinin sesini klonlamak için onun izni gerekir.
+> - Görüşmenin sesi ve metni seçtiğin servislere gider (ElevenLabs, Anthropic, OpenAI, Groq, Soniox). İş toplantısında katılımcılara söyle ve şirketinin kurallarına bak ya da her şeyi kendi sunucularında tut. Birinin sesini klonlamak için onun izni gerekir.
 
 ---
 
@@ -72,7 +72,6 @@ Görüşmede iki yönlü: karşı taraf İspanyolca konuşur, sen Türkçe duyar
 | --- | --- | --- |
 | **Barındırılan** | ElevenLabs (Scribe v2 Realtime, Flash v2.5 / v4 Turbo); OpenAI (Whisper, gpt-4o-transcribe, gpt-4o-mini-tts); Groq Whisper (tanıma, hızlı ve ucuz) | Claude Opus, Sonnet ya da Haiku 5.5; OpenAI; OpenRouter (yüzlerce model, tek anahtar) |
 | **Tanıma ve çeviri bir arada** | Soniox (`stt-rt-v6`): aynı akışta duyar ve çevirir, en hızlı kurulum; çeviriyi Soniox'un kendi sesleri (`tts-rt-v2`) ya da yukarıdaki seslerden biri seslendirir | Soniox |
-| **Ücretsiz servisler** | | DeepL Free, Mistral, Groq, Chrome'un yerleşik çevirmeni |
 | **Kendi sunucuların** | [speech-server/](speech-server/README.tr.md) içindeki ses sunucusu (faster-whisper ve Piper) ya da OpenAI'nin ses API'sini sunan herhangi bir sunucu (Speaches, LocalAI, Kokoro-FastAPI) | Ollama (örneğin `gemma4:12b`) ya da OpenAI API'sini sunan herhangi bir sunucu (LM Studio, vLLM) |
 
 İki sütun ayrı ayrı seçilir. İkisinde de kendi sunucularını kullanırsan görüşmeden hiçbir şey bilgisayarlarının dışına çıkmaz ve hiçbir şey faturalanmaz.
@@ -87,11 +86,11 @@ Görüşmede iki yönlü: karşı taraf İspanyolca konuşur, sen Türkçe duyar
 
 ### Yabancı kelimeler doğru okunur
 
-Bir ses her şeyi kendi dilinin kurallarıyla okur; Türkçe konuşmadaki İngilizce bir terim ("API", "Apple") ya da İngilizce konuşmadaki Türkçe bir ad ("Şükrü") yanlış çıkabilir. Çeviri seslendirilecekse çevirmen bu kelimeleri nasıl okunduklarıyla işaretler: `[[Apple|epıl]]` ya da `[[Şükrü|Shoo-kroo]]`. Ekranda ve dökümde yalnızca "Apple" ve "Şükrü" görünür. Her sesi tek dil bilen kendi ses sunucun okunuşu okur; karışık metni idare edebildikleri için ElevenLabs ve OpenAI kelimenin kendisini alır, OpenAI'nin `gpt-*-tts` seslerine ayrıca yabancı kelimeleri kendi dillerindeki gibi söylemeleri söylenir. İşaret konmayan yerlerde (ücretsiz servisler, Soniox) yerleşik bir yaygın terimler ve markalar listesi ve kısa kısaltmaların harf harf okunması (SGK: "se ge ke") yerel seslere yardım eder; kendi listen de (**Ses tanıma ve sesler › Yabancı kelimelerin okunuşu**, her satıra bir `kelime = okunuşu`) bütün seslerde kullanılır. Ollama'da `gemma4:12b` ile ölçüldü: işaretler iki yönde de düzgün geldi; küçük bir modelin bozduğu işaret temizlenir ve ekranda hiç görünmez.
+Bir ses her şeyi kendi dilinin kurallarıyla okur; Türkçe konuşmadaki İngilizce bir terim ("API", "Apple") ya da İngilizce konuşmadaki Türkçe bir ad ("Şükrü") yanlış çıkabilir. Çeviri seslendirilecekse çevirmen bu kelimeleri nasıl okunduklarıyla işaretler: `[[Apple|epıl]]` ya da `[[Şükrü|Shoo-kroo]]`. Ekranda ve dökümde yalnızca "Apple" ve "Şükrü" görünür. Her sesi tek dil bilen kendi ses sunucun okunuşu okur; karışık metni idare edebildikleri için ElevenLabs ve OpenAI kelimenin kendisini alır, OpenAI'nin `gpt-*-tts` seslerine ayrıca yabancı kelimeleri kendi dillerindeki gibi söylemeleri söylenir. İşaret konmayan yerlerde (Soniox) yerleşik bir yaygın terimler ve markalar listesi ve kısa kısaltmaların harf harf okunması (SGK: "se ge ke") yerel seslere yardım eder; kendi listen de (**Ses tanıma ve sesler › Yabancı kelimelerin okunuşu**, her satıra bir `kelime = okunuşu`) bütün seslerde kullanılır. Ollama'da `gemma4:12b` ile ölçüldü: işaretler iki yönde de düzgün geldi; küçük bir modelin bozduğu işaret temizlenir ve ekranda hiç görünmez.
 
 ### Çeviri için Ollama
 
-Ayarlarda çeviri servisi olarak **Ollama**'yı seç ve sunucunun adresini gir (örneğin `100.101.102.103`; port yazılmazsa 11434 eklenir): tarayıcı o adrese erişim için bir kez izin ister ve modellerin listesi kendiliğinden dolar (yalnızca gömme yapan modeller dışarıda kalır). Bir cümlenin süresini ölçmek için **Test et**'e bas. Tailscale üzerinden masaüstü bir NVIDIA GPU'da ölçüldü: model yüklendikten sonra `gemma4:12b` ve `gemma4:26b` bir cümleyi 0,3–0,6 sn'de çeviriyor. Arkasında başka bir bilgisayardaki ikinci bir sunucu, sonra Claude Haiku (anahtar varsa) ve ücretsiz çeviri durabilir.
+Ayarlarda çeviri servisi olarak **Ollama**'yı seç ve sunucunun adresini gir (örneğin `100.101.102.103`; port yazılmazsa 11434 eklenir): tarayıcı o adrese erişim için bir kez izin ister ve modellerin listesi kendiliğinden dolar (yalnızca gömme yapan modeller dışarıda kalır). Bir cümlenin süresini ölçmek için **Test et**'e bas. Tailscale üzerinden masaüstü bir NVIDIA GPU'da ölçüldü: model yüklendikten sonra `gemma4:12b` ve `gemma4:26b` bir cümleyi 0,3–0,6 sn'de çeviriyor. Arkasında başka bir bilgisayardaki ikinci bir sunucu, sonra Claude Haiku (anahtar varsa) durabilir.
 
 Ollama, tanımadığı bir `Origin` başlığı taşıyan istekleri reddeder ve tarayıcılar her POST isteğinde bu başlığı gönderir. Eklenti bu başlığı ayarlardaki sunuculara giden kendi isteklerinden kaldırır (yalnızca bu eklentinin başlattığı isteklerle sınırlı bir `declarativeNetRequest` kuralı); bu yüzden **`OLLAMA_ORIGINS` ayarı gerekmez**. Bir web sayfasının aynı sunucuya isteği kendi kaynağını taşımaya devam eder ve reddedilir.
 
@@ -112,20 +111,6 @@ Bu, faster-whisper'ı (`large-v3-turbo`) ve 20 dilin 16'sı için sesleriyle Pip
 
 Bu servisler canlı akış yerine bütün kayıtlar alır: eklenti konuşmayı kendisi cümlelere böler ve her birini bitince gönderir; bu yüzden canlı taslak yoktur ve uzun bir cümle 15 sn'de kesilir. Fiyatları panelin tahminine dahil değildir.
 
-### Ücretsiz çeviri
-
-Çeviri servisi olarak **Ücretsiz**'i seç; anahtar gerekmez. Eklenti ücretsiz servisleri en kalitelisinden başlayarak dener; biri kotasını doldurunca, yavaşlayınca ya da hata verince kendiliğinden sıradakine geçer. Aynı zincir Claude'un arkasında da durur.
-
-| Sıra | Servis | Ücretsiz kullanım | Gereken |
-| --- | --- | --- | --- |
-| 1 | DeepL API Free | Ayda 500.000 karakter | Ücretsiz DeepL anahtarın |
-| 2 | Mistral (`mistral-medium-latest`) | Hız sınırlı ücretsiz plan | Ücretsiz Mistral anahtarın; Mistral'ın gizlilik ayarlarında verilerinle eğitimi kapat |
-| 3 | Groq `openai/gpt-oss-120b` | Günlük sınırlar | Ücretsiz Groq anahtarın |
-| 4 | Groq `qwen/qwen3.8-27b` | Kendi günlük sınırları | Aynı Groq anahtarı |
-| 5 | Chrome'un yerleşik çevirmeni | Sınırsız, bilgisayarında çalışır | Masaüstünde Chrome 138 ya da daha yenisi; Brave ve bazı Chromium tarayıcılarında olmayabilir |
-
-Brave'de ücretsiz bir DeepL anahtarı ekle; Chrome'un yerleşik çevirmeni orada olmayabilir.
-
 ---
 
 ## Gerekenler
@@ -133,7 +118,7 @@ Brave'de ücretsiz bir DeepL anahtarı ekle; Chrome'un yerleşik çevirmeni orad
 - Chrome 116 ya da daha yenisi, Edge ya da Brave
 - Node.js 18 ya da daha yenisi, yalnızca eklentiyi kaynaktan derlemek için
 - Ses için: bir ElevenLabs API anahtarı (ses klonlama ücretli plan ister), bir OpenAI ya da Groq anahtarı ya da kendi ses sunucun; tek akışta duyup çevirmek için isteğe bağlı olarak bir Soniox anahtarı
-- Çeviri için: Claude, OpenAI ya da OpenRouter API anahtarı, ya da kendi sunucun (Ollama, LM Studio, vLLM), ya da hiçbir şey (ücretsiz çeviri)
+- Çeviri için: Claude, OpenAI, OpenRouter ya da Soniox API anahtarı, ya da kendi sunucun (Ollama, LM Studio, vLLM)
 - Görüşmeler için kulaklık
 
 ---
@@ -167,7 +152,7 @@ mikrofonun              -> ses tanıma (senin dilin)  -> çeviri -> seslendirme 
 video sekmesinin sesi   -> ses tanıma                -> çeviri -> altyazı ya da orijinalin üzerine ses
 
 ses tanıma ve seslendirme: ElevenLabs, OpenAI uyumlu bir servis ya da ses sunucusu
-çeviri: seçilen servis (Claude, OpenAI/uyumlu, OpenRouter, Ollama -> ikinci Ollama) -> anahtar varsa Claude Haiku -> ücretsiz
+çeviri: seçilen servis (Claude, OpenAI/uyumlu, OpenRouter, Ollama -> ikinci Ollama) -> anahtar varsa Claude Haiku
 Soniox ile: Soniox tek akışta duyar ve çevirir -> seslendirme
 ```
 
@@ -183,7 +168,7 @@ Soniox ile: Soniox tek akışta duyar ve çevirir -> seslendirme
 | `src/offscreen/tts.js`, `pipeline.js` | Ekran dışı belge | Yan cümle yan cümle, sırayla ve gecikmeyi denetim altında tutarak seslendirme |
 | `src/offscreen/fallback-translator.js` | Ekran dışı belge | Bir çevirmenin önünde bir başkası |
 | `src/offscreen/translator.js` | Ekran dışı belge | Claude ve her çeviri servisine verilen talimatlar ve örnekler |
-| `src/offscreen/openai-translator.js`, `ollama-translator.js`, `free-translator.js` | Ekran dışı belge | OpenAI, OpenRouter ve uyumlu sunucular; cümle cümle akan Ollama; en iyisinden başlayarak ücretsiz servisler |
+| `src/offscreen/openai-translator.js`, `ollama-translator.js` | Ekran dışı belge | OpenAI, OpenRouter ve uyumlu sunucular; cümle cümle akan Ollama |
 | `src/offscreen/voice-clone.js` | Ekran dışı belge | ElevenLabs ses klonları: seninki ve izinle karşı tarafınki |
 | `src/shared/pronounce.js` | Her yerde | Yabancı kelimelerin doğru okunuşu: işaretler, yerleşik liste ve seninki |
 | `src/shared/transcript.js`, `recordings.js` | Her yerde | Bu bilgisayarda saklanan dökümler ve görüşme kayıtları |
@@ -203,13 +188,12 @@ npm run test:e2e         # test derlemesi yapar, Chromium'a yükler; sahte gör�
 ONLY=soniox,local npm run test:e2e   # yalnızca adı bu kelimelerden birini içeren test grupları
 npm run test:scenarios   # tek bir sahte görüşmeyi yeniden başlatmalar, hatalar, ayar değişiklikleri ve ayrılma içinden geçirir
 npm run test:api         # ElevenLabs ve Claude'un canlı denetimi (anahtarlar .env'de)
-npm run test:free        # DeepL, Mistral ve Groq ücretsiz planlarının canlı denetimi (anahtarlar .env'de)
 npm run test:soniox      # bir Soniox anahtarının canlı denetimi (bir sentin küçük bir kısmı; anahtar .env'de)
 node test/ollama/live.mjs 100.101.102.103 gemma4:12b   # bir Ollama sunucusunun ayarlar sayfası üzerinden canlı denetimi
 cd speech-server && python -m pytest tests           # ses sunucusu: protokol, bölme, anahtarlar, web sayfası reddi
 ```
 
-- Uçtan uca testler anahtar istemez ve hiçbir ücret doğurmaz. Sahte Meet ve Zoom görüşmelerinin yanında kaydı, ücretsiz çeviriyi, sahte bir Ollama sunucusunu (gerçeği gibi her `Origin` başlığını reddeder), sahte OpenAI çevirisini ve seslendirmesini, sahte bir Soniox akışını, yedek motorlarla gerçek ses sunucusunu, ElevenLabs ve Claude olmadan bir görüşmeyi ve bir video sekmesini kapsar. `.env`'de anahtarlar varsa gerçek ElevenLabs ve Claude üzerinden de bir tur yaparlar; `SKIP_REAL=1` bunu atlar.
+- Uçtan uca testler anahtar istemez ve hiçbir ücret doğurmaz. Sahte Meet ve Zoom görüşmelerinin yanında kaydı, sahte bir Ollama sunucusunu (gerçeği gibi her `Origin` başlığını reddeder), sahte OpenAI çevirisini ve seslendirmesini, sahte bir Soniox akışını, yedek motorlarla gerçek ses sunucusunu, ElevenLabs ve Claude olmadan bir görüşmeyi ve bir video sekmesini kapsar. `.env`'de anahtarlar varsa gerçek ElevenLabs ve Claude üzerinden de bir tur yaparlar; `SKIP_REAL=1` bunu atlar.
 - `test/meet/` gerçek servislerle daha yavaş denetimleri içerir: gerçek bir Google Meet görüşmesi (`live.mjs`), dört kişilik bir yedek görüşme (`group-call.mjs`) ve kaydedilmiş iki yönlü bir gösteri (`mock-call-demo.mjs`).
 - `--test` ile derlenirler (`npm run build:test`); bu, panelin gölge kökünü onlar için açık bırakır ve `127.0.0.1` ile sahte video sitesine erişim verir; normal derlemede ikisi de yoktur.
 - Konuşma örnekleri macOS `say` komutu ve ffmpeg ile, sertifikaları openssl ile yapılır. Windows'ta hazır `english.wav`, `turkish.wav` ve `tone.wav` dosyalarını (48 kHz mono) `test/e2e/fixtures` içine koy ve openssl için Git'in `usr\bin` klasörünü PATH'e ekle. Ses sunucusu testleri `speech-server/requirements-test.txt` kurulu bir Python ister.

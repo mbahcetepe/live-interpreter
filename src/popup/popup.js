@@ -1,5 +1,4 @@
-import { loadSettings, saveSettings, missingKeys, missingServers, isFreeTranslation, isLocalSpeech, isOpenAISpeech, isSonioxSpeech } from '../shared/settings.js';
-import { localPairs, localTranslationState, prepareLocalTranslation } from '../shared/local-translation.js';
+import { loadSettings, saveSettings, missingKeys, missingServers, isLocalSpeech, isOpenAISpeech, isSonioxSpeech } from '../shared/settings.js';
 import { formatUsage } from '../shared/usage.js';
 import { setLanguage, t, applyI18n, languageLabel, joinNames, locale, UI_LANGUAGES } from '../shared/i18n.js';
 import { isSupportedUrl, isMediaUrl, platformForUrl } from '../shared/platforms.js';
@@ -98,16 +97,6 @@ function render() {
   }
 }
 
-// Free translation lands on Chrome's own translator, whose language packs can only be
-// downloaded right after a click: the Start click is that moment.
-async function prepareFreeTranslation() {
-  const pairs = localPairs(settings);
-  if ((await localTranslationState(pairs)) !== 'download') return;
-  notice(t('popup.preparingFree'));
-  await Promise.race([prepareLocalTranslation(pairs), new Promise((resolve) => setTimeout(resolve, 30000))]);
-  notice('');
-}
-
 // The first start on Zoom asks for access to it; the page hook is put in from the next
 // page load, so the tab has to be reloaded once.
 async function askSiteAccess() {
@@ -124,10 +113,6 @@ async function start(mode) {
   try {
     if (!siteAccess) return await askSiteAccess();
     notice('');
-    if (mode !== 'diagnostic' && isFreeTranslation(settings)) await prepareFreeTranslation();
-    // With Claude, Chrome's translator is the backup (offscreen/fallback-translator.js): its
-    // packs download now, while the click still counts, without holding up the start.
-    else if (mode !== 'diagnostic' && settings.translationFallback !== false) prepareFreeTranslation().catch(() => {});
     // The stream id expires within seconds, so it is fetched last.
     const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
     const options =

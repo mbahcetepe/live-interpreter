@@ -1,15 +1,14 @@
-// Claude first, free translation when Claude fails. A sentence Claude cannot translate
-// (overloaded, rate limited, out of credit, unreachable) is translated by the free chain
-// in free-translator.js instead of being lost from the call.
+// A translator with a backup: a sentence the primary cannot translate (overloaded, rate
+// limited, out of credit, unreachable) is translated by the backup instead of being lost
+// from the call.
 //
-// Only a failure before Claude sends any text falls back: once part of a translation has
-// been spoken, a second translation of the whole sentence would repeat it. After a
-// failure Claude rests for a while (or for the rest of the call when the key or the
-// model is unusable), so the following sentences go straight to the free chain.
-
+// Only a failure before the primary sends any text falls back: once part of a translation
+// has been spoken, a second translation of the whole sentence would repeat it. After a
+// failure the primary rests for a while (or for the rest of the call when the key or the
+// model is unusable), so the following sentences go straight to the backup.
 //
-// The same pair also puts the person's own Ollama server in front (ollama-translator.js):
-// Ollama, then a second Ollama server, then Claude, then free translation.
+// The engine chains them: Ollama, then a second Ollama server, then Claude; or OpenAI
+// (OpenRouter), then Claude.
 export class FallbackTranslator {
   // requirePrimary: the call does not start without the primary (Claude: a bad key must
   // show at once). An Ollama server that is down only rests, and the backup starts.
@@ -58,7 +57,7 @@ export class FallbackTranslator {
     return [...(backup.value || []), { id: `down-${this.name}`, key: 'warn.serverDown', params: { name: this.name, message } }];
   }
 
-  // Chrome's language packs may still be downloading when the call starts.
+  // Whether the backup can stand in when the call starts.
   backupReady() {
     return this.backup.verify().then(
       () => true,

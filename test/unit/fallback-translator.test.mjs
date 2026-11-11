@@ -42,7 +42,7 @@ test('a working Claude is used and the backup is never asked', async () => {
   assert.equal(backup.calls, 0);
 });
 
-test('a Claude failure before any text falls back to free translation', async () => {
+test('a Claude failure before any text falls back to the backup', async () => {
   const primary = fake({ failWith: Object.assign(new Error('overloaded'), { status: 529 }) });
   const backup = fake({ pieces: ['Selam.'] });
   const t = new FallbackTranslator({ primary, backup });

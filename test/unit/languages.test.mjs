@@ -1,7 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildSystemPrompt, buildUserMessage } from '../../src/offscreen/translator.js';
-import { deeplCodes, FreeTranslator } from '../../src/offscreen/free-translator.js';
 import { firstRunDefaults, DEFAULT_SETTINGS } from '../../src/shared/settings.js';
 import { AUTO_LANGUAGE, languageByCode } from '../../src/shared/languages.js';
 
@@ -21,31 +20,6 @@ test('a video tab is described as something watched, not a call, and leaves the 
   const call = buildSystemPrompt({ from: 'en', to: 'ja', myLanguage: 'ja', theirLanguage: 'en', meetingContext: 'Budget review' });
   assert.match(call, /live video call/);
   assert.match(call, /Budget review/);
-});
-
-test('DeepL finds the source language itself when it is not known', () => {
-  assert.deepEqual(deeplCodes(AUTO_LANGUAGE, 'en'), { target_lang: 'EN-US' });
-  assert.deepEqual(deeplCodes('fr', 'de'), { source_lang: 'FR', target_lang: 'DE' });
-});
-
-test("Chrome's translator gets the language Chrome's detector found", async () => {
-  const asked = [];
-  const local = {
-    availability: async () => 'available',
-    create: async ({ sourceLanguage, targetLanguage }) => {
-      asked.push(`${sourceLanguage}>${targetLanguage}`);
-      return { translate: async (text) => `[${sourceLanguage}] ${text}` };
-    },
-  };
-  const detector = { create: async () => ({ detect: async (text) => [{ detectedLanguage: text.startsWith('Bonjour') ? 'fr' : 'de', confidence: 0.9 }] }) };
-  const tr = new FreeTranslator({ local, detector, myLanguage: 'en', theirLanguage: 'fr' });
-  const out = [];
-  for await (const piece of tr.translate({ text: 'Bonjour à tous.', from: AUTO_LANGUAGE, to: 'en', history: [] })) out.push(piece);
-  assert.deepEqual(asked, ['fr>en']);
-  assert.match(out.join(' '), /^\[fr\]/i); // the first letter follows the source sentence's case
-  // Without a detector that step cannot help with an unknown language.
-  const blind = new FreeTranslator({ local, detector: null });
-  assert.equal(blind.usable({ id: 'chrome', kind: 'local' }, AUTO_LANGUAGE, 'en'), false);
 });
 
 test('the first start takes my language from the browser; the interface stays English', () => {

@@ -17,7 +17,7 @@ Kurulumdan ilk çevrilen Teams görüşmesine ya da YouTube videosuna adım adı
 | **Chrome 116+, Edge ya da Brave** | Teams toplantısına da bu tarayıcıdan katılırsın. Masaüstü Teams uygulaması desteklenmez |
 | **Node.js 18+** | Yalnızca eklentiyi kaynaktan derlemek için ([nodejs.org](https://nodejs.org)); Chrome Web Store kopyasında gerekmez |
 | **Ses tanıma ve sesler için biri** | ElevenLabs hesabı (kendi ses klonun için Starter veya üstü plan, [planlar](https://elevenlabs.io/pricing)) **ya da** kendi ses sunucun ([speech-server](speech-server/README.tr.md)) |
-| **Çeviri için biri** | Claude, OpenAI ya da OpenRouter için bir API anahtarı, **ya da** kendi sunucun (Ollama, LM Studio), **ya da** hiçbiri (ücretsiz çeviri) |
+| **Çeviri için biri** | Claude, OpenAI, OpenRouter ya da Soniox için bir API anahtarı, **ya da** kendi sunucun (Ollama, LM Studio) |
 | **Kulaklık** | Görüşmelerde, duyduğun çeviri mikrofonuna girip karşıya geri gitmesin diye |
 
 Eklentinin kendi sunucusu yok. Anahtarların yalnızca tarayıcında kalır ve yalnızca seçtiğin servise gider.
@@ -66,11 +66,10 @@ Ayarlar sayfası dört bölümden oluşur: **Diller**, **Çeviri**, **Ses tanım
 | **OpenAI ya da uyumlu bir sunucu** | OpenAI için **Sunucu**'yu boş bırak ve API anahtarını gir; ya da aynı arayüzü sunan bir sunucunun adresini gir (LM Studio, vLLM; örneğin `http://192.168.1.5:1234/v1`) |
 | **OpenRouter** | [openrouter.ai](https://openrouter.ai/keys) sayfasından bir API anahtarı |
 | **Ollama (kendi sunucunuz)** | Sunucunun adresi (örneğin `100.101.102.103`; port 11434 eklenir); altına bir **ikinci sunucu** eklenebilir |
-| **Ücretsiz** | Hiçbir şey; ücretsiz bir [DeepL API Free](https://www.deepl.com/pro-api) anahtarı kaliteyi artırır, Brave'de gereklidir |
 
 **Model** listesi servisten kendiliğinden dolar; **↻** listeyi yeniden getirir. Kendi sunucunda (Ollama, LM Studio) tarayıcı o adrese erişim için bir kez izin ister: izin ver. Ollama sunucusunda `OLLAMA_ORIGINS` ayarı gerekmez.
 
-**Test et** düğmesine bas: bir cümle çevrilir ve süresi ölçülür. Görüşme sırasında seçilen servis bir cümlede hata verirse sıradaki çevirir (ikinci Ollama sunucusu, anahtar varsa Claude Haiku, sonra ücretsiz çeviri). Kalıcı olarak devre dışı kalan bir servis (örneğin reddedilen bir anahtar) panelde bir kez bildirilir.
+**Test et** düğmesine bas: bir cümle çevrilir ve süresi ölçülür. Görüşme sırasında seçilen servis bir cümlede hata verirse sıradaki çevirir (ikinci Ollama sunucusu, sonra anahtar varsa Claude Haiku). Kalıcı olarak devre dışı kalan bir servis (örneğin reddedilen bir anahtar) panelde bir kez bildirilir.
 
 **Toplantı notları ve özel terimler** (katlanır bölüm) çevirmene arka plan bilgisi ve isimlerin yazılışını verir.
 
@@ -203,7 +202,7 @@ Aynı bilgisayardan iki katılımcı birbirinin sesini bozar; ikinci bir cihaz k
 | "Ollama sunucusu ... adresine ulaşılamadı" | Sunucu açık mı, bu bilgisayar Tailscale'de mi? Ayarlarda Çeviri bölümündeki **Test et** |
 | "Anthropic API anahtarı geçersiz" (ya da OpenAI, OpenRouter) | Anthropic, ayarlarda kayıtlı anahtarı reddediyor: anahtar değiştirilmiş, iptal edilmiş ya da eksik yapıştırılmış. Çeviri bölümünde anahtarı yeniden yapıştır ve **Test et** düğmesine bas |
 | "Yerel ses sunucusu anahtarı kabul etmedi" | Sunucudaki `/etc/live-interpreter-speech.env` dosyasındaki `SPEECH_KEY`'i gir |
-| "Yedek çeviri henüz hazır değil" | Brave'de Chrome'un çevirmeni yok: bir DeepL Free anahtarı ya da ikinci bir Ollama sunucusu ekle |
+| "Yedek çeviri (Claude) şu an kullanılamıyor" | Çeviri bölümünde Claude anahtarını ve bakiyesini kontrol et ya da ikinci bir Ollama sunucusu ekle |
 | Gecikme fazla | Ollama ya da **Claude Haiku 5.5** seç, sessizlik ayarını **0,5 sn** yap, kısa cümlelerle konuş |
 | Filmde çeviri gelmiyor | Kendi ses sunucunu güncelle (`git pull` ve `sudo ./install-ubuntu.sh`); konuşma algılayıcısı yeni sürümde. Altyazıyı yalnızca konuşmanın olduğu yerlerde bekle |
 | Çince ya da Japonca konuşma yalnızca konuşan durunca çevriliyor ya da bir cümle iki kez seslendiriliyor | Eklentiyi 2.4.3 ya da sonrasına, ses sunucunu 2.0.1'e güncelle (`git pull` ve `sudo ./install-ubuntu.sh`): sunucu bu dilleri noktalamayla yazar, eklenti de her bitmiş cümleyi konuşma sürerken bir kez çevirir |

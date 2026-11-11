@@ -20,7 +20,6 @@ import { LANGUAGES, AUTO_LANGUAGE } from '../shared/languages.js';
 import { setLanguage, t, applyI18n, languageLabel, UI_LANGUAGES } from '../shared/i18n.js';
 import { listVoices, createVoiceClone, deleteVoice, speechStream, describeElevenLabsError, speechAccount, fetchScribeToken, realtimeUrl, speechHealth, speechModels, SPEECH_PROTOCOL } from '../shared/elevenlabs.js';
 import { Translator, describeClaudeError } from '../offscreen/translator.js';
-import { FreeTranslator, checkFreeKey, freeKeys, FREE_KEY_NAMES } from '../offscreen/free-translator.js';
 import { OllamaTranslator, listOllamaModels } from '../offscreen/ollama-translator.js';
 import { OpenAITranslator, listOpenAIModels } from '../offscreen/openai-translator.js';
 import { OpenAITranscriber, openaiSynthesize, listAudioModels, listAudioVoices } from '../offscreen/openai-speech.js';
@@ -28,7 +27,6 @@ import { StreamResampler } from '../shared/dsp.js';
 import { SONIOX_WS, sonioxConfig } from '../offscreen/soniox.js';
 import { sonioxSynthesize, listSonioxVoices, SONIOX_VOICES, SONIOX_DEFAULT_VOICES } from '../offscreen/soniox-tts.js';
 import { serverBase, originPattern, originRules } from '../shared/servers.js';
-import { localPairs, localTranslationState, prepareLocalTranslation, missingTranslatorReason } from '../shared/local-translation.js';
 import { PcmByteAligner, encodeWav, float32ToInt16 } from '../shared/pcm.js';
 import { PcmScheduler } from '../shared/scheduler.js';
 
@@ -59,7 +57,6 @@ const PREVIEW_TEXT = {
 
 let settings;
 let voices = [];
-let localState = 'unknown';
 let localSpeechInfo = null; // what the local speech server offers (/v1/models)
 
 // ---- small helpers ---------------------------------------------------------------------
@@ -159,8 +156,7 @@ async function refreshStatus() {
   const provider = translationProvider(settings);
   const missing = [...missingKeys(settings), ...missingServers(settings)];
   const speechOk = isSonioxSpeech(settings) ? !missing.includes('Soniox') : isLocalSpeech(settings) || isOpenAISpeech(settings) ? !missing.includes('speech') && !(isOpenAISpeech(settings) && missing.some((m) => m === 'Groq')) : !missing.includes('ElevenLabs');
-  const translationOk =
-    provider === 'free' ? localState === 'ready' || FREE_KEY_NAMES.some((k) => settings[k]) : !missing.some((m) => m !== 'ElevenLabs' && m !== 'speech');
+  const translationOk = !missing.some((m) => m !== 'ElevenLabs' && m !== 'speech');
   const speechName = isSonioxSpeech(settings) ? 'Soniox' : isLocalSpeech(settings) ? t('opt.speech.local') : isOpenAISpeech(settings) ? t('opt.speech.openai') : 'ElevenLabs';
   const soniox = isSoniox(settings);
   $('check-speech').textContent = `${t('opt.speech.title')}: ${soniox && speechName !== 'Soniox' ? `Soniox + ${speechName}` : speechName}`;
@@ -179,8 +175,7 @@ function renderProvider() {
   result('translationResult', '');
   // Soniox has its own Test next to its key.
   $('testTranslation').hidden = provider === 'soniox';
-  if (provider === 'free') renderFree();
-  else if (provider !== 'soniox') loadModels(provider, { quiet: true });
+  if (provider !== 'soniox') loadModels(provider, { quiet: true });
 }
 
 // The model lists: what each server offers, filled into its select. The chosen model
@@ -282,53 +277,8 @@ async function testTranslation() {
     for (const [, url] of servers) if (!(await allow(serverBase(url)))) return result('translationResult', t('opt.denied', { url: serverBase(url) }), 'bad');
     await applyOriginRules();
     for (const [label, url, model] of servers) await run(label, new OllamaTranslator({ ...common, url, model, label }));
-  } else {
-    const checks = await Promise.all(FREE_KEY_NAMES.filter((n) => settings[n]).map((n) => checkFreeKey(n, settings[n])));
-    for (const c of checks) {
-      lines.push(c.message);
-      ok &&= c.ok;
-    }
-    await run(t('provider.free'), new FreeTranslator({ ...common, keys: freeKeys(settings) }));
   }
   result('translationResult', lines.join(' '), ok ? 'ok' : 'bad');
-}
-
-// ---- free translation ------------------------------------------------------------------
-
-const LOCAL_STATE_TEXT = {
-  ready: ['local.ready', 'ok'],
-  download: ['local.download', ''],
-  unavailable: ['local.unavailable', 'bad'],
-  unsupported: ['local.unsupported', 'bad'],
-};
-
-function showLocalState(state) {
-  localState = state;
-  let [key, kind] = LOCAL_STATE_TEXT[state] || ['', ''];
-  if (state === 'unsupported' && missingTranslatorReason() === 'browser') key = 'local.otherBrowser';
-  $('freeState').textContent = key ? t(key) : '';
-  $('freeState').className = `pill ${kind}`;
-  $('prepareFree').hidden = state !== 'download';
-  refreshStatus();
-}
-
-async function renderFree() {
-  if (translationProvider(settings) !== 'free') return;
-  showLocalState(await localTranslationState(localPairs(settings)));
-}
-
-// Runs from a click: Chrome downloads language packs only after one.
-async function prepareFree() {
-  $('prepareFree').disabled = true;
-  $('freeState').className = 'pill';
-  $('freeState').textContent = t('local.preparing');
-  const pairs = localPairs(settings);
-  const prepared = prepareLocalTranslation(pairs, {
-    onProgress: (loaded) => ($('freeState').textContent = t('local.preparingPct', { n: Math.round(loaded * 100) })),
-  });
-  const state = await Promise.race([prepared, new Promise((resolve) => setTimeout(() => resolve(localTranslationState(pairs)), 60000))]);
-  $('prepareFree').disabled = false;
-  showLocalState(state);
 }
 
 // ---- speech ----------------------------------------------------------------------------
@@ -850,7 +800,6 @@ function renderTexts() {
   for (const kind of Object.keys(PICKERS)) if (!$(PICKERS[kind].select).options.length) fillModels(kind, []);
   renderVoices();
   renderLocalSpeech();
-  showLocalState(localState);
   refreshMic();
   refreshDevices();
 }
@@ -870,13 +819,12 @@ async function init() {
     $('showKeys').textContent = t(show ? 'opt.keys.hide' : 'opt.keys.show');
   });
 
-  // Languages: the local voices and the free translation follow them.
+  // Languages: the local voices follow them.
   for (const id of ['myLanguage', 'theirLanguage', 'mediaLanguage']) {
     bindSelect(id, {
       onChange: () => {
         $('readingText').textContent = READING_TEXTS[settings.myLanguage] || READING_TEXTS.en;
         renderLocalSpeech();
-        renderFree();
       },
     });
   }
@@ -892,7 +840,7 @@ async function init() {
     },
   });
   bindSelect('claudeModel');
-  for (const id of ['anthropicKey', 'openaiUrl', 'openaiKey', 'openrouterKey', 'ollamaUrl', 'ollamaBackupUrl', ...FREE_KEY_NAMES, 'meetingContext', 'keyterms']) bindText(id);
+  for (const id of ['anthropicKey', 'openaiUrl', 'openaiKey', 'openrouterKey', 'ollamaUrl', 'ollamaBackupUrl', 'meetingContext', 'keyterms']) bindText(id);
   for (const kind of Object.keys(PICKERS)) bindSelect(PICKERS[kind].select);
   for (const button of document.querySelectorAll('[data-models]')) {
     if (button.dataset.models === 'speech' || button.dataset.models === 'oaiSpeech') continue;
@@ -909,8 +857,6 @@ async function init() {
   $('ollamaUrl').addEventListener('change', () => loadModels('ollama'));
   $('ollamaBackupUrl').addEventListener('change', () => loadModels('ollamaBackup'));
   if (settings.ollamaBackupUrl) $('ollamaBackup').open = true;
-  if (FREE_KEY_NAMES.some((id) => settings[id])) $('freeKeys').open = true;
-  $('prepareFree').addEventListener('click', prepareFree);
   $('testTranslation').addEventListener('click', async () => {
     $('testTranslation').disabled = true;
     await testTranslation();

@@ -53,7 +53,7 @@ const asked = (stats, dir) => stats.claude.filter((c) => (dir === 'in' ? /thanks
 
 async function openCall(mock) {
   const env = await launch({ micWav: path.join(fixtures, 'turkish.wav'), remoteWav: path.join(fixtures, 'english.wav'), proxyPort: mock.port });
-  // Claude's own failures are checked here, so the free backup (unit tested on its own) is off.
+  // Claude's own failures are checked here, so no backup stands in.
   await setSettings(env.control, { elevenLabsKey: 'mock-el', anthropicKey: 'mock-an', claudeModel: 'claude-opus-5-5', translationFallback: false, uiLanguage: 'en', myVoiceId: '' });
   return env;
 }

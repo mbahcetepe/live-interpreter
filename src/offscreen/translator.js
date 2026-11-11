@@ -200,7 +200,7 @@ export function describeClaudeError(err) {
   return err?.message || String(err);
 }
 
-// How long Claude is left alone after a failure while free translation stands in.
+// How long Claude is left alone after a failure while the backup stands in.
 export function claudeRestMs(err) {
   if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError || err instanceof Anthropic.NotFoundError) {
     return Infinity; // the key or the model will not start working mid-call

@@ -17,7 +17,7 @@
   <tr><td><b>其他标签页</b></td><td>YouTube、X、网络电台、任何有声音的网页</td></tr>
   <tr><td><b>浏览器</b></td><td>Chrome、Edge、Brave 以及其他 Chromium 浏览器</td></tr>
   <tr><td><b>语言</b></td><td>20 种，任意两种互译；首次启动时跟随浏览器语言；在视频标签页中可自动识别所说的语言</td></tr>
-  <tr><td><b>翻译</b></td><td>Claude、OpenAI 或兼容服务器、OpenRouter、你自己的 Ollama，或免费服务；设置中会列出各服务的模型</td></tr>
+  <tr><td><b>翻译</b></td><td>Claude、OpenAI 或兼容服务器、OpenRouter、你自己的 Ollama，或 Soniox；设置中会列出各服务的模型</td></tr>
   <tr><td><b>语音</b></td><td>ElevenLabs、兼容 OpenAI 的服务（OpenAI、Groq Whisper、LocalAI、Speaches、Kokoro），或你自己的语音服务器（faster-whisper 和 Piper）</td></tr>
   <tr><td><b>延迟</b></td><td>一句话结束后约 1.5–3 秒</td></tr>
   <tr><td><b>界面</b></td><td>英语（默认）、土耳其语、德语、西班牙语、中文</td></tr>
@@ -53,14 +53,14 @@
 
 - 二十种语言，任意两种，双向互译：英语、土耳其语、德语、法语、西班牙语、意大利语、葡萄牙语、荷兰语、波兰语、俄语、乌克兰语、阿拉伯语、希腊语、罗马尼亚语、瑞典语、印尼语、印地语、中文、日语和韩语。
 - 像电影一样的字幕：译文用大字显示，原文在下方；还有一个面板，显示双方内容、实时延迟以及带费用估算的用量计数。
-- 一个服务出错不会丢掉一句话：翻译会从 Ollama 依次退到第二台 Ollama 服务器、Claude Haiku（设置了 Claude 密钥时）和免费翻译；从 OpenAI 或 OpenRouter 退到 Claude Haiku（有密钥时）和免费翻译；从 Claude 退到免费翻译。
+- 一个服务出错不会丢掉一句话：翻译会从 Ollama 依次退到第二台 Ollama 服务器、Claude Haiku（设置了 Claude 密钥时）；从 OpenAI 或 OpenRouter 退到 Claude Haiku（有密钥时）。
 
 > **请先阅读。**
 > - 这是交替传译：一句话结束后才开始翻译。语音识别等待 0.7 秒的静音（可设为 0.5 秒），翻译需要 0.3–2 秒，语音 0.2–0.5 秒。说话人讲得较长时，已经说完的句子会在其继续讲话时就开始翻译。
 > - 想要最短的延迟：用 Ollama 或 **Claude Haiku 5.5** 翻译，把静音设为 **0.5 秒**，并用短句说话。
 > - **请戴耳机。** 不戴耳机时，你听到的翻译会漏进麦克风，再被发回给对方。如果没有耳机，请在设置中打开 **扬声器模式**。
 > - 同一台电脑上的两个参与者会互相干扰音频。请用第二台设备（手机）或请另一个人来测试。
-> - 通话的音频和文字会发送到你选择的服务（ElevenLabs、Anthropic、DeepL、Mistral、Groq）。用于工作会议时，请告知参与者并查看公司规定，或者全部使用你自己的服务器。克隆他人的声音需要对方同意。
+> - 通话的音频和文字会发送到你选择的服务（ElevenLabs、Anthropic、OpenAI、Groq、Soniox）。用于工作会议时，请告知参与者并查看公司规定，或者全部使用你自己的服务器。克隆他人的声音需要对方同意。
 
 ---
 
@@ -70,7 +70,6 @@
 | --- | --- | --- |
 | **托管服务** | ElevenLabs（Scribe v2 Realtime、Flash v2.5 / v4 Turbo）；OpenAI（Whisper、gpt-4o-transcribe、gpt-4o-mini-tts）；Groq Whisper（识别，快且便宜） | Claude Opus、Sonnet 或 Haiku 5.5；OpenAI；OpenRouter（数百个模型，一个密钥） |
 | **识别和翻译合一** | Soniox（`stt-rt-v6`）：在同一个流中听和翻译，最快的配置；译文由 Soniox 自己的声音（`tts-rt-v2`）或上面任一种声音朗读 | Soniox |
-| **免费服务** | | DeepL Free、Mistral、Groq、Chrome 内置翻译 |
 | **你自己的服务器** | [speech-server/](speech-server/README.md) 中的语音服务器（faster-whisper 和 Piper），或任何提供 OpenAI 音频 API 的服务器（Speaches、LocalAI、Kokoro-FastAPI） | Ollama（例如 `gemma4:12b`），或任何提供 OpenAI API 的服务器（LM Studio、vLLM） |
 
 两列分别选择。两列都用你自己的服务器时，通话内容不会离开你的电脑，也不会产生任何费用。
@@ -85,11 +84,11 @@
 
 ### 外语词的正确读法
 
-每个声音都按自己语言的规则朗读一切，所以土耳其语语音中的英语术语（“API”、“Apple”）或英语语音中的土耳其名字（“Şükrü”）可能会读错。朗读译文时，翻译器会给这类词标注读音，例如 `[[Apple|epıl]]` 或 `[[Şükrü|Shoo-kroo]]`。屏幕和文字记录中只显示 “Apple” 和 “Şükrü”。你自己的语音服务器（每个声音只会一种语言）读的是标注的读音；ElevenLabs 和 OpenAI 收到的是词本身，因为它们能处理混合文本，而且 OpenAI 的 `gpt-*-tts` 声音还会被告知按外语词本来的语言去读。没有标注的情况下（免费服务、Soniox），内置的常用术语和品牌列表以及短缩写的逐字母拼读（SGK：“se ge ke”）会帮助本地声音；你自己的列表（**语音识别和声音 › 外语词的读法**，每行一个 `词 = 读音`）对所有声音都有效。在 Ollama 上用 `gemma4:12b` 实测：两个方向返回的标注格式都正确；小模型弄坏的标注会被清理掉，不会出现在屏幕上。
+每个声音都按自己语言的规则朗读一切，所以土耳其语语音中的英语术语（“API”、“Apple”）或英语语音中的土耳其名字（“Şükrü”）可能会读错。朗读译文时，翻译器会给这类词标注读音，例如 `[[Apple|epıl]]` 或 `[[Şükrü|Shoo-kroo]]`。屏幕和文字记录中只显示 “Apple” 和 “Şükrü”。你自己的语音服务器（每个声音只会一种语言）读的是标注的读音；ElevenLabs 和 OpenAI 收到的是词本身，因为它们能处理混合文本，而且 OpenAI 的 `gpt-*-tts` 声音还会被告知按外语词本来的语言去读。没有标注的情况下（Soniox），内置的常用术语和品牌列表以及短缩写的逐字母拼读（SGK：“se ge ke”）会帮助本地声音；你自己的列表（**语音识别和声音 › 外语词的读法**，每行一个 `词 = 读音`）对所有声音都有效。在 Ollama 上用 `gemma4:12b` 实测：两个方向返回的标注格式都正确；小模型弄坏的标注会被清理掉，不会出现在屏幕上。
 
 ### 用 Ollama 翻译
 
-在设置中选择 **Ollama** 作为翻译服务，并输入服务器地址（例如 `100.101.102.103`；未写端口时自动加上 11434）：浏览器会询问一次是否允许访问该地址，模型列表会自动填充（仅用于嵌入的模型会被排除）。点击 **测试** 可计时翻译一句话。在台式机 NVIDIA GPU 上通过 Tailscale 实测，模型加载后 `gemma4:12b` 和 `gemma4:26b` 翻译一句话需要 0.3–0.6 秒。另一台电脑上的第二台服务器可以作为它的后备，然后是 Claude Haiku（设置了密钥时）和免费翻译。
+在设置中选择 **Ollama** 作为翻译服务，并输入服务器地址（例如 `100.101.102.103`；未写端口时自动加上 11434）：浏览器会询问一次是否允许访问该地址，模型列表会自动填充（仅用于嵌入的模型会被排除）。点击 **测试** 可计时翻译一句话。在台式机 NVIDIA GPU 上通过 Tailscale 实测，模型加载后 `gemma4:12b` 和 `gemma4:26b` 翻译一句话需要 0.3–0.6 秒。另一台电脑上的第二台服务器可以作为它的后备，然后是 Claude Haiku（设置了密钥时）。
 
 Ollama 会拒绝 `Origin` 请求头不认识的请求，而浏览器的每个 POST 都会带上它。扩展会从自己发往设置中服务器的请求里去掉这个请求头（一条仅限本扩展作为发起方的 `declarativeNetRequest` 规则），因此 **不需要设置 `OLLAMA_ORIGINS`**。网页向同一服务器发出的请求仍带有它的来源，会被拒绝。
 
@@ -110,20 +109,6 @@ cd live-interpreter/speech-server && sudo ./install-ubuntu.sh
 
 这些服务接收完整的录音，而不是实时流：扩展自己把语音切成句子，每句结束时发送，所以没有实时草稿，长句会在 15 秒处切开。它们的价格不包含在面板的估算中。
 
-### 免费翻译
-
-选择 **免费** 作为翻译服务，不需要任何密钥。扩展会从质量最好的免费服务开始尝试，某个服务额度用完、变慢或出错时自动换下一个。同样的链条也作为 Claude 的后备。
-
-| 顺序 | 服务 | 免费额度 | 需要 |
-| --- | --- | --- | --- |
-| 1 | DeepL API Free | 每月 500,000 字符 | 你的免费 DeepL 密钥 |
-| 2 | Mistral（`mistral-medium-latest`） | 有速率限制的免费套餐 | 你的免费 Mistral 密钥；在 Mistral 隐私设置中关闭用你的数据训练 |
-| 3 | Groq `openai/gpt-oss-120b` | 每日限额 | 你的免费 Groq 密钥 |
-| 4 | Groq `qwen/qwen3.8-27b` | 单独的每日限额 | 同一个 Groq 密钥 |
-| 5 | Chrome 内置翻译 | 无限制，在你的电脑上运行 | 桌面版 Chrome 138 或更新版本；Brave 和部分其他 Chromium 浏览器可能没有 |
-
-在 Brave 中请添加免费的 DeepL 密钥，因为那里可能没有 Chrome 内置翻译。
-
 ---
 
 ## 要求
@@ -131,7 +116,7 @@ cd live-interpreter/speech-server && sudo ./install-ubuntu.sh
 - Chrome 116 或更新版本、Edge 或 Brave
 - Node.js 18 或更新版本，仅在从源码构建扩展时需要
 - 语音：ElevenLabs API 密钥（声音克隆需要付费套餐）、OpenAI 或 Groq 密钥，或你自己的语音服务器；可选 Soniox 密钥，用一个流完成识别和翻译
-- 翻译：Claude、OpenAI 或 OpenRouter 的 API 密钥，或你自己的服务器（Ollama、LM Studio、vLLM），或什么都不需要（免费翻译）
+- 翻译：Claude、OpenAI、OpenRouter 或 Soniox 的 API 密钥，或你自己的服务器（Ollama、LM Studio、vLLM）
 - 通话时戴耳机
 
 ---
@@ -165,7 +150,7 @@ npm run build
 视频标签页的声音 -> 语音识别               -> 翻译 -> 字幕，或盖在原声之上的语音
 
 语音识别和语音：ElevenLabs、兼容 OpenAI 的服务或语音服务器
-翻译：所选服务（Claude、OpenAI/兼容、OpenRouter、Ollama -> 第二台 Ollama）-> 设置了密钥时 Claude Haiku -> 免费
+翻译：所选服务（Claude、OpenAI/兼容、OpenRouter、Ollama -> 第二台 Ollama）-> 设置了密钥时 Claude Haiku
 使用 Soniox 时：Soniox 在一个流中听和翻译 -> 语音
 ```
 
@@ -181,7 +166,7 @@ npm run build
 | `src/offscreen/tts.js`、`pipeline.js` | 离屏文档 | 语音：按分句、按顺序朗读，并控制延迟 |
 | `src/offscreen/fallback-translator.js` | 离屏文档 | 一个翻译器在另一个之前 |
 | `src/offscreen/translator.js` | 离屏文档 | Claude，以及每个翻译服务都会收到的指令和示例 |
-| `src/offscreen/openai-translator.js`、`ollama-translator.js`、`free-translator.js` | 离屏文档 | OpenAI、OpenRouter 和兼容服务器；Ollama，逐句流式返回；从最好的开始依次尝试的免费服务 |
+| `src/offscreen/openai-translator.js`、`ollama-translator.js` | 离屏文档 | OpenAI、OpenRouter 和兼容服务器；Ollama，逐句流式返回 |
 | `src/offscreen/voice-clone.js` | 离屏文档 | ElevenLabs 声音克隆：你的，以及经同意的对方的 |
 | `src/shared/pronounce.js` | 各处 | 外语词的正确读法：标注、内置列表和你的列表 |
 | `src/shared/transcript.js`、`recordings.js` | 各处 | 保存在这台电脑上的文字记录和通话录制 |
@@ -201,13 +186,12 @@ npm run test:e2e         # 构建测试版本，加载到 Chromium，驱动模�
 ONLY=soniox,local npm run test:e2e   # 只运行名称包含这些词之一的测试组
 npm run test:scenarios   # 一次模拟通话，经历重启、故障、设置更改和离开
 npm run test:api         # 实时检查 ElevenLabs 和 Claude（密钥在 .env 中）
-npm run test:free        # 实时检查 DeepL、Mistral 和 Groq 免费套餐（密钥在 .env 中）
 npm run test:soniox      # 实时检查 Soniox 密钥（不到一美分；密钥在 .env 中）
 node test/ollama/live.mjs 100.101.102.103 gemma4:12b   # 通过设置页面实时检查 Ollama 服务器
 cd speech-server && python -m pytest tests           # 语音服务器：协议、切分、密钥、拒绝网页请求
 ```
 
-- 端到端测试不需要密钥，也不产生费用。除了模拟的 Meet 和 Zoom 通话，还覆盖录制、免费翻译、模拟 Ollama 服务器（像真的一样拒绝任何 `Origin` 请求头）、模拟 OpenAI 翻译和语音、模拟 Soniox 流、带替身引擎的真实语音服务器、完全不用 ElevenLabs 和 Claude 的通话，以及视频标签页。`.env` 中有密钥时，还会对真实的 ElevenLabs 和 Claude 做一次往返；`SKIP_REAL=1` 可跳过。
+- 端到端测试不需要密钥，也不产生费用。除了模拟的 Meet 和 Zoom 通话，还覆盖录制、模拟 Ollama 服务器（像真的一样拒绝任何 `Origin` 请求头）、模拟 OpenAI 翻译和语音、模拟 Soniox 流、带替身引擎的真实语音服务器、完全不用 ElevenLabs 和 Claude 的通话，以及视频标签页。`.env` 中有密钥时，还会对真实的 ElevenLabs 和 Claude 做一次往返；`SKIP_REAL=1` 可跳过。
 - `test/meet/` 中是使用真实服务的较慢检查：真实的 Google Meet 通话（`live.mjs`）、四人替身通话（`group-call.mjs`）以及录制的双向演示（`mock-call-demo.mjs`）。
 - 它们使用 `--test` 构建（`npm run build:test`），为测试打开面板的 shadow root，并允许访问 `127.0.0.1` 和模拟视频网站；正常构建两者都没有。
 - 测试用的语音样本由 macOS 的 `say` 命令和 ffmpeg 生成，证书由 openssl 生成。在 Windows 上，请把现成的 `english.wav`、`turkish.wav` 和 `tone.wav`（48 kHz 单声道）放进 `test/e2e/fixtures`，并把 Git 的 `usr\bin` 加入 PATH 以使用 openssl。语音服务器测试组需要安装了 `speech-server/requirements-test.txt` 的 Python。
@@ -233,7 +217,7 @@ cd speech-server && python -m pytest tests           # 语音服务器：协议�
 
 ## 费用
 
-面板会统计一次通话的用量，并按标价（2026 年 10 月 28 日）估算费用：Scribe v2 Realtime 每个活跃方向每小时 $0.39，Flash v2.5 和 v4 Turbo 语音每 1,000 字符 $0.04，Claude 按 token 计费（Haiku 5.5 最便宜）。仅字幕模式不生成语音。免费翻译、Ollama 和你自己的语音服务器不产生费用，面板按 $0 计算。OpenAI 和 OpenRouter 也按 token 计费，Soniox 按音频时长计费，但它们的价格不在估算中。
+面板会统计一次通话的用量，并按标价（2026 年 10 月 28 日）估算费用：Scribe v2 Realtime 每个活跃方向每小时 $0.39，Flash v2.5 和 v4 Turbo 语音每 1,000 字符 $0.04，Claude 按 token 计费（Haiku 5.5 最便宜）。仅字幕模式不生成语音。Ollama 和你自己的语音服务器不产生费用，面板按 $0 计算。OpenAI 和 OpenRouter 也按 token 计费，Soniox 按音频时长计费，但它们的价格不在估算中。
 
 ---
 

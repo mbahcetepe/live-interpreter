@@ -75,7 +75,7 @@ export function formatUsage(usage) {
     usage.claudeTokens >= 1000
       ? t('usage.tokensK', { n: formatNumber(usage.claudeTokens / 1000, 1) })
       : t('usage.tokens', { n: formatNumber(usage.claudeTokens) });
-  // Free translation uses no Claude tokens, so the token count is left out.
+  // Without Claude (another service, or Soniox) there are no tokens to count.
   return [
     t('usage.listening', { n: formatNumber(usage.sttMinutes, 1) }),
     t('usage.speech', { n: formatNumber(usage.ttsChars) }),

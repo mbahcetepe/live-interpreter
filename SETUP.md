@@ -17,7 +17,7 @@ From install to your first translated Teams call or YouTube video, step by step.
 | **Chrome 116+, Edge or Brave** | You also join Teams meetings in this browser. The desktop Teams app is not supported |
 | **Node.js 18+** | Only to build the extension from source ([nodejs.org](https://nodejs.org)); not needed with the Chrome Web Store copy |
 | **One of these for speech** | An ElevenLabs account (your own voice clone needs Starter or higher, [plans](https://elevenlabs.io/pricing)) **or** your own speech server ([speech-server](speech-server/README.md)) |
-| **One of these for translation** | An API key for Claude, OpenAI or OpenRouter, **or** a server of your own (Ollama, LM Studio), **or** nothing (free translation) |
+| **One of these for translation** | An API key for Claude, OpenAI, OpenRouter or Soniox, **or** a server of your own (Ollama, LM Studio) |
 | **Headphones** | In calls, so the translation you hear does not leak into your microphone and back to them |
 
 The extension has no server of its own. Your keys stay in your browser and go only to the services you choose.
@@ -66,11 +66,10 @@ Choose the **Service**:
 | **OpenAI or a compatible server** | Leave **Server** empty for OpenAI and enter its API key; or enter the address of a server with the same API (LM Studio, vLLM, for example `http://192.168.1.5:1234/v1`) |
 | **OpenRouter** | An API key from [openrouter.ai](https://openrouter.ai/keys) |
 | **Ollama (your own server)** | The server's address (for example `100.101.102.103`; port 11434 is added); a **second server** can be added below it |
-| **Free** | Nothing; a free [DeepL API Free](https://www.deepl.com/pro-api) key gives better quality, and is needed in Brave |
 
 The **Model** list fills itself from the service; **↻** fetches it again. For a server of your own (Ollama, LM Studio) the browser asks once for access to its address: allow it. No `OLLAMA_ORIGINS` setting is needed on an Ollama server.
 
-Press **Test**: one sentence is translated and timed. If the chosen service fails on a sentence during a call, the next one translates it (a second Ollama server, then Claude Haiku if a key is set, then free translation); a service that is out for good, such as a refused key, is reported once in the panel.
+Press **Test**: one sentence is translated and timed. If the chosen service fails on a sentence during a call, the next one translates it (a second Ollama server, then Claude Haiku if a key is set); a service that is out for good, such as a refused key, is reported once in the panel.
 
 **Meeting notes and special terms** (folded) give the translator background and the spelling of names.
 
@@ -203,7 +202,7 @@ Two participants on one computer garble each other's audio; use a second device.
 | "Ollama server at ... could not be reached" | Is the server on, and is this computer on Tailscale? Press **Test** under Translation in the settings |
 | "The Anthropic API key is not valid" (or OpenAI, OpenRouter) | Anthropic refuses the key saved in the settings: it was replaced, revoked or pasted only in part. Paste the key again under Translation and press **Test** |
 | "The local speech server refused the key" | Enter `SPEECH_KEY` from `/etc/live-interpreter-speech.env` on the server |
-| "The backup translation is not ready yet" | Brave has no Chrome translator: add a DeepL Free key or a second Ollama server |
+| "The backup translation (Claude) is not available right now" | Check the Claude key and its credit under Translation, or add a second Ollama server |
 | The delay is long | Choose Ollama or **Claude Haiku 5.5**, set the silence to **0.5 s**, speak in short sentences |
 | No translation in a film | Update your speech server (`git pull` and `sudo ./install-ubuntu.sh`); the voice detector came in a later version. Expect subtitles only where someone speaks |
 | Chinese or Japanese speech is translated only when the speaker pauses, or a sentence is spoken twice | Update the extension to 2.4.3 or newer and your speech server to 2.0.1 (`git pull` and `sudo ./install-ubuntu.sh`): the server then writes these languages with punctuation, and the extension translates each finished sentence once, while the speaker goes on |

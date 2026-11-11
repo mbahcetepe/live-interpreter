@@ -103,7 +103,7 @@ test("OpenAI's own model list is narrowed to chat models; another server's is no
 });
 
 test('the provider follows the old claudeModel values until one is chosen', () => {
-  assert.equal(translationProvider({ claudeModel: 'free' }), 'free');
+  assert.equal(translationProvider({ claudeModel: 'free' }), 'claude'); // free translation is gone
   assert.equal(translationProvider({ claudeModel: 'ollama' }), 'ollama');
   assert.equal(translationProvider({ claudeModel: 'claude-sonnet-5-5' }), 'claude');
   assert.equal(translationProvider({ claudeModel: 'free', translationProvider: 'openrouter' }), 'openrouter');
@@ -119,4 +119,10 @@ test('each provider asks for what it needs', () => {
   // A server of one's own with the same API may need no key.
   assert.deepEqual(missingKeys({ ...base, translationProvider: 'openai', openaiUrl: 'http://127.0.0.1:1234/v1' }), []);
   assert.deepEqual(missingServers({ ...base, translationProvider: 'openai', openaiUrl: 'x', openaiModel: 'm' }), []);
+});
+
+test('a setup that had free translation chosen moves to Claude', async () => {
+  const { migrateSettings, PROVIDERS } = await import('../../src/shared/settings.js');
+  assert.equal(migrateSettings({ translationProvider: 'free' }).translationProvider, 'claude');
+  assert.ok(!PROVIDERS.some((p) => p.id === 'free'));
 });

@@ -9,6 +9,10 @@ Versions follow [semantic versioning](https://semver.org): MAJOR for changes tha
 - **Soniox speaks too.** Soniox is a speech service like the others (Speech recognition and voices › Service): its own voices (about 230, each speaking every language) over one WebSocket kept open, the first sound of a piece about 0.35–0.5 s after it is asked for. With another translator Soniox listens (without translating) and speaks.
 - **The panel names the services at work**: which one hears, translates and speaks.
 
+### Removed
+
+- **Free translation** (DeepL Free, Mistral, Groq and Chrome's built-in translator) is gone, as a choice and as the backup behind the other services. Chrome's translator is missing in Brave and other Chromium browsers, and the free plans were too limited for whole calls. A setup that had it chosen now shows Claude. Behind Ollama, OpenAI and OpenRouter, Claude Haiku (with a key) remains the backup; Claude alone has none. The extension no longer asks for access to DeepL and Mistral.
+
 ### Changed
 
 - **Soniox is chosen like any other service**, under Translation (it hears and translates in one stream) or under Speech recognition and voices; the separate tick box is gone, and a setup that had it ticked now shows Soniox under Translation. While Soniox translates, the settings page says that it also does the listening and that the speech service only speaks; that service's speech recognition settings are hidden.

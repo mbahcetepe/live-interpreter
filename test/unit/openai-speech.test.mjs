@@ -116,7 +116,7 @@ test('model lists keep the models for the job; OpenAI has its own voices', async
 });
 
 test('the speech account takes the keys under Translation when none is typed', () => {
-  const s = { ...DEFAULT_SETTINGS, translationProvider: 'free', speechProvider: 'openai', oaiSttServer: 'groq', groqKey: 'gk', openaiKey: 'ok' };
+  const s = { ...DEFAULT_SETTINGS, translationProvider: 'ollama', ollamaUrl: 'http://192.0.2.10:11434', ollamaModel: 'gemma3', speechProvider: 'openai', oaiSttServer: 'groq', groqKey: 'gk', openaiKey: 'ok' };
   const account = speechAccount(s);
   assert.equal(account.stt.base, 'https://api.groq.com/openai/v1');
   assert.equal(account.stt.key, 'gk');

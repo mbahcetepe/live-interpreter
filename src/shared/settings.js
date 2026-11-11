@@ -19,7 +19,6 @@ export const PROVIDERS = [
   { id: 'openai', labelKey: 'provider.openai' },
   { id: 'openrouter', labelKey: 'provider.openrouter' },
   { id: 'ollama', labelKey: 'provider.ollama' },
-  { id: 'free', labelKey: 'provider.free' },
   // Soniox hears and translates in one stream, so it also does the listening.
   { id: 'soniox', labelKey: 'provider.soniox' },
 ];
@@ -38,11 +37,11 @@ export function whisperModelFor(model, languageCode) {
   return model || '';
 }
 
-// Before translationProvider existed, claudeModel held 'free' or 'ollama' as well.
+// Before translationProvider existed, claudeModel held 'ollama' as well (and 'free', for
+// free translation, which is gone: Claude takes its place).
 export function translationProvider(settings) {
   const chosen = settings?.translationProvider;
   if (PROVIDERS.some((p) => p.id === chosen)) return chosen;
-  if (settings?.claudeModel === 'free') return 'free';
   if (settings?.claudeModel === 'ollama') return 'ollama';
   return 'claude';
 }
@@ -50,7 +49,6 @@ export function translationProvider(settings) {
 // The Claude model to use: the chosen one, or Haiku when the field still holds an old value.
 export const claudeModelOf = (settings) => (CLAUDE_IDS.has(settings?.claudeModel) ? settings.claudeModel : 'claude-haiku-5-5');
 
-export const isFreeTranslation = (settings) => translationProvider(settings) === 'free';
 export const isOllamaTranslation = (settings) => translationProvider(settings) === 'ollama';
 export const isClaudeTranslation = (settings) => translationProvider(settings) === 'claude';
 export const isOpenAITranslation = (settings) => ['openai', 'openrouter'].includes(translationProvider(settings));
@@ -82,9 +80,8 @@ export const DEFAULT_SETTINGS = {
 
   elevenLabsKey: '',
   anthropicKey: '',
-  // Optional free keys that raise the quality of free translation.
-  deeplKey: '',
-  mistralKey: '',
+  // A Groq key from before 2.6, when free translation used it; Groq speech recognition
+  // still falls back to it.
   groqKey: '',
 
   // On the very first start these follow the browser's language (firstRunDefaults).
@@ -208,6 +205,8 @@ export function migrateSettings(stored) {
     merged.translationProvider = 'soniox';
     merged.useSoniox = false;
   }
+  // Free translation is gone since 2.6: Claude takes its place.
+  if (merged.translationProvider === 'free') merged.translationProvider = 'claude';
   return merged;
 }
 

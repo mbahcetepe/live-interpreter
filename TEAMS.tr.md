@@ -23,7 +23,7 @@ Teams bir toplantı bağlantısını açarken uygulamayı başlatmayı önerirse
 - **`src/shared/platforms.js`:** Siteye özgü her şey tek yerde: adresler, mikrofon düğmesinden mute durumunun okunması, sitenin kendi altyazı alanı ve altyazı çubuğunun alttan yüksekliği.
 - **`src/manifest.json`:** Teams adresleri content script eşleşmelerine ve host izinlerine eklendi.
 - **`src/content/page-hook.js`:** Ses yolu (RTCRtpSender takası) her WebRTC sitesinde aynı çalışır; mute algılama platforma göre seçilir. Teams sayfasının ana iş parçacığı yoğun olduğu için çeviri sesi sayfada 0,25 sn tamponlanır; konuşmanın ortasında ses kesilirse tampon kendiliğinden 0,6 sn'ye kadar büyür.
-- **`src/offscreen/fallback-translator.js`:** Claude bir cümlede hata verirse (aşırı yük, hız sınırı, kredi, bağlantı) cümleyi ücretsiz çeviri zinciri çevirir.
+- **`src/offscreen/fallback-translator.js`:** ana çeviri bir cümlede hata verirse (aşırı yük, hız sınırı, kredi, bağlantı) cümleyi yedek çevirir.
 - **`src/content/subtitle-bar.js`:** Teams'te altyazı daha aşağıda durur ve Teams'in canlı altyazı alanı aranır.
 - **`test/unit/platforms.test.mjs`:** Adres eşleşmesi (benzer görünen sahte alan adları dahil), manifest kapsamı ve mute algılayıcıları.
 

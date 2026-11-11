@@ -27,7 +27,7 @@ Eklenti ses ya da metni yalnızca ayarlarda seçili servislere, yalnızca çevir
 
 - Tek akışta ses tanıma ve çeviri: Soniox.
 - Ses: ElevenLabs, OpenAI, Groq ya da kendi çalıştırdığın bir ses sunucusu (örneğin bu projedeki sunucu, Speaches, LocalAI ya da Kokoro).
-- Çeviri: Anthropic (Claude), OpenAI ya da aynı API'yi sunan bir sunucu, OpenRouter, kendi çalıştırdığın bir Ollama sunucusu, DeepL, Mistral, Groq ya da bilgisayarında çalışan tarayıcının kendi çevirmeni.
+- Çeviri: Anthropic (Claude), OpenAI ya da aynı API'yi sunan bir sunucu, OpenRouter, kendi çalıştırdığın bir Ollama sunucusu ya da Soniox.
 
 Kendi ses sunucun ve kendi Ollama sunucunla ses ve metin, senin denetimindeki bilgisayarlardan hiç çıkmaz.
 
