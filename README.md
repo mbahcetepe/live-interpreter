@@ -6,6 +6,8 @@
 
 ### Live speech translation for Microsoft Teams on the web, Google Meet and any video or radio tab
 
+**English** · [中文](README.zh.md)
+
 In a call both ways: they speak Spanish and you hear English; you speak English and they hear Spanish, in your own voice. On YouTube, X or an online radio: subtitles, or a spoken translation over the original, in any language you follow. Any two of 20 languages; the language of a video can be detected automatically. A browser extension with no backend of its own; translation and speech can run on ElevenLabs and Claude, or entirely on your own servers.
 
 **[Add to Chrome from the Chrome Web Store](https://chromewebstore.google.com/detail/opaicinhommdnfhikkmlgjcalkohnkhl)** · free and open source (MIT)
@@ -23,7 +25,7 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
 
 </div>
 
-> **Status.** Published on the Chrome Web Store. Teams on the web has been used in real calls in both directions; the mute detection and the Teams caption area are still being checked ([TEAMS.md](TEAMS.md)). YouTube translation has been used on real videos. Google Meet is covered by the end-to-end tests with mock calls but has not been checked in a real call since 2.0. Run a test before an important meeting.
+> **Status.** Published on the Chrome Web Store. Teams on the web and Google Meet have been used in real calls in both directions (English and Turkish); in Teams the mute detection and the caption area are still being checked ([TEAMS.md](TEAMS.md)). Translation has been used on real videos, Chinese among them, in both directions. Run a test before an important meeting.
 >
 > The desktop Teams app is not supported: browser extensions only run in the browser. Join the meeting with **"Continue on this browser"**.
 
@@ -79,7 +81,7 @@ Under **Speech recognition and voices** tick **Hear and translate with Soniox** 
 
 ### How fast it is
 
-The translation is spoken clause by clause: as soon as a translated clause is long enough (a comma, semicolon or colon after about 24 characters, or the end of a sentence), its voice is asked for, and the voice streams back, so the first words are heard before the translator has finished the sentence. Reasoning models are asked not to reason (`reasoning_effort: none`, stepping up only as far as a model requires); on OpenRouter reasoning is turned off for every model and the quickest provider is chosen (`provider.sort: latency`). When speech falls more than 20 s behind, the oldest piece not yet playing is skipped (its text stays on screen). The panel shows the delay in its parts, averaged over the last sentences: waiting for the speech to end, the first translated words, and the first sound of the voice.
+The translation is spoken clause by clause: as soon as a translated clause is long enough (a comma, semicolon or colon after about 24 characters, or the end of a sentence; in Chinese and Japanese, which have no spaces, their own marks `，、。` count and a character counts as two), its voice is asked for, and the voice streams back, so the first words are heard before the translator has finished the sentence. Reasoning models are asked not to reason (`reasoning_effort: none`, stepping up only as far as a model requires); on OpenRouter reasoning is turned off for every model and the quickest provider is chosen (`provider.sort: latency`). When speech falls more than 20 s behind, the oldest piece not yet playing is skipped (its text stays on screen). The panel shows the delay in its parts, averaged over the last sentences: waiting for the speech to end, the first translated words, and the first sound of the voice.
 
 ### Foreign words said the right way
 
@@ -100,7 +102,7 @@ git clone https://github.com/mbahcetepe/live-interpreter.git
 cd live-interpreter/speech-server && sudo ./install-ubuntu.sh
 ```
 
-This installs faster-whisper (`large-v3-turbo`) and Piper with voices for 16 of the 20 languages (all but Greek, Indonesian, Japanese and Korean, which Piper has no voice for) as a service on port 8765 and prints the address and key. In the settings, under **Speech recognition and voices**, choose **My own speech server**, enter both and press **Test**; then choose the recognition model (Whisper) and the voices from the server's lists. English-only models (`distil-large-v3`, `*.en`) are marked as such and used only for English speech; speech in any other language goes to `large-v3-turbo`, since an English-only model writes it as an English rendering. Measured over Tailscale: a sentence is recognized about 1.1–1.3 s after it ends (0.7 s of that is the silence that ends it) and spoken in under 0.2 s. Speech is found with Silero VAD, which tells a voice from music and effects, so a film's soundtrack does not hide where sentences end; loud sound with no voice found for 6 s is handed to Whisper anyway. No voice cloning in this mode. Details: [speech-server/README.md](speech-server/README.md).
+This installs faster-whisper (`large-v3-turbo`) and Piper with voices for 16 of the 20 languages (all but Greek, Indonesian, Japanese and Korean, which Piper has no voice for) as a service on port 8765 and prints the address and key. In the settings, under **Speech recognition and voices**, choose **My own speech server**, enter both and press **Test**; then choose the recognition model (Whisper) and the voices from the server's lists. English-only models (`distil-large-v3`, `*.en`) are marked as such and used only for English speech; speech in any other language goes to `large-v3-turbo`, since an English-only model writes it as an English rendering. Measured over Tailscale: a sentence is recognized about 1.1–1.3 s after it ends (0.7 s of that is the silence that ends it) and spoken in under 0.2 s. Speech is found with Silero VAD, which tells a voice from music and effects, so a film's soundtrack does not hide where sentences end; loud sound with no voice found for 6 s is handed to Whisper anyway. Chinese and Japanese are written with punctuation (server 2.0.1), so their finished sentences are translated while the speaker goes on. No voice cloning in this mode. Details: [speech-server/README.md](speech-server/README.md).
 
 ### OpenAI-compatible speech
 
@@ -237,7 +239,7 @@ The panel counts what a call uses and estimates the cost from list prices (28 Oc
 
 ## Versions
 
-The version is shown in the popup and at the top of the settings page; what changed in each one is in [CHANGELOG.md](CHANGELOG.md), and every version has a git tag (`v2.4.1`). The Chrome Web Store copy updates itself; a copy built from source is updated with `git pull` and `npm run build`. The speech server reports its own version and protocol, and the extension says so when the server needs an update.
+The version is shown in the popup and at the top of the settings page; what changed in each one is in [CHANGELOG.md](CHANGELOG.md), and every version has a git tag (`v2.4.3`). The Chrome Web Store copy updates itself; a copy built from source is updated with `git pull` and `npm run build`. The speech server reports its own version and protocol, and the extension says so when the server needs an update.
 
 ---
 

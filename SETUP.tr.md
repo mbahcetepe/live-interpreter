@@ -198,6 +198,7 @@ Aynı bilgisayardan iki katılımcı birbirinin sesini bozar; ikinci bir cihaz k
 | "Yedek çeviri henüz hazır değil" | Brave'de Chrome'un çevirmeni yok: bir DeepL Free anahtarı ya da ikinci bir Ollama sunucusu ekle |
 | Gecikme fazla | Ollama ya da **Claude Haiku 5.5** seç, sessizlik ayarını **0,5 sn** yap, kısa cümlelerle konuş |
 | Filmde çeviri gelmiyor | Kendi ses sunucunu güncelle (`git pull` ve `sudo ./install-ubuntu.sh`); konuşma algılayıcısı yeni sürümde. Altyazıyı yalnızca konuşmanın olduğu yerlerde bekle |
+| Çince ya da Japonca konuşma yalnızca konuşan durunca çevriliyor ya da bir cümle iki kez seslendiriliyor | Eklentiyi 2.4.3 ya da sonrasına, ses sunucunu 2.0.1'e güncelle (`git pull` ve `sudo ./install-ubuntu.sh`): sunucu bu dilleri noktalamayla yazar, eklenti de her bitmiş cümleyi konuşma sürerken bir kez çevirir |
 | Konuşmam karşıya anlamsız İngilizce cümleler ya da cevaplar olarak gidiyor | Kendi ses sunucunda yalnızca İngilizce bilen bir model seçili (`distil-large-v3`). Eklentiyi 2.4.1 ya da sonrasına güncelle (diğer dilleri `large-v3-turbo`ya gönderir) ya da ses tanıma modeli olarak `large-v3-turbo` seç. Net ve mikrofona yakın konuş |
 | Çeviri kendiliğinden durdu | Panel nedenini yazar (örneğin ElevenLabs kotası doldu). Sorunu giderip yeniden başlat |
 

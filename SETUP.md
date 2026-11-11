@@ -198,6 +198,7 @@ Two participants on one computer garble each other's audio; use a second device.
 | "The backup translation is not ready yet" | Brave has no Chrome translator: add a DeepL Free key or a second Ollama server |
 | The delay is long | Choose Ollama or **Claude Haiku 5.5**, set the silence to **0.5 s**, speak in short sentences |
 | No translation in a film | Update your speech server (`git pull` and `sudo ./install-ubuntu.sh`); the voice detector came in a later version. Expect subtitles only where someone speaks |
+| Chinese or Japanese speech is translated only when the speaker pauses, or a sentence is spoken twice | Update the extension to 2.4.3 or newer and your speech server to 2.0.1 (`git pull` and `sudo ./install-ubuntu.sh`): the server then writes these languages with punctuation, and the extension translates each finished sentence once, while the speaker goes on |
 | My speech reaches them as English nonsense, or as answers | Your own speech server is set to an English-only model (`distil-large-v3`). Update the extension to 2.4.1 or newer, which sends other languages to `large-v3-turbo`, or choose `large-v3-turbo` as the recognition model. Speak clearly and close to the microphone |
 | The translation stopped by itself | The panel says why (an ElevenLabs quota ran out, for example). Fix it and start again |
 
