@@ -61,6 +61,8 @@ async function copyStatic() {
     manifest.host_permissions.push('http://127.0.0.1/*');
     // The stand-in video page; a real install reaches such a tab through the click (activeTab).
     manifest.host_permissions.push('https://media.test/*');
+    // Zoom's access, which a real install asks for on the first start there.
+    manifest.host_permissions.push('https://*.zoom.us/*');
   }
   await writeFile(path.join(dist, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   await cp(path.join(src, 'offscreen/offscreen.html'), path.join(dist, 'offscreen.html'));

@@ -6,6 +6,11 @@
 // its own microphone track everywhere it looks (sender.track is reported as Meet's).
 // Turning it off puts Meet's track back. Nothing here talks to the network: the
 // audio arrives from the extension through a private MessagePort.
+//
+// Zoom's web client sends no WebRTC audio track: it encodes the microphone itself and
+// sends it over a data channel. There the page gets, from getUserMedia, a track of ours
+// instead of the microphone: the microphone passes through it while translation is off,
+// and the translated speech takes its place while it is on.
 
 import { PcmScheduler } from '../shared/scheduler.js';
 import { base64ToInt16 } from '../shared/pcm.js';
@@ -34,6 +39,11 @@ import { platformForUrl, MUTE_DETECTORS } from '../shared/platforms.js';
   const swapped = new Set(); // senders currently carrying our track
   const rawTracks = []; // microphone tracks Meet got from getUserMedia
   const peers = new Set(); // Meet's peer connections: a connected one means the call has begun
+  const replacements = new Map(); // microphone mode: the track the page got -> { raw, micGain, ... }
+
+  // Which way the microphone reaches the call (src/shared/platforms.js).
+  const platform = platformForUrl(location.href);
+  const micMode = platform?.audioPath === 'microphone';
 
   let port = null;
   let active = false;
@@ -57,7 +67,7 @@ import { platformForUrl, MUTE_DETECTORS } from '../shared/platforms.js';
     // The speech arrives through the call page's own main thread, which a busy call
     // (Teams above all) holds up now and then: a longer buffer keeps it from stuttering.
     const player = new PcmScheduler(ctx, gain, { prebufferSec: 0.25, maxPrebufferSec: 0.6, onPlayingChange: () => schedulePost() });
-    audio = { ctx, track, player };
+    audio = { ctx, gain, track, player };
     resumeAudio();
     return audio;
   }
@@ -97,6 +107,54 @@ import { platformForUrl, MUTE_DETECTORS } from '../shared/platforms.js';
     }
   }
 
+  // ---- microphone mode (Zoom) --------------------------------------------------------
+
+  // The page gets a track of ours in place of each microphone track it asks for. The
+  // microphone plays into it while translation is off; while it is on, only the
+  // translated speech does. Label, settings and constraints are the microphone's, so the
+  // page's device menus keep working.
+  function replaceMicrophone(stream) {
+    const a = ensureAudio();
+    const out = new MediaStream(stream.getVideoTracks());
+    for (const raw of stream.getAudioTracks()) {
+      const source = a.ctx.createMediaStreamSource(new MediaStream([raw]));
+      const micGain = a.ctx.createGain();
+      micGain.gain.value = active ? 0 : 1;
+      const dest = a.ctx.createMediaStreamDestination();
+      dest.channelCount = 1;
+      dest.channelCountMode = 'explicit';
+      source.connect(micGain).connect(dest);
+      a.gain.connect(dest);
+      const track = dest.stream.getAudioTracks()[0];
+      for (const name of ['label']) Object.defineProperty(track, name, { configurable: true, get: () => raw[name] });
+      for (const name of ['getSettings', 'getConstraints', 'getCapabilities', 'applyConstraints']) {
+        if (typeof raw[name] === 'function') Object.defineProperty(track, name, { configurable: true, value: (...args) => raw[name](...args) });
+      }
+      replacements.set(track, { raw, source, micGain, dest });
+      out.addTrack(track);
+    }
+    schedulePost();
+    return out;
+  }
+
+  function releaseReplacement(track) {
+    const entry = replacements.get(track);
+    if (!entry) return;
+    replacements.delete(track);
+    nativeStop.call(entry.raw);
+    try {
+      entry.source.disconnect();
+      audio?.gain.disconnect(entry.dest);
+    } catch {
+      // already disconnected
+    }
+  }
+
+  function setMicrophonePassThrough() {
+    if (!audio) return;
+    for (const entry of replacements.values()) entry.micGain.gain.setTargetAtTime(active ? 0 : 1, audio.ctx.currentTime, 0.02);
+  }
+
   function adopt(sender, track) {
     meetTrack.set(sender, track);
     audioSenders.add(sender);
@@ -110,6 +168,7 @@ import { platformForUrl, MUTE_DETECTORS } from '../shared/platforms.js';
     active = true;
     prune();
     for (const sender of audioSenders) swap(sender);
+    setMicrophonePassThrough();
     if (!pollTimer) pollTimer = setInterval(() => postState(), 300);
     schedulePost();
   }
@@ -117,9 +176,11 @@ import { platformForUrl, MUTE_DETECTORS } from '../shared/platforms.js';
   function deactivate(final) {
     active = false;
     for (const sender of [...swapped]) unswap(sender);
+    setMicrophonePassThrough();
     if (audio) {
       audio.player.flush();
-      if (final) {
+      // In microphone mode the page's microphone still flows through our audio graph.
+      if (final && !replacements.size) {
         audio.ctx.close().catch(() => {});
         audio = null;
       }
@@ -204,6 +265,7 @@ import { platformForUrl, MUTE_DETECTORS } from '../shared/platforms.js';
 
   trackProto.stop = function stop() {
     nativeStop.call(this);
+    releaseReplacement(this);
     if (this.kind === 'audio') schedulePost();
   };
 
@@ -218,16 +280,22 @@ import { platformForUrl, MUTE_DETECTORS } from '../shared/platforms.js';
           while (rawTracks.length > 8) rawTracks.shift();
         }
         schedulePost();
-        return stream;
+        return micMode && stream.getAudioTracks().length ? replaceMicrophone(stream) : stream;
       });
     };
   }
+
+  // Zoom's call runs on data channels only; a connected one also means the call has begun.
+  const nativeCreateDataChannel = pcProto.createDataChannel;
+  pcProto.createDataChannel = function createDataChannel(...args) {
+    peers.add(this);
+    return nativeCreateDataChannel.apply(this, args);
+  };
 
   // ---- is the call site sending my microphone? --------------------------------------
 
   // Each site shows its microphone button differently (src/shared/platforms.js). The
   // candidates are read here as plain records so the detectors stay testable.
-  const platform = platformForUrl(location.href);
   const detectMuted = MUTE_DETECTORS[platform?.id] || (() => null);
 
   function labelOf(el) {
@@ -247,6 +315,8 @@ import { platformForUrl, MUTE_DETECTORS } from '../shared/platforms.js';
     meet: '[data-is-muted]',
     // UNVERIFIED: Teams' toolbar markup. The shortcut in the label is what really decides.
     teams: '#microphone-button, [data-tid*="microphone" i], [data-inp*="microphone" i], [data-tid*="toggle-mute" i], button[aria-label*="shift+m" i], button[title*="shift+m" i]',
+    // UNVERIFIED: Zoom's web client footer. The label is what decides.
+    zoom: '.join-audio-container button, button[class*="join-audio" i], button[aria-label*="microphone" i], button[aria-label*="mikrofon" i], button[aria-label*="audio" i]',
   };
 
   function domMuted() {
@@ -255,7 +325,7 @@ import { platformForUrl, MUTE_DETECTORS } from '../shared/platforms.js';
     const buttons = [...document.querySelectorAll(selector)].map((el) => ({
       label: labelOf(el),
       isMuted: el.getAttribute('data-is-muted'),
-      tag: tagOf(el),
+      tag: `${tagOf(el)} ${typeof el.className === 'string' ? el.className : ''}`.trim(),
     }));
     return detectMuted(buttons);
   }
@@ -267,6 +337,13 @@ import { platformForUrl, MUTE_DETECTORS } from '../shared/platforms.js';
       const track = meetTrack.get(sender);
       if (track && track.readyState === 'live' && isEnabled(track)) sending = true;
     }
+    // Microphone mode: the page has our track and switches it like its microphone.
+    let attached = swapped.size;
+    for (const track of replacements.keys()) {
+      if (track.readyState !== 'live') continue;
+      if (isEnabled(track)) sending = true;
+      if (active) attached += 1;
+    }
     const liveRaw = rawTracks.filter((t) => t.readyState === 'live');
     const rawState = rawTracks.length === 0 ? 'none' : liveRaw.some((t) => isEnabled(t)) ? 'live' : 'off';
     const dom = domMuted();
@@ -274,7 +351,7 @@ import { platformForUrl, MUTE_DETECTORS } from '../shared/platforms.js';
     const micTrack = liveRaw[liveRaw.length - 1];
     return {
       muted,
-      senders: swapped.size,
+      senders: attached,
       inCall: [...peers].some((pc) => pc.connectionState === 'connected'),
       micLabel: micTrack?.label || '',
       ctxState: audio ? audio.ctx.state : 'none',

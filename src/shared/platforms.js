@@ -2,8 +2,10 @@
 //
 // Everything that knows about a particular site lives here: which addresses it uses,
 // how its microphone button says whether you are muted, where its own captions are and
-// how much room its controls take at the bottom of the window. The audio path itself
-// (the RTCRtpSender swap in page-hook.js) is the same for every site that uses WebRTC.
+// how much room its controls take at the bottom of the window. The audio path is the
+// RTCRtpSender swap in page-hook.js for sites that send the microphone as a WebRTC track
+// (Meet, Teams); Zoom's web client encodes it itself and sends it over a data channel,
+// so there the microphone is replaced where the page asks for it (getUserMedia).
 
 export const PLATFORMS = [
   {
@@ -29,12 +31,30 @@ export const PLATFORMS = [
       '[role="region"][aria-label*="ltyaz" i]',
     ],
   },
+  {
+    id: 'zoom',
+    name: 'Zoom',
+    // The web client (app.zoom.us/wc/..., or a company's own name.zoom.us/wc/...).
+    // Not in the manifest: the extension asks for access to Zoom only when it is used
+    // there, so nobody else sees a new permission.
+    optional: true,
+    origins: ['https://*.zoom.us/*'],
+    scriptMatches: ['https://*.zoom.us/wc/*'],
+    matches: (url) => /^https:\/\/([a-z0-9-]+\.)*zoom\.us\/wc\//i.test(url),
+    // The microphone is replaced where Zoom asks for it, not on a WebRTC sender.
+    audioPath: 'microphone',
+    subtitleBottom: 96,
+    captionSelectors: [],
+  },
 ];
 
 export function platformForUrl(url) {
   if (typeof url !== 'string') return null;
-  return PLATFORMS.find((p) => p.prefixes.some((prefix) => url.startsWith(prefix))) || null;
+  return PLATFORMS.find((p) => (p.matches ? p.matches(url) : p.prefixes.some((prefix) => url.startsWith(prefix)))) || null;
 }
+
+// Sites whose access is asked for when first used (Zoom) rather than in the manifest.
+export const OPTIONAL_PLATFORMS = PLATFORMS.filter((p) => p.optional);
 
 export const isSupportedUrl = (url) => platformForUrl(url) !== null;
 
@@ -43,7 +63,7 @@ export const isSupportedUrl = (url) => platformForUrl(url) !== null;
 export const isMediaUrl = (url) => /^https?:\/\//.test(url || '') && !isSupportedUrl(url);
 
 // chrome.tabs.query patterns for every supported site.
-export const URL_PATTERNS = PLATFORMS.flatMap((p) => p.prefixes.map((prefix) => `${prefix}*`));
+export const URL_PATTERNS = PLATFORMS.filter((p) => !p.optional).flatMap((p) => p.prefixes.map((prefix) => `${prefix}*`));
 
 // ---- reading the mute state from a microphone button ---------------------------------
 //
@@ -85,4 +105,24 @@ export function teamsMuted(buttons) {
   return null;
 }
 
-export const MUTE_DETECTORS = { meet: meetMuted, teams: teamsMuted };
+// Zoom's web client: the audio button's label says what a click would do ("Unmute my
+// microphone" while muted) or, before the audio is joined, offers to join it (nothing is
+// sent then). UNVERIFIED against every Zoom language: anything unclear gives null.
+const ZOOM_JOIN = /join audio|sese katıl|ses(e)? bağlan|audio beitreten|rejoindre l'audio|unirse al audio/i;
+const ZOOM_UNMUTE = /\bunmute\b|sesi aç|sesini aç|mikrofonu aç|stummschaltung aufheben|réactiver|reactivar|activar (el )?(audio|micrófono)/i;
+const ZOOM_MUTE = /\bmute\b|sesi kapat|sesini kapat|sessize al|mikrofonu kapat|stummschalten|couper|silenciar/i;
+const ZOOM_NOT_MINE = /\ball\b|participant|herkes|tüm|katılımcı/i;
+
+export function zoomMuted(buttons) {
+  for (const b of buttons) {
+    if (ZOOM_NOT_MINE.test(b.label)) continue;
+    const isAudio = /join-audio|audio-option|microphone/i.test(b.tag || '') || MIC_WORD.test(b.label) || /audio|\bmute|\bses/i.test(b.label);
+    if (!isAudio) continue;
+    if (ZOOM_JOIN.test(b.label)) return true;
+    if (ZOOM_UNMUTE.test(b.label)) return true;
+    if (ZOOM_MUTE.test(b.label)) return false;
+  }
+  return null;
+}
+
+export const MUTE_DETECTORS = { meet: meetMuted, teams: teamsMuted, zoom: zoomMuted };

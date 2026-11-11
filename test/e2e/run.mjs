@@ -81,7 +81,60 @@ async function connectionTest() {
   }
 }
 
+// Zoom's web client sends no WebRTC audio track: the page gets our track from getUserMedia.
+async function zoomTest() {
+  console.log('\n== Zoom web client (no API keys) ==');
+  const env = await launch({ site: 'zoom', micWav: path.join(fixtures, 'tone.wav'), remoteWav: path.join(fixtures, 'english.wav') });
+  const { control, meet: zoom, tabId } = env;
+  try {
+    check('page hook is installed in the Zoom page', await zoom.evaluate(() => window.__meetTercumanHook === true));
+    const label = await zoom.evaluate(() => window.__test.micLabel());
+    check('Zoom sees its microphone by its own name', Boolean(label) && !/destination/i.test(label), label);
+    const before = await maxLevel(zoom, 1200);
+    check('Zoom hears the microphone before translation starts', before > 0.01, `level ${before.toFixed(3)}`);
 
+    const start = await send(control, { type: 'start', tabId, options: { mode: 'diagnostic' } });
+    check('a connection test session starts on Zoom', start?.ok === true, start?.error);
+    const connected = await waitFor(async () => (await sessionState(control))?.engine?.page?.connected, 8000);
+    check('the engine reaches the Zoom tab', Boolean(connected));
+    const attached = await waitFor(async () => (await sessionState(control))?.engine?.page?.senders > 0, 5000);
+    check('the microphone Zoom reads now carries the extension audio', Boolean(attached));
+    await sleep(400);
+    const quiet = await maxLevel(zoom, 800);
+    check('the raw microphone no longer reaches Zoom', quiet < 0.005, `level ${quiet.toFixed(4)}`);
+    await send(control, { type: 'chime' });
+    const chime = await maxLevel(zoom, 900);
+    check('a test chime reaches Zoom', chime > 0.01, `level ${chime.toFixed(3)}`);
+
+    const engine = await waitFor(async () => {
+      const e = (await sessionState(control))?.engine;
+      return e && e.levels.tab > 0.005 && e.levels.mic > 0.005 ? e : null;
+    }, 6000);
+    check('the engine hears the Zoom tab and the microphone', Boolean(engine), JSON.stringify((await sessionState(control))?.engine?.levels));
+
+    await zoom.evaluate(() => window.__test.mute(true));
+    const muted = await waitFor(async () => (await sessionState(control))?.engine?.page?.muted, 4000);
+    check('muting in Zoom is detected from its audio button', Boolean(muted));
+    await send(control, { type: 'chime' });
+    const mutedChime = await maxLevel(zoom, 900);
+    check('nothing reaches Zoom while muted', mutedChime < 0.005, `level ${mutedChime.toFixed(4)}`);
+    await zoom.evaluate(() => window.__test.mute(false));
+    await waitFor(async () => (await sessionState(control))?.engine?.page?.muted === false, 4000);
+    await send(control, { type: 'chime' });
+    const unmuted = await maxLevel(zoom, 900);
+    check('sound reaches Zoom again after unmuting', unmuted > 0.01, `level ${unmuted.toFixed(3)}`);
+
+    const stop = await send(control, { type: 'stop' });
+    check('the Zoom session stops', stop?.ok === true);
+    await sleep(800);
+    const after = await maxLevel(zoom, 1200);
+    check('Zoom hears the real microphone again after stopping', after > 0.01, `level ${after.toFixed(3)}`);
+    check('no script errors on the Zoom page', env.pageErrors.length === 0, env.pageErrors.join(' | '));
+  } finally {
+    await env.context.close();
+    await rm(env.userDataDir, { recursive: true, force: true });
+  }
+}
 
 async function recordingTest() {
   console.log('\n== Call recording (no API keys) ==');
@@ -813,7 +866,7 @@ await mkdir(fixtures, { recursive: true });
 makeFixtures();
 // ONLY=local,media runs only the suites whose names contain one of these words.
 const only = (process.env.ONLY || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
-const suites = { connectionTest, recordingTest, mockTranslationTest, freeTranslationTest, ollamaTranslationTest, openaiTranslationTest, openaiSpeechTest, sonioxTest, localServersTest, mediaTest };
+const suites = { connectionTest, zoomTest, recordingTest, mockTranslationTest, freeTranslationTest, ollamaTranslationTest, openaiTranslationTest, openaiSpeechTest, sonioxTest, localServersTest, mediaTest };
 for (const [name, run] of Object.entries(suites)) {
   if (!only.length || only.some((w) => name.toLowerCase().includes(w))) await run();
 }

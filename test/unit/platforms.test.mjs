@@ -56,3 +56,32 @@ test('Teams: buttons that are not the microphone, or labels it cannot read, give
   assert.equal(teamsMuted([{ label: 'Mikrofon (Ctrl+Shift+M)', tag: '' }]), null);
   assert.equal(teamsMuted([]), null);
 });
+
+import { zoomMuted, OPTIONAL_PLATFORMS } from '../../src/shared/platforms.js';
+
+test('Zoom: the web client, on Zoom own and company addresses, and nothing else', () => {
+  assert.equal(platformForUrl('https://app.zoom.us/wc/71219263145/start?from=pwa').id, 'zoom');
+  assert.equal(platformForUrl('https://acme.zoom.us/wc/join/123').id, 'zoom');
+  for (const url of ['https://zoom.us.evil.example/wc/1', 'https://evilzoom.us/wc/1', 'http://app.zoom.us/wc/1', 'https://app.zoom.us/j/123']) {
+    assert.equal(isSupportedUrl(url), false, url);
+  }
+});
+
+test('Zoom is asked for when first used: not in the manifest, and its script patterns are its own', () => {
+  const manifest = JSON.parse(readFileSync(new URL('../../src/manifest.json', import.meta.url)));
+  const zoom = OPTIONAL_PLATFORMS.find((p) => p.id === 'zoom');
+  assert.ok(zoom && zoom.audioPath === 'microphone');
+  assert.ok(!manifest.host_permissions.some((p) => p.includes('zoom')));
+  // The optional host access in the manifest covers what is asked for.
+  assert.ok(manifest.optional_host_permissions.includes('https://*/*'));
+  assert.deepEqual(zoom.scriptMatches, ['https://*.zoom.us/wc/*']);
+});
+
+test('Zoom: the audio button label says what a click would do', () => {
+  assert.equal(zoomMuted([{ label: 'unmute my microphone', tag: 'join-audio-container__btn' }]), true);
+  assert.equal(zoomMuted([{ label: 'mute my microphone', tag: 'join-audio-container__btn' }]), false);
+  assert.equal(zoomMuted([{ label: 'Join Audio', tag: 'join-audio-container__btn' }]), true);
+  assert.equal(zoomMuted([{ label: 'Mute All', tag: 'participants' }]), null);
+  assert.equal(zoomMuted([{ label: 'Start Video', tag: 'send-video-container__btn' }]), null);
+  assert.equal(zoomMuted([]), null);
+});

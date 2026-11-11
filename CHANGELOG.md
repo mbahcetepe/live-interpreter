@@ -2,6 +2,13 @@
 
 Versions follow [semantic versioning](https://semver.org): MAJOR for changes that need something done (new settings, a server update), MINOR for new features, PATCH for fixes. The version lives in `package.json`; the build writes it into the extension's manifest, and the popup and the settings page show it. The speech server has its own version and a protocol number (`/health`); the extension warns when the server is older than it needs.
 
+## Unreleased
+
+### New
+
+- **Zoom in the browser** (the web client, `app.zoom.us/wc/…`): both directions, like Teams and Meet. Zoom sends no WebRTC audio track (it encodes the microphone itself and sends it over a data channel), so the page gets a track of ours where it asks for the microphone: the microphone passes through it while translation is off, and the translated speech takes its place while it is on. Muting is read from Zoom's audio button.
+- Access to Zoom is asked for on the first start there, not at install, so nobody else sees a new permission; the tab is reloaded once after that.
+
 ## 2.4.3 (2026-11-11)
 
 ### Fixed

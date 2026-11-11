@@ -71,7 +71,14 @@ export function extensionIdFor(dir) {
   return [...hex].map((c) => String.fromCharCode(97 + parseInt(c, 16))).join('');
 }
 
-export async function launch({ micWav, remoteWav, proxyPort }) {
+// site: 'meet' (default) or 'zoom' (the mock Zoom web client at app.zoom.us/wc/).
+const SITES = {
+  meet: { origin: 'https://meet.google.com', path: '/abc-defg-hij', page: 'mock-meet.html' },
+  zoom: { origin: 'https://app.zoom.us', path: '/wc/71219263145/start', page: 'mock-zoom.html' },
+};
+
+export async function launch({ micWav, remoteWav, proxyPort, site = 'meet' }) {
+  const where = SITES[site];
   const userDataDir = await mkdtemp(path.join(os.tmpdir(), 'tercuman-e2e-'));
   const id = extensionIdFor(dist);
   const context = await chromium.launchPersistentContext(userDataDir, {
@@ -94,10 +101,10 @@ export async function launch({ micWav, remoteWav, proxyPort }) {
       ...(proxyPort ? [`--proxy-server=http://127.0.0.1:${proxyPort}`, '--ignore-certificate-errors'] : []),
     ],
   });
-  await context.route('https://meet.google.com/**', (route) => {
+  await context.route(`${where.origin}/**`, (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === '/__fixtures/remote.wav') return route.fulfill({ path: remoteWav, contentType: 'audio/wav' });
-    return route.fulfill({ path: path.join(here, 'mock-meet.html'), contentType: 'text/html' });
+    return route.fulfill({ path: path.join(here, where.page), contentType: 'text/html' });
   });
   let [worker] = context.serviceWorkers();
   if (!worker) worker = await context.waitForEvent('serviceworker');
@@ -114,10 +121,16 @@ export async function launch({ micWav, remoteWav, proxyPort }) {
   const meet = await context.newPage();
   const pageErrors = [];
   meet.on('pageerror', (err) => pageErrors.push(err.message));
-  await meet.goto('https://meet.google.com/abc-defg-hij');
-  await meet.waitForFunction(() => window.__test, null, { timeout: 15000 });
+  // Zoom's page hook is registered by the service worker once access is granted (the
+  // test build grants it); it may land just after the first load.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await meet.goto(`${where.origin}${where.path}`);
+    await meet.waitForFunction(() => window.__test, null, { timeout: 15000 });
+    if (await meet.evaluate(() => window.__meetTercumanHook === true)) break;
+    await sleep(500);
+  }
   await meet.bringToFront();
-  const tabId = await worker.evaluate(async () => (await chrome.tabs.query({ url: 'https://meet.google.com/*' }))[0].id);
+  const tabId = await worker.evaluate(async (pattern) => (await chrome.tabs.query({ url: pattern }))[0].id, `${where.origin}/*`);
   return { context, worker, control, meet, tabId, pageErrors, userDataDir };
 }
 

@@ -4,7 +4,7 @@
 
 import { loadSettings, saveSettings, missingKeys, missingServers } from '../shared/settings.js';
 import { setLanguage, t, joinNames } from '../shared/i18n.js';
-import { isSupportedUrl, isMediaUrl } from '../shared/platforms.js';
+import { isSupportedUrl, isMediaUrl, OPTIONAL_PLATFORMS } from '../shared/platforms.js';
 import { isAllowed, cleanModes } from './message-policy.js';
 import { originRules } from '../shared/servers.js';
 import { describeMissingServers } from '../shared/setup-messages.js';
@@ -45,7 +45,7 @@ async function ensureOffscreen() {
   await chrome.offscreen.createDocument({
     url: OFFSCREEN_PATH,
     reasons: ['USER_MEDIA'],
-    justification: 'Captures the call tab audio (Google Meet or Microsoft Teams) and the microphone, and plays the live translation.',
+    justification: 'Captures the call tab audio (Google Meet, Microsoft Teams or Zoom) and the microphone, and plays the live translation.',
   });
 }
 
@@ -142,17 +142,45 @@ async function syncOriginRules() {
     .catch((err) => console.warn('[tercuman] could not update the Ollama header rule', err));
 }
 
+// Sites asked for only when first used (Zoom, src/shared/platforms.js): once access is
+// granted, the page hook and the bridge are registered for them the way the manifest
+// does it for Meet and Teams, and removed again if access is taken back.
+async function syncSiteScripts() {
+  const registered = new Set((await chrome.scripting.getRegisteredContentScripts().catch(() => [])).map((s) => s.id));
+  for (const site of OPTIONAL_PLATFORMS) {
+    const ids = [`${site.id}-hook`, `${site.id}-bridge`];
+    const granted = await chrome.permissions.contains({ origins: site.origins }).catch(() => false);
+    try {
+      if (granted && !registered.has(ids[0])) {
+        await chrome.scripting.registerContentScripts([
+          { id: ids[0], matches: site.scriptMatches, js: ['page-hook.js'], runAt: 'document_start', world: 'MAIN' },
+          { id: ids[1], matches: site.scriptMatches, js: ['bridge.js'], runAt: 'document_start' },
+        ]);
+      } else if (!granted && registered.has(ids[0])) {
+        await chrome.scripting.unregisterContentScripts({ ids });
+      }
+    } catch (err) {
+      console.warn(`[tercuman] could not update the ${site.name} scripts`, err);
+    }
+  }
+}
+
+chrome.permissions.onAdded.addListener(() => syncSiteScripts());
+chrome.permissions.onRemoved.addListener(() => syncSiteScripts());
+
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason === 'install') chrome.runtime.openOptionsPage();
   chrome.storage.session.set({ state: IDLE });
   updateBadge(IDLE);
   syncOriginRules();
+  syncSiteScripts();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   chrome.storage.session.set({ state: IDLE });
   updateBadge(IDLE);
   syncOriginRules();
+  syncSiteScripts();
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {

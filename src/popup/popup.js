@@ -2,7 +2,7 @@ import { loadSettings, saveSettings, missingKeys, missingServers, isFreeTranslat
 import { localPairs, localTranslationState, prepareLocalTranslation } from '../shared/local-translation.js';
 import { formatUsage } from '../shared/usage.js';
 import { setLanguage, t, applyI18n, languageLabel, joinNames, locale, UI_LANGUAGES } from '../shared/i18n.js';
-import { isSupportedUrl, isMediaUrl } from '../shared/platforms.js';
+import { isSupportedUrl, isMediaUrl, platformForUrl } from '../shared/platforms.js';
 import { describeMissingServers } from '../shared/setup-messages.js';
 
 const $ = (id) => document.getElementById(id);
@@ -12,6 +12,7 @@ const HINT_KEYS = { incoming: 'popup.hint.in', outgoing: 'popup.hint.out' };
 let settings;
 let tab;
 let state;
+let siteAccess = true;
 
 function setSeg(id, value) {
   for (const button of $(id).querySelectorAll('button')) {
@@ -36,7 +37,7 @@ function notice(text, { bad = false, action } = {}) {
   }
 }
 
-// Google Meet or Teams on the web (src/shared/platforms.js).
+// Google Meet, Teams or Zoom on the web (src/shared/platforms.js).
 const isMeet = () => isSupportedUrl(tab?.url);
 // Any other web page: its sound (a video, a radio) is translated, nothing goes back into it.
 const isMedia = () => isMediaUrl(tab?.url);
@@ -107,8 +108,21 @@ async function prepareFreeTranslation() {
   notice('');
 }
 
+// The first start on Zoom asks for access to it; the page hook is put in from the next
+// page load, so the tab has to be reloaded once.
+async function askSiteAccess() {
+  const site = platformForUrl(tab?.url);
+  const granted = await chrome.permissions.request({ origins: site.origins }).catch(() => false);
+  if (!granted) throw new Error(t('popup.siteDenied', { site: site.name }));
+  siteAccess = true;
+  notice(t('popup.siteReload', { site: site.name }), {
+    action: { label: t('popup.reloadTab'), run: () => chrome.tabs.reload(tab.id).then(() => window.close()) },
+  });
+}
+
 async function start(mode) {
   try {
+    if (!siteAccess) return await askSiteAccess();
     notice('');
     if (mode !== 'diagnostic' && isFreeTranslation(settings)) await prepareFreeTranslation();
     // With Claude, Chrome's translator is the backup (offscreen/fallback-translator.js): its
@@ -166,6 +180,10 @@ async function init() {
   settings = loaded;
   tab = tabs[0];
   state = session.state || { status: 'idle' };
+  // Zoom's access is asked for on the first start there; known now, so the request can
+  // be made straight from the click (Chrome allows it only during a click).
+  const site = platformForUrl(tab?.url);
+  if (site?.optional) siteAccess = await chrome.permissions.contains({ origins: site.origins }).catch(() => false);
 
   applyLanguage(settings.uiLanguage);
   $('consent').checked = Boolean(state.status === 'running' && state.engine?.cloneConsent);

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mock Zoom call</title>
+  </head>
+  <body>
+    <h1>Mock Zoom call</h1>
+    <p>Served at https://app.zoom.us/wc/ by the e2e test. It does what Zoom's web client does
+      with audio: reads the microphone from getUserMedia into its own audio processing (where
+      Zoom encodes it) and runs the call over data channels only, with no WebRTC audio track.</p>
+    <div class="join-audio-container">
+      <button class="join-audio-container__btn" id="micBtn" aria-label="mute my microphone">mic</button>
+    </div>
+    <audio id="remote" src="/__fixtures/remote.wav" loop></audio>
+    <script>
+      window.__test = null;
+      (async () => {
+        // Processing off: noise suppression would fade the steady test tone.
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, sampleRate: { ideal: 48000 } },
+        });
+        const mic = stream.getAudioTracks()[0];
+        // What Zoom would encode and send: the track the page got, read through Web Audio.
+        const ctx = new AudioContext();
+        const source = ctx.createMediaStreamSource(new MediaStream([mic]));
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 2048;
+        source.connect(analyser);
+        const buf = new Float32Array(analyser.fftSize);
+
+        // The call itself: a data channel between two local peer connections.
+        const pc1 = new RTCPeerConnection();
+        const pc2 = new RTCPeerConnection();
+        pc1.onicecandidate = (e) => e.candidate && pc2.addIceCandidate(e.candidate);
+        pc2.onicecandidate = (e) => e.candidate && pc1.addIceCandidate(e.candidate);
+        pc1.createDataChannel('ZoomWebclientAudioDataChannel');
+        const offer = await pc1.createOffer();
+        await pc1.setLocalDescription(offer);
+        await pc2.setRemoteDescription(offer);
+        const answer = await pc2.createAnswer();
+        await pc2.setLocalDescription(answer);
+        await pc1.setRemoteDescription(answer);
+
+        window.__test = {
+          mic,
+          micLabel: () => mic.label,
+          level() {
+            analyser.getFloatTimeDomainData(buf);
+            let sum = 0;
+            for (const v of buf) sum += v * v;
+            return Math.sqrt(sum / buf.length);
+          },
+          // Zoom's mute changes the button's label; the track stays as it was.
+          mute(on) {
+            document.getElementById('micBtn').setAttribute('aria-label', on ? 'unmute my microphone' : 'mute my microphone');
+          },
+          leave() {
+            pc1.close();
+            pc2.close();
+            mic.stop();
+            document.getElementById('remote').pause();
+          },
+        };
+        document.getElementById('remote').play().catch(() => {});
+      })();
+    </script>
+  </body>
+</html>
