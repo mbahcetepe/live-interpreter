@@ -23,7 +23,8 @@ OUT_RATE = 24000
 # Whisper makes these up from silence or noise (film subtitle credits, video outros).
 HALLUCINATIONS = re.compile(
     r'(altyaz[ıi]|subtitles? by|thanks? for watching|izlediğiniz için teşekkür|abone ol|'
-    r'like and subscribe|www\.|\.com\b|amara\.org|^\W*$)',
+    r'like and subscribe|www\.|\.com\b|amara\.org|'
+    r'点赞|订阅|打赏|明镜|字幕由|ご視聴ありがとう|チャンネル登録|^\W*$)',
     re.IGNORECASE,
 )
 

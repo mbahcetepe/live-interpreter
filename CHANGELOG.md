@@ -7,10 +7,12 @@ Versions follow [semantic versioning](https://semver.org): MAJOR for changes tha
 ### Fixed
 
 - **Chinese and Japanese speech is translated sentence by sentence while the speaker goes on.** The speech recognition often writes Chinese with Latin punctuation and no space after it (`是什么?其实`), which was not seen as a sentence end, so nothing was sent ahead and each piece waited for a pause.
+- With your own speech server, sentences were sometimes translated and spoken twice. When the server's live text paused for a few seconds, or started part-way through a long piece, the extension closed the piece itself, and the server's later text of the same piece was translated again. The speech server always ends its pieces, so the extension now leaves that to it.
 
 ### Speech server 2.0.1
 
 - Chinese and Japanese are recognized with punctuation: Whisper often left it out altogether. A punctuated sentence in that language is given to it before the audio; with the language set to detect automatically, a piece found to be Chinese or Japanese is read again with it. Update the server (`sudo ./install-ubuntu.sh`) to get this.
+- Lines Whisper makes up from Chinese and Japanese videos ("请不吝点赞 订阅…", "ご視聴ありがとうございました") are dropped.
 
 ## 2.4.2 (2026-11-10)
 

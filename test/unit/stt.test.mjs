@@ -161,6 +161,21 @@ test('a new segment that replaces an uncommitted sentence closes that sentence f
   stt.stop();
 });
 
+// Our own speech server always commits; in a real session its partials of one long
+// segment started part-way through and paused for seconds, and closing the segment here
+// had the same sentences translated twice (Chinese podcast, 11 Nov 2026).
+test('with a server that always commits, nothing is closed here', async () => {
+  const { stt, seen } = await started({ serverCommits: true });
+  last().emit({ message_type: 'partial_transcript', text: '很害羞的人,他可能就不好意思说。' });
+  await tick(80);
+  last().emit({ message_type: 'partial_transcript', text: '学生他们跟我说,老师,为什么我说汉语的时候。' });
+  last().emit({ message_type: 'partial_transcript', text: '- 因为可能他的女朋友或者男朋友是中国人。' });
+  assert.deepEqual(seen.committed, []);
+  last().emit({ message_type: 'committed_transcript', text: '学生他们跟我说,老师,为什么我说汉语的时候,因为可能他的女朋友或者男朋友是中国人。' });
+  assert.deepEqual(seen.committed, ['学生他们跟我说,老师,为什么我说汉语的时候,因为可能他的女朋友或者男朋友是中国人。']);
+  stt.stop();
+});
+
 test('an empty commit keeps the words of the partial before it', async () => {
   const { stt, seen } = await started({ stallExtraSecs: 5 });
   last().emit({ message_type: 'partial_transcript', text: 'We need the final numbers' });

@@ -297,3 +297,9 @@ def test_other_languages_get_no_prompt_and_one_pass():
 def test_the_prompt_made_up_from_silence_is_dropped():
     stub = StubWhisper('ja', PUNCTUATION_PROMPTS['ja'])
     assert recognizer_with(stub).transcribe(AUDIO, 'ja') == ''
+
+
+def test_made_up_chinese_and_japanese_video_lines_are_caught():
+    for line in ('请不吝点赞 订阅 转发 打赏支持明镜与点点栏目', '字幕由Amara.org社区提供', 'ご視聴ありがとうございました'):
+        assert HALLUCINATIONS.search(line), line
+    assert not HALLUCINATIONS.search('那你觉得说好汉语的一个关键是什么?')

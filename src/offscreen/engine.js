@@ -603,6 +603,7 @@ class Session {
       vadSilenceSecs: this.settings.vadSilenceSecs,
       keyterms,
       extraParams: this.speech.local ? this.whisperParams(dir, languageCode) : {},
+      serverCommits: Boolean(this.speech.local),
       onPartial: (text) => this.onPartial(dir, text),
       onCommitted: (text) => this.onCommitted(dir, text),
       onServerMessage: (type, text) => this.debugSink?.event({ kind: 'stt-message', dir, type, text }),

@@ -35,7 +35,10 @@ export class SttFatalError extends Error {
 // while it is reconnecting, so nothing said in the gap is lost.
 export class ScribeRealtime {
   // extraParams: more query parameters for the connection (the local server's whisper_model).
-  constructor({ name, apiKey, languageCode, vadSilenceSecs = 0.7, stallExtraSecs = STALL_EXTRA_SECS, tokenTimeoutMs = TOKEN_TIMEOUT_MS, keyterms = [], extraParams = {}, onPartial, onCommitted, onServerMessage, onStatus, onFatal, log }) {
+  // serverCommits: the server always commits its segments (our own speech server), so none
+  // is closed here: its partials of one long segment can start part-way through, which
+  // looked like a new segment and had the same words translated twice.
+  constructor({ name, apiKey, languageCode, vadSilenceSecs = 0.7, stallExtraSecs = STALL_EXTRA_SECS, tokenTimeoutMs = TOKEN_TIMEOUT_MS, keyterms = [], extraParams = {}, serverCommits = false, onPartial, onCommitted, onServerMessage, onStatus, onFatal, log }) {
     this.name = name;
     this.tokenTimeoutMs = tokenTimeoutMs;
     this.apiKey = apiKey;
@@ -44,6 +47,7 @@ export class ScribeRealtime {
     this.stallExtraSecs = stallExtraSecs;
     this.keyterms = keyterms;
     this.extraParams = extraParams;
+    this.serverCommits = serverCommits;
     this.onPartial = onPartial;
     this.onCommitted = onCommitted;
     this.onServerMessage = onServerMessage;
@@ -147,8 +151,10 @@ export class ScribeRealtime {
         const text = msg.text || '';
         // The server sometimes repeats a committed segment as a partial right after it.
         if (this.echoesLastCommit(text)) return;
-        if (startsNewSegment(this.partial, text)) this.closeStalledSegment();
-        if (text !== this.partial) this.watchForStall();
+        if (!this.serverCommits) {
+          if (startsNewSegment(this.partial, text)) this.closeStalledSegment();
+          if (text !== this.partial) this.watchForStall();
+        }
         this.partial = text;
         this.onPartial?.(this.partial);
         this.considerForcedCommit();
