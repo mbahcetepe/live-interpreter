@@ -220,4 +220,4 @@ npm run build
 
 Sonra uzantılar sayfasında eklentinin yenile düğmesine bas ve açık sekmeyi F5 ile yenile. Ayarların ve sesin yerinde kalır. Chrome Web Store kopyasında bunların hiçbiri gerekmez, kendini günceller. Kendi ses sunucunu güncellemek için Ubuntu'da `git pull` yapıp `speech-server` klasöründe `sudo ./install-ubuntu.sh` komutunu tekrar çalıştır; anahtar korunur.
 
-Teams'e özgü teknik notlar ve henüz doğrulanmamış noktalar: [TEAMS.tr.md](TEAMS.tr.md).
+Her görüşme sitesinin teknik notları ve henüz doğrulanmamış noktalar: [MEET.tr.md](MEET.tr.md), [TEAMS.tr.md](TEAMS.tr.md), [ZOOM.tr.md](ZOOM.tr.md).

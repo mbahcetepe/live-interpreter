@@ -25,7 +25,7 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
 
 </div>
 
-> **Status.** Published on the Chrome Web Store. Teams on the web, Google Meet and Zoom on the web have been used in real calls in both directions (English and Turkish); in Teams the mute detection and the caption area are still being checked ([TEAMS.md](TEAMS.md)). Translation has been used on real videos, Chinese among them, in both directions. Run a test before an important meeting.
+> **Status.** Published on the Chrome Web Store. Teams on the web, Google Meet and Zoom on the web have been used in real calls in both directions (English and Turkish); in Teams and Zoom the mute detection and the caption area are still being checked. Technical notes: [MEET.md](MEET.md), [TEAMS.md](TEAMS.md), [ZOOM.md](ZOOM.md). Translation has been used on real videos, Chinese among them, in both directions. Run a test before an important meeting.
 >
 > The desktop Teams and Zoom apps are not supported: browser extensions only run in the browser. Join a Teams meeting with **"Continue on this browser"**, a Zoom meeting with **"Join from your browser"** (Zoom's web app, installed from the browser, works too).
 

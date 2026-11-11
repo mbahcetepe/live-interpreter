@@ -220,4 +220,4 @@ npm run build
 
 Then press reload on the extension and reload the open tab (F5). Your settings and voice stay. The Chrome Web Store copy needs none of this: it updates itself. To update your own speech server, run `git pull` on the Ubuntu computer and `sudo ./install-ubuntu.sh` again in `speech-server`; the key is kept.
 
-Teams-specific technical notes and the points still being checked: [TEAMS.md](TEAMS.md).
+Technical notes for each call site, and the points still being checked: [MEET.md](MEET.md), [TEAMS.md](TEAMS.md), [ZOOM.md](ZOOM.md).

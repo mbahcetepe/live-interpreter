@@ -2,11 +2,11 @@
 
 [English](TEAMS.md) · **Türkçe**
 
-Live Interpreter (Türkçe arayüzde Canlı Tercüman), Google Meet'e ek olarak **tarayıcıdaki Microsoft Teams** ile çalışır. Masaüstü Teams uygulaması desteklenmez: tarayıcı eklentileri yalnızca tarayıcıda çalışır. Kurulum için [SETUP.tr.md](SETUP.tr.md).
+Live Interpreter (Türkçe arayüzde Canlı Tercüman), Google Meet ([MEET.tr.md](MEET.tr.md)) ve web'deki Zoom'a ([ZOOM.tr.md](ZOOM.tr.md)) ek olarak **tarayıcıdaki Microsoft Teams** ile çalışır. Masaüstü Teams uygulaması desteklenmez: tarayıcı eklentileri yalnızca tarayıcıda çalışır. Kurulum için [SETUP.tr.md](SETUP.tr.md).
 
 > **Durum:** Brave'de gerçek iş hesabı Teams görüşmelerinde iki yönlü çeviri kullanıldı; çeviriler karşıya ulaştı. Aşağıdaki "Doğrulanmamış noktalar" henüz kontrol ediliyor. Önemli bir toplantıdan önce deneme görüşmesi yapın.
 >
-> Teams görüşmelerinde de çeviri Ollama'da, ses tanıma ve seslendirme kendi ses sunucunuzda yapılabilir; kurulum için [SETUP.tr.md](SETUP.tr.md), 4. ve 5. adımlar. Video ve radyo sekmeleri için 8. adım.
+> Teams görüşmelerinde de çeviri Ollama'da, ses tanıma ve seslendirme kendi ses sunucunuzda yapılabilir; kurulum için [SETUP.tr.md](SETUP.tr.md), 4. ve 5. adımlar. Video ve radyo sekmeleri için 9. adım.
 
 ## Desteklenen adresler
 
@@ -15,7 +15,6 @@ Live Interpreter (Türkçe arayüzde Canlı Tercüman), Google Meet'e ek olarak 
 | `https://teams.microsoft.com/` | İş/okul hesabıyla Teams |
 | `https://teams.cloud.microsoft/` | Teams'in yeni adresi |
 | `https://teams.live.com/` | Kişisel (ücretsiz) Teams |
-| `https://meet.google.com/` | Google Meet |
 
 Teams bir toplantı bağlantısını açarken uygulamayı başlatmayı önerirse "Bu tarayıcıda devam et" seçeneğini seçin.
 

@@ -2,11 +2,11 @@
 
 **English** · [Türkçe](TEAMS.tr.md)
 
-Live Interpreter works with **Microsoft Teams in the browser** as well as Google Meet. The desktop Teams app is not supported: browser extensions only run in the browser. Setup: [SETUP.md](SETUP.md).
+Live Interpreter works with **Microsoft Teams in the browser** as well as Google Meet ([MEET.md](MEET.md)) and Zoom on the web ([ZOOM.md](ZOOM.md)). The desktop Teams app is not supported: browser extensions only run in the browser. Setup: [SETUP.md](SETUP.md).
 
 > **Status:** two-way translation has been used in real work-account Teams calls in Brave; the translations reached the other side. The "Unverified points" below are still being checked. Run a test call before an important meeting.
 >
-> In Teams calls too, translation can run on Ollama and speech recognition and speech on your own speech server: [SETUP.md](SETUP.md), steps 4 and 5. Video and radio tabs: step 8.
+> In Teams calls too, translation can run on Ollama and speech recognition and speech on your own speech server: [SETUP.md](SETUP.md), steps 4 and 5. Video and radio tabs: step 9.
 
 ## Supported addresses
 
@@ -15,7 +15,6 @@ Live Interpreter works with **Microsoft Teams in the browser** as well as Google
 | `https://teams.microsoft.com/` | Teams with a work or school account |
 | `https://teams.cloud.microsoft/` | Teams' newer address |
 | `https://teams.live.com/` | Personal (free) Teams |
-| `https://meet.google.com/` | Google Meet |
 
 If Teams offers to start the app when you open a meeting link, choose "Continue on this browser".
 
