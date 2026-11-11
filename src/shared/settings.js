@@ -16,11 +16,11 @@ const CLAUDE_IDS = new Set(CLAUDE_MODELS.map((m) => m.id));
 // vLLM, a company gateway); 'openrouter' reaches hundreds of models with one key.
 export const PROVIDERS = [
   { id: 'claude', labelKey: 'provider.claude' },
+  // Soniox hears and translates in one stream, so it also does the listening.
+  { id: 'soniox', labelKey: 'provider.soniox' },
   { id: 'openai', labelKey: 'provider.openai' },
   { id: 'openrouter', labelKey: 'provider.openrouter' },
   { id: 'ollama', labelKey: 'provider.ollama' },
-  // Soniox hears and translates in one stream, so it also does the listening.
-  { id: 'soniox', labelKey: 'provider.soniox' },
 ];
 
 // Whisper models that know only English: Distil-Whisper (distil-large-v3 and the like) and
