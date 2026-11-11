@@ -6,7 +6,7 @@
 
 ### Live speech translation for Microsoft Teams on the web, Google Meet, Zoom on the web and any video or radio tab
 
-**English** · [中文](README.zh.md)
+**English** · [Türkçe](README.tr.md) · [中文](README.zh.md)
 
 In a call both ways: they speak Spanish and you hear English; you speak English and they hear Spanish, in your own voice. On YouTube, X or an online radio: subtitles, or a spoken translation over the original, in any language you follow. Any two of 20 languages; the language of a video can be detected automatically. A browser extension with no backend of its own; translation and speech can run on ElevenLabs and Claude, or entirely on your own servers.
 
@@ -172,7 +172,7 @@ with Soniox: Soniox hears and translates in one stream -> speech
 | Part | Where it runs | What it does |
 | --- | --- | --- |
 | `src/shared/platforms.js` | Everywhere | Everything site specific: call addresses, reading mute from the microphone button, the site's caption area, which tabs are video tabs |
-| `src/content/page-hook.js` | The call page | Swaps the microphone track on the page's `RTCRtpSender` for the translation track, mirrors the mute |
+| `src/content/page-hook.js` | The call page | Swaps the microphone track on the page's `RTCRtpSender` for the translation track (on Zoom, replaces the microphone where the page asks for it), mirrors the mute |
 | `src/content/bridge.js` | Content script | Connects the page with the engine, shows the panel and the subtitles (put into a video tab only after the click) |
 | `src/offscreen/engine.js` | Offscreen document | Tab capture, microphone, speech recognition, translation, speech, voice clone, recording |
 | `src/offscreen/stt.js` | Offscreen document | Realtime speech recognition client (ElevenLabs or the speech server): reconnects, keeps audio while reconnecting |
@@ -222,7 +222,7 @@ What the extension does with your data: [privacy policy](PRIVACY.md) ([Türkçe]
 
 - No backend of its own, no analytics and no remote code: everything ships inside the extension.
 - No API key is in the source code. Keys are typed into the settings page, kept in `chrome.storage.local` and sent only to the service they belong to. Your own servers are reached only at the addresses you enter, after the browser has asked you for access to each one; the speech server also needs its own key and refuses requests from web pages.
-- A video tab is reached only after you click the extension on it (`activeTab`); the extension asks for no access to all sites.
+- A video tab is reached only after you click the extension on it (`activeTab`); the extension asks for no access to all sites. Access to Zoom is asked for only when you first start a translation there.
 - The script inside the call page makes no network requests. Audio reaches it through a private `MessagePort`, offered only to the page's own origin and only until the hook answers.
 - What the call page reports (muted or not, its microphone) is reduced to known fields of the right type; anything unclear counts as muted. Nothing reaches the call while you are muted, while translation to them is off, or before the call has started.
 - The service worker and the engine check who sends each message: a content script may only greet and stop its own session, and mode values are checked against a list.
@@ -239,7 +239,7 @@ The panel counts what a call uses and estimates the cost from list prices (28 Oc
 
 ## Versions
 
-The version is shown in the popup and at the top of the settings page; what changed in each one is in [CHANGELOG.md](CHANGELOG.md), and every version has a git tag (`v2.4.3`). The Chrome Web Store copy updates itself; a copy built from source is updated with `git pull` and `npm run build`. The speech server reports its own version and protocol, and the extension says so when the server needs an update.
+The version is shown in the popup and at the top of the settings page; what changed in each one is in [CHANGELOG.md](CHANGELOG.md), and every version has a git tag (`v2.5.0`). The Chrome Web Store copy updates itself; a copy built from source is updated with `git pull` and `npm run build`. The speech server reports its own version and protocol, and the extension says so when the server needs an update.
 
 ---
 
