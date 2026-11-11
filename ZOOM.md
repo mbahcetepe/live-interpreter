@@ -4,7 +4,7 @@
 
 Live Interpreter works with **Zoom in the browser**: the web client (`app.zoom.us/wc/…`, or a company's own `name.zoom.us/wc/…`) and Zoom's web app installed from the browser. The desktop Zoom app is not supported: browser extensions only run in the browser. Setup: [SETUP.md](SETUP.md), step 8. Meet and Teams: [MEET.md](MEET.md), [TEAMS.md](TEAMS.md).
 
-> **Status:** two-way translation has been used in a real Zoom call (version 2.5.0, Zoom's installed web app, Turkish and English); the translated voice reached the other side. The "Unverified points" below are still being checked. Run a test call before an important meeting.
+> **Status:** two-way translation has been used in a real Zoom call (version 2.5.0, Zoom's installed web app, Turkish and English); the translated voice reached the other side, and muting in Zoom (English interface) let nothing through. The "Unverified points" below are still being checked. Run a test call before an important meeting.
 
 ## Access to Zoom
 

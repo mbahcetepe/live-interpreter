@@ -4,7 +4,7 @@
 
 Live Interpreter (Türkçe arayüzde Canlı Tercüman) **tarayıcıdaki Zoom** ile çalışır: web istemcisi (`app.zoom.us/wc/…` ya da bir şirketin kendi `ad.zoom.us/wc/…` adresi) ve Zoom'un tarayıcıdan kurulan web uygulaması. Masaüstü Zoom uygulaması desteklenmez: tarayıcı eklentileri yalnızca tarayıcıda çalışır. Kurulum: [SETUP.tr.md](SETUP.tr.md), 8. adım. Meet ve Teams: [MEET.tr.md](MEET.tr.md), [TEAMS.tr.md](TEAMS.tr.md).
 
-> **Durum:** gerçek bir Zoom görüşmesinde iki yönlü çeviri kullanıldı (2.5.0 sürümü, Zoom'un kurulu web uygulaması, Türkçe ve İngilizce); çevrilmiş ses karşı tarafa ulaştı. Aşağıdaki "Doğrulanmamış noktalar" henüz kontrol ediliyor. Önemli bir toplantıdan önce deneme görüşmesi yapın.
+> **Durum:** gerçek bir Zoom görüşmesinde iki yönlü çeviri kullanıldı (2.5.0 sürümü, Zoom'un kurulu web uygulaması, Türkçe ve İngilizce); çevrilmiş ses karşı tarafa ulaştı; Zoom'da sessize alınca (İngilizce arayüz) karşıya hiçbir şey gitmedi. Aşağıdaki "Doğrulanmamış noktalar" henüz kontrol ediliyor. Önemli bir toplantıdan önce deneme görüşmesi yapın.
 
 ## Zoom'a erişim
 
