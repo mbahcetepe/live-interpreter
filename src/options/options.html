@@ -115,6 +115,21 @@
           </div>
         </div>
 
+        <div class="box" data-provider="gemini">
+          <label class="field">
+            <span data-i18n="opt.oai.key">API key</span>
+            <input type="password" id="geminiKey" class="key" autocomplete="off" spellcheck="false" />
+          </label>
+          <div class="picker">
+            <label class="field">
+              <span data-i18n="opt.tr.model">Model</span>
+              <select id="geminiModel"></select>
+            </label>
+            <button type="button" class="refresh" data-models="gemini" data-i18n-title="opt.models.refresh">↻</button>
+          </div>
+          <small class="hint" data-i18n="opt.gemini.hint">A key from Google AI Studio (aistudio.google.com › Get API key). Thinking is turned down to the lowest level each model takes, so it does not add to the delay; gemini-3.5-flash-lite is the fastest.</small>
+        </div>
+
         <div class="box" data-provider="ollama">
           <div class="grid2">
             <label class="field">

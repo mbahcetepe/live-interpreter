@@ -17,7 +17,7 @@ From install to your first translated Teams call or YouTube video, step by step.
 | **Chrome 116+, Edge or Brave** | You also join Teams meetings in this browser. The desktop Teams app is not supported |
 | **Node.js 18+** | Only to build the extension from source ([nodejs.org](https://nodejs.org)); not needed with the Chrome Web Store copy |
 | **One of these for speech** | An ElevenLabs account (your own voice clone needs Starter or higher, [plans](https://elevenlabs.io/pricing)) **or** your own speech server ([speech-server](speech-server/README.md)) |
-| **One of these for translation** | An API key for Claude, OpenAI, OpenRouter or Soniox, **or** a server of your own (Ollama, LM Studio) |
+| **One of these for translation** | An API key for Claude, OpenAI, OpenRouter, Google Gemini or Soniox, **or** a server of your own (Ollama, LM Studio) |
 | **Headphones** | In calls, so the translation you hear does not leak into your microphone and back to them |
 
 The extension has no server of its own. Your keys stay in your browser and go only to the services you choose.
@@ -65,6 +65,7 @@ Choose the **Service**:
 | **Claude (Anthropic)** | An API key from [Claude Console › API keys](https://platform.claude.com/settings/keys) (the account needs credit) and a model; **Claude Haiku 5.5** has the shortest delay |
 | **OpenAI or a compatible server** | Leave **Server** empty for OpenAI and enter its API key; or enter the address of a server with the same API (LM Studio, vLLM, for example `http://192.168.1.5:1234/v1`) |
 | **OpenRouter** | An API key from [openrouter.ai](https://openrouter.ai/keys) |
+| **Google Gemini** | An API key from [Google AI Studio](https://aistudio.google.com/apikey); **gemini-3.5-flash-lite** is the fastest. Thinking is turned down by the extension |
 | **Ollama (your own server)** | The server's address (for example `100.101.102.103`; port 11434 is added); a **second server** can be added below it |
 
 The **Model** list fills itself from the service; **↻** fetches it again. For a server of your own (Ollama, LM Studio) the browser asks once for access to its address: allow it. No `OLLAMA_ORIGINS` setting is needed on an Ollama server.
@@ -200,7 +201,7 @@ Two participants on one computer garble each other's audio; use a second device.
 | They cannot hear me | Is your Teams microphone on? Read the warning in the panel; try **Send test sound** |
 | They hear odd sounds or their own words back | Your translation leaks from the speakers into the mic: use headphones or turn on **Speaker mode** |
 | "Ollama server at ... could not be reached" | Is the server on, and is this computer on Tailscale? Press **Test** under Translation in the settings |
-| "The Anthropic API key is not valid" (or OpenAI, OpenRouter) | Anthropic refuses the key saved in the settings: it was replaced, revoked or pasted only in part. Paste the key again under Translation and press **Test** |
+| "The Anthropic API key is not valid" (or OpenAI, OpenRouter, Gemini) | Anthropic refuses the key saved in the settings: it was replaced, revoked or pasted only in part. Paste the key again under Translation and press **Test** |
 | "The local speech server refused the key" | Enter `SPEECH_KEY` from `/etc/live-interpreter-speech.env` on the server |
 | "The backup translation (Claude) is not available right now" | Check the Claude key and its credit under Translation, or add a second Ollama server |
 | The delay is long | Choose Ollama or **Claude Haiku 5.5**, set the silence to **0.5 s**, speak in short sentences |

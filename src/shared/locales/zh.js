@@ -238,6 +238,8 @@ export default {
   'provider.claude': 'Claude（Anthropic）',
   'provider.openai': 'OpenAI 或兼容的服务器',
   'provider.openrouter': 'OpenRouter',
+  'provider.gemini': "Google Gemini",
+  'opt.gemini.hint': "来自 Google AI Studio 的密钥（aistudio.google.com › Get API key）。思考会降到每个模型接受的最低级别，因此不会增加延迟；最快的是 gemini-3.5-flash-lite。",
   'provider.ollama': 'Ollama（您的自建服务器）',
   'opt.oai.url': '服务器（留空：OpenAI）',
   'opt.oai.key': 'API 密钥',

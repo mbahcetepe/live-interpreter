@@ -46,7 +46,7 @@ export function tuningFor(base, model) {
 // server|model -> index of the tuning that model took.
 const TUNING_STEP = new Map();
 
-function limiter(signal, ms) {
+export function limiter(signal, ms) {
   const controller = new AbortController();
   let id = 0;
   const arm = (limit) => {

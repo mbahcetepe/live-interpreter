@@ -238,6 +238,8 @@ export default {
   'provider.claude': "Claude (Anthropic)",
   'provider.openai': "OpenAI ya da uyumlu bir sunucu",
   'provider.openrouter': "OpenRouter",
+  'provider.gemini': "Google Gemini",
+  'opt.gemini.hint': "Google AI Studio'dan bir anahtar (aistudio.google.com › Get API key). Düşünme her modelin kabul ettiği en düşük seviyeye indirilir, böylece gecikmeye eklenmez; en hızlısı gemini-3.5-flash-lite.",
   'provider.ollama': "Ollama (kendi sunucunuz)",
   'opt.oai.url': "Sunucu (boş: OpenAI)",
   'opt.oai.key': "API anahtarı",

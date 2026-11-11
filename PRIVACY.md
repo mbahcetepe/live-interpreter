@@ -27,7 +27,7 @@ The extension sends audio or text only to the services selected in its settings,
 
 - Speech recognition and translation in one stream: Soniox.
 - Speech: ElevenLabs, OpenAI, Groq, or a speech server you run yourself (for example the one in this project, Speaches, LocalAI or Kokoro).
-- Translation: Anthropic (Claude), OpenAI or a server with the same API, OpenRouter, an Ollama server you run yourself, or Soniox.
+- Translation: Anthropic (Claude), OpenAI or a server with the same API, OpenRouter, Google (Gemini), an Ollama server you run yourself, or Soniox.
 
 With your own speech server and your own Ollama server, the audio and text never leave the computers you control.
 

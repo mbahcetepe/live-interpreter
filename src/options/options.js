@@ -22,6 +22,7 @@ import { listVoices, createVoiceClone, deleteVoice, speechStream, describeEleven
 import { Translator, describeClaudeError } from '../offscreen/translator.js';
 import { OllamaTranslator, listOllamaModels } from '../offscreen/ollama-translator.js';
 import { OpenAITranslator, listOpenAIModels } from '../offscreen/openai-translator.js';
+import { GeminiTranslator, listGeminiModels } from '../offscreen/gemini-translator.js';
 import { OpenAITranscriber, openaiSynthesize, listAudioModels, listAudioVoices } from '../offscreen/openai-speech.js';
 import { StreamResampler } from '../shared/dsp.js';
 import { SONIOX_WS, sonioxConfig } from '../offscreen/soniox.js';
@@ -183,6 +184,7 @@ function renderProvider() {
 const PICKERS = {
   openai: { select: 'openaiModel', setting: 'openaiModel' },
   openrouter: { select: 'openrouterModel', setting: 'openrouterModel' },
+  gemini: { select: 'geminiModel', setting: 'geminiModel' },
   ollama: { select: 'ollamaModel', setting: 'ollamaModel', url: 'ollamaUrl' },
   ollamaBackup: { select: 'ollamaBackupModel', setting: 'ollamaBackupModel', url: 'ollamaBackupUrl' },
 };
@@ -209,6 +211,9 @@ async function loadModels(kind, { quiet = false } = {}) {
     let models;
     if (kind === 'openrouter') {
       models = await listOpenAIModels({ base: OPENROUTER_URL });
+    } else if (kind === 'gemini') {
+      if (!String(settings.geminiKey || '').trim()) return;
+      models = await listGeminiModels({ key: settings.geminiKey });
     } else if (kind === 'openai') {
       const base = serverBase(settings.openaiUrl, { defaultPort: '' }) || OPENAI_URL;
       if (base !== OPENAI_URL && !(quiet ? await chrome.permissions.contains({ origins: [originPattern(base)] }) : await allow(base))) return;
@@ -269,6 +274,8 @@ async function testTranslation() {
     if (base !== OPENAI_URL && base !== OPENROUTER_URL && !(await allow(base))) return result('translationResult', t('opt.denied', { url: base }), 'bad');
     const label = t(openrouter ? 'provider.openrouter' : 'provider.openai');
     await run(label, new OpenAITranslator({ ...common, base, key: openrouter ? settings.openrouterKey : settings.openaiKey, model: openrouter ? settings.openrouterModel : settings.openaiModel, label }));
+  } else if (provider === 'gemini') {
+    await run('Gemini', new GeminiTranslator({ ...common, key: settings.geminiKey, model: settings.geminiModel }));
   } else if (provider === 'ollama') {
     const servers = [
       [t('server.ollama'), settings.ollamaUrl, settings.ollamaModel],
@@ -866,6 +873,10 @@ async function init() {
   // Speech.
   bindSelect('speechProvider', { onChange: renderSpeech });
   bindText('sonioxKey', () => result('sonioxResult', ''));
+  // A pasted Gemini key fills the model list (keys are longer than 30 characters).
+  bindText('geminiKey', () => {
+    if (String(settings.geminiKey || '').length >= 30) loadModels('gemini', { quiet: true });
+  });
   $('sonioxSpeechKey').addEventListener('input', () => {
     save({ sonioxKey: $('sonioxSpeechKey').value.trim() });
     $('sonioxKey').value = $('sonioxSpeechKey').value.trim();

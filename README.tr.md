@@ -19,7 +19,7 @@ Görüşmede iki yönlü: karşı taraf İspanyolca konuşur, sen Türkçe duyar
   <tr><td><b>Diğer sekmeler</b></td><td>YouTube, X, çevrimiçi radyo, sesi olan her web sayfası</td></tr>
   <tr><td><b>Tarayıcılar</b></td><td>Chrome, Edge, Brave ve diğer Chromium tarayıcıları</td></tr>
   <tr><td><b>Diller</b></td><td>20 dil, herhangi ikisi; ilk açılışta tarayıcının dili seçilir; video sekmelerinde konuşulan dil kendiliğinden algılanabilir</td></tr>
-  <tr><td><b>Çeviri</b></td><td>Claude, OpenAI ya da uyumlu bir sunucu, OpenRouter, kendi Ollama sunucun ya da Soniox; her birinin modelleri ayarlarda listelenir</td></tr>
+  <tr><td><b>Çeviri</b></td><td>Claude, OpenAI ya da uyumlu bir sunucu, OpenRouter, Google Gemini, kendi Ollama sunucun ya da Soniox; her birinin modelleri ayarlarda listelenir</td></tr>
   <tr><td><b>Ses</b></td><td>ElevenLabs, OpenAI uyumlu servisler (OpenAI, Groq Whisper, LocalAI, Speaches, Kokoro) ya da kendi ses sunucun (faster-whisper ve Piper)</td></tr>
   <tr><td><b>Gecikme</b></td><td>Cümle bittikten yaklaşık 1,5–3 sn sonra</td></tr>
   <tr><td><b>Arayüz</b></td><td>İngilizce (varsayılan), Türkçe, Almanca, İspanyolca, Çince</td></tr>
@@ -55,7 +55,7 @@ Görüşmede iki yönlü: karşı taraf İspanyolca konuşur, sen Türkçe duyar
 
 - Yirmi dil, herhangi ikisi, iki yönde: İngilizce, Türkçe, Almanca, Fransızca, İspanyolca, İtalyanca, Portekizce, Felemenkçe, Lehçe, Rusça, Ukraynaca, Arapça, Yunanca, Rumence, İsveççe, Endonezce, Hintçe, Çince, Japonca ve Korece.
 - Film altyazısı gibi: çeviri büyük harflerle, orijinal altında; iki tarafı, anlık gecikmeyi ve tahmini maliyetli bir kullanım sayacını gösteren bir panel.
-- Bir servis hata verdi diye cümle kaybolmaz: çeviri Ollama'dan ikinci bir Ollama sunucusuna, oradan Claude Haiku'ya (Claude anahtarı varsa) geçer; OpenAI ya da OpenRouter'dan Claude Haiku'ya (anahtar varsa).
+- Bir servis hata verdi diye cümle kaybolmaz: çeviri Ollama'dan ikinci bir Ollama sunucusuna, oradan Claude Haiku'ya (Claude anahtarı varsa) geçer; OpenAI, OpenRouter ya da Gemini'den Claude Haiku'ya (anahtar varsa).
 
 > **Önce bunu oku.**
 > - Bu ardıl çeviridir: çeviri cümle bittikten sonra başlar. Ses tanıma 0,7 sn sessizlik bekler (0,5 sn seçilebilir), çeviri 0,3–2 sn, seslendirme 0,2–0,5 sn sürer. Uzun bir konuşmada biten cümleler, konuşan devam ederken çevrilir.
@@ -70,7 +70,7 @@ Görüşmede iki yönlü: karşı taraf İspanyolca konuşur, sen Türkçe duyar
 
 | | Ses tanıma ve sesler | Çeviri |
 | --- | --- | --- |
-| **Barındırılan** | ElevenLabs (Scribe v2 Realtime, Flash v2.5 / v4 Turbo); OpenAI (Whisper, gpt-4o-transcribe, gpt-4o-mini-tts); Groq Whisper (tanıma, hızlı ve ucuz) | Claude Opus, Sonnet ya da Haiku 5.5; OpenAI; OpenRouter (yüzlerce model, tek anahtar) |
+| **Barındırılan** | ElevenLabs (Scribe v2 Realtime, Flash v2.5 / v4 Turbo); OpenAI (Whisper, gpt-4o-transcribe, gpt-4o-mini-tts); Groq Whisper (tanıma, hızlı ve ucuz) | Claude Opus, Sonnet ya da Haiku 5.5; OpenAI; OpenRouter (yüzlerce model, tek anahtar); Google Gemini |
 | **Tanıma ve çeviri bir arada** | Soniox (`stt-rt-v6`): aynı akışta duyar ve çevirir, en hızlı kurulum; çeviriyi Soniox'un kendi sesleri (`tts-rt-v2`) ya da yukarıdaki seslerden biri seslendirir | Soniox |
 | **Kendi sunucuların** | [speech-server/](speech-server/README.tr.md) içindeki ses sunucusu (faster-whisper ve Piper) ya da OpenAI'nin ses API'sini sunan herhangi bir sunucu (Speaches, LocalAI, Kokoro-FastAPI) | Ollama (örneğin `gemma4:12b`) ya da OpenAI API'sini sunan herhangi bir sunucu (LM Studio, vLLM) |
 
@@ -87,6 +87,10 @@ Görüşmede iki yönlü: karşı taraf İspanyolca konuşur, sen Türkçe duyar
 ### Yabancı kelimeler doğru okunur
 
 Bir ses her şeyi kendi dilinin kurallarıyla okur; Türkçe konuşmadaki İngilizce bir terim ("API", "Apple") ya da İngilizce konuşmadaki Türkçe bir ad ("Şükrü") yanlış çıkabilir. Çeviri seslendirilecekse çevirmen bu kelimeleri nasıl okunduklarıyla işaretler: `[[Apple|epıl]]` ya da `[[Şükrü|Shoo-kroo]]`. Ekranda ve dökümde yalnızca "Apple" ve "Şükrü" görünür. Her sesi tek dil bilen kendi ses sunucun okunuşu okur; karışık metni idare edebildikleri için ElevenLabs ve OpenAI kelimenin kendisini alır, OpenAI'nin `gpt-*-tts` seslerine ayrıca yabancı kelimeleri kendi dillerindeki gibi söylemeleri söylenir. İşaret konmayan yerlerde (Soniox) yerleşik bir yaygın terimler ve markalar listesi ve kısa kısaltmaların harf harf okunması (SGK: "se ge ke") yerel seslere yardım eder; kendi listen de (**Ses tanıma ve sesler › Yabancı kelimelerin okunuşu**, her satıra bir `kelime = okunuşu`) bütün seslerde kullanılır. Ollama'da `gemma4:12b` ile ölçüldü: işaretler iki yönde de düzgün geldi; küçük bir modelin bozduğu işaret temizlenir ve ekranda hiç görünmez.
+
+### Çeviri için Google Gemini
+
+Çeviri servisi olarak **Google Gemini**'yi seç ve [Google AI Studio](https://aistudio.google.com/apikey)'dan aldığın anahtarı yapıştır; anahtarın kullanabildiği modellerin listesi kendiliğinden dolar (ses, görsel, müzik ve gömme modelleri dışarıda kalır). Gemini modellerinin çoğu cevap vermeden önce düşünür; canlı çeviri bunu bekleyemez. Eklenti düşünmeyi her modelin kabul ettiği en düşük seviyeye indirir: önce 0 bütçe, sonra MINIMAL ve LOW seviyeleri, sonra 128 jetonluk bütçe denenir ve modelin kabul ettiği hatırlanır. 11 Kasım 2026'da ölçülen, istekten ilk metne kadar geçen süre: `gemini-3.5-flash-lite` yaklaşık 0,56 sn (varsayılan), `gemini-3.1-flash-lite` 0,56 sn, `gemini-3.5-flash` 0,74 sn, `gemini-3.8-flash` 1,4–2 sn; kendi düşünmesiyle `gemini-3.8-flash` 5,6 sn sürdü. Claude anahtarı varsa Gemini'nin arkasında Claude Haiku durur. Gemini'nin fiyatı panelin tahminine dahil değildir.
 
 ### Çeviri için Ollama
 
@@ -118,7 +122,7 @@ Bu servisler canlı akış yerine bütün kayıtlar alır: eklenti konuşmayı k
 - Chrome 116 ya da daha yenisi, Edge ya da Brave
 - Node.js 18 ya da daha yenisi, yalnızca eklentiyi kaynaktan derlemek için
 - Ses için: bir ElevenLabs API anahtarı (ses klonlama ücretli plan ister), bir OpenAI ya da Groq anahtarı ya da kendi ses sunucun; tek akışta duyup çevirmek için isteğe bağlı olarak bir Soniox anahtarı
-- Çeviri için: Claude, OpenAI, OpenRouter ya da Soniox API anahtarı, ya da kendi sunucun (Ollama, LM Studio, vLLM)
+- Çeviri için: Claude, OpenAI, OpenRouter, Google Gemini ya da Soniox API anahtarı, ya da kendi sunucun (Ollama, LM Studio, vLLM)
 - Görüşmeler için kulaklık
 
 ---
@@ -152,7 +156,7 @@ mikrofonun              -> ses tanıma (senin dilin)  -> çeviri -> seslendirme 
 video sekmesinin sesi   -> ses tanıma                -> çeviri -> altyazı ya da orijinalin üzerine ses
 
 ses tanıma ve seslendirme: ElevenLabs, OpenAI uyumlu bir servis ya da ses sunucusu
-çeviri: seçilen servis (Claude, OpenAI/uyumlu, OpenRouter, Ollama -> ikinci Ollama) -> anahtar varsa Claude Haiku
+çeviri: seçilen servis (Claude, OpenAI/uyumlu, OpenRouter, Gemini, Ollama -> ikinci Ollama) -> anahtar varsa Claude Haiku
 Soniox ile: Soniox tek akışta duyar ve çevirir -> seslendirme
 ```
 
@@ -168,7 +172,7 @@ Soniox ile: Soniox tek akışta duyar ve çevirir -> seslendirme
 | `src/offscreen/tts.js`, `pipeline.js` | Ekran dışı belge | Yan cümle yan cümle, sırayla ve gecikmeyi denetim altında tutarak seslendirme |
 | `src/offscreen/fallback-translator.js` | Ekran dışı belge | Bir çevirmenin önünde bir başkası |
 | `src/offscreen/translator.js` | Ekran dışı belge | Claude ve her çeviri servisine verilen talimatlar ve örnekler |
-| `src/offscreen/openai-translator.js`, `ollama-translator.js` | Ekran dışı belge | OpenAI, OpenRouter ve uyumlu sunucular; cümle cümle akan Ollama |
+| `src/offscreen/openai-translator.js`, `gemini-translator.js`, `ollama-translator.js` | Ekran dışı belge | OpenAI, OpenRouter ve uyumlu sunucular; düşünmesi modele göre kısılan Google Gemini; cümle cümle akan Ollama |
 | `src/offscreen/voice-clone.js` | Ekran dışı belge | ElevenLabs ses klonları: seninki ve izinle karşı tarafınki |
 | `src/shared/pronounce.js` | Her yerde | Yabancı kelimelerin doğru okunuşu: işaretler, yerleşik liste ve seninki |
 | `src/shared/transcript.js`, `recordings.js` | Her yerde | Bu bilgisayarda saklanan dökümler ve görüşme kayıtları |

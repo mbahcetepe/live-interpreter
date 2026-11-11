@@ -17,7 +17,7 @@ Kurulumdan ilk çevrilen Teams görüşmesine ya da YouTube videosuna adım adı
 | **Chrome 116+, Edge ya da Brave** | Teams toplantısına da bu tarayıcıdan katılırsın. Masaüstü Teams uygulaması desteklenmez |
 | **Node.js 18+** | Yalnızca eklentiyi kaynaktan derlemek için ([nodejs.org](https://nodejs.org)); Chrome Web Store kopyasında gerekmez |
 | **Ses tanıma ve sesler için biri** | ElevenLabs hesabı (kendi ses klonun için Starter veya üstü plan, [planlar](https://elevenlabs.io/pricing)) **ya da** kendi ses sunucun ([speech-server](speech-server/README.tr.md)) |
-| **Çeviri için biri** | Claude, OpenAI, OpenRouter ya da Soniox için bir API anahtarı, **ya da** kendi sunucun (Ollama, LM Studio) |
+| **Çeviri için biri** | Claude, OpenAI, OpenRouter, Google Gemini ya da Soniox için bir API anahtarı, **ya da** kendi sunucun (Ollama, LM Studio) |
 | **Kulaklık** | Görüşmelerde, duyduğun çeviri mikrofonuna girip karşıya geri gitmesin diye |
 
 Eklentinin kendi sunucusu yok. Anahtarların yalnızca tarayıcında kalır ve yalnızca seçtiğin servise gider.
@@ -65,6 +65,7 @@ Ayarlar sayfası dört bölümden oluşur: **Diller**, **Çeviri**, **Ses tanım
 | **Claude (Anthropic)** | [Claude Console › API keys](https://platform.claude.com/settings/keys) sayfasından bir API anahtarı (hesapta kredi olmalı) ve bir model; en kısa gecikme **Claude Haiku 5.5** |
 | **OpenAI ya da uyumlu bir sunucu** | OpenAI için **Sunucu**'yu boş bırak ve API anahtarını gir; ya da aynı arayüzü sunan bir sunucunun adresini gir (LM Studio, vLLM; örneğin `http://192.168.1.5:1234/v1`) |
 | **OpenRouter** | [openrouter.ai](https://openrouter.ai/keys) sayfasından bir API anahtarı |
+| **Google Gemini** | [Google AI Studio](https://aistudio.google.com/apikey)'dan bir API anahtarı; en hızlısı **gemini-3.5-flash-lite**. Düşünmeyi eklenti kısar |
 | **Ollama (kendi sunucunuz)** | Sunucunun adresi (örneğin `100.101.102.103`; port 11434 eklenir); altına bir **ikinci sunucu** eklenebilir |
 
 **Model** listesi servisten kendiliğinden dolar; **↻** listeyi yeniden getirir. Kendi sunucunda (Ollama, LM Studio) tarayıcı o adrese erişim için bir kez izin ister: izin ver. Ollama sunucusunda `OLLAMA_ORIGINS` ayarı gerekmez.
@@ -200,7 +201,7 @@ Aynı bilgisayardan iki katılımcı birbirinin sesini bozar; ikinci bir cihaz k
 | Karşı taraf beni duymuyor | Teams'te mikrofonun açık mı? Paneldeki uyarıyı oku; **Test sesi gönder** ile dene |
 | Karşı taraf anlamsız sesler ya da kendi sözlerini geri duyuyor | Çevirin hoparlörden mikrofona giriyor: kulaklık kullan ya da **Hoparlör modu**nu aç |
 | "Ollama sunucusu ... adresine ulaşılamadı" | Sunucu açık mı, bu bilgisayar Tailscale'de mi? Ayarlarda Çeviri bölümündeki **Test et** |
-| "Anthropic API anahtarı geçersiz" (ya da OpenAI, OpenRouter) | Anthropic, ayarlarda kayıtlı anahtarı reddediyor: anahtar değiştirilmiş, iptal edilmiş ya da eksik yapıştırılmış. Çeviri bölümünde anahtarı yeniden yapıştır ve **Test et** düğmesine bas |
+| "Anthropic API anahtarı geçersiz" (ya da OpenAI, OpenRouter, Gemini) | Anthropic, ayarlarda kayıtlı anahtarı reddediyor: anahtar değiştirilmiş, iptal edilmiş ya da eksik yapıştırılmış. Çeviri bölümünde anahtarı yeniden yapıştır ve **Test et** düğmesine bas |
 | "Yerel ses sunucusu anahtarı kabul etmedi" | Sunucudaki `/etc/live-interpreter-speech.env` dosyasındaki `SPEECH_KEY`'i gir |
 | "Yedek çeviri (Claude) şu an kullanılamıyor" | Çeviri bölümünde Claude anahtarını ve bakiyesini kontrol et ya da ikinci bir Ollama sunucusu ekle |
 | Gecikme fazla | Ollama ya da **Claude Haiku 5.5** seç, sessizlik ayarını **0,5 sn** yap, kısa cümlelerle konuş |

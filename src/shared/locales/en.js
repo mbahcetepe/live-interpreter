@@ -238,6 +238,8 @@ export default {
   'provider.claude': "Claude (Anthropic)",
   'provider.openai': "OpenAI or a compatible server",
   'provider.openrouter': "OpenRouter",
+  'provider.gemini': "Google Gemini",
+  'opt.gemini.hint': "A key from Google AI Studio (aistudio.google.com › Get API key). Thinking is turned down to the lowest level each model takes, so it does not add to the delay; gemini-3.5-flash-lite is the fastest.",
   'provider.ollama': "Ollama (your own server)",
   'opt.oai.url': "Server (empty: OpenAI)",
   'opt.oai.key': "API key",

@@ -17,7 +17,7 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
   <tr><td><b>Other tabs</b></td><td>YouTube, X, online radio, any web page with sound</td></tr>
   <tr><td><b>Browsers</b></td><td>Chrome, Edge, Brave and other Chromium browsers</td></tr>
   <tr><td><b>Languages</b></td><td>20, any two of them; the first start follows your browser's language; on video tabs the spoken language can be detected automatically</td></tr>
-  <tr><td><b>Translation</b></td><td>Claude, OpenAI or a compatible server, OpenRouter, your own Ollama, or Soniox; each one's models listed in the settings</td></tr>
+  <tr><td><b>Translation</b></td><td>Claude, OpenAI or a compatible server, OpenRouter, Google Gemini, your own Ollama, or Soniox; each one's models listed in the settings</td></tr>
   <tr><td><b>Speech</b></td><td>ElevenLabs, OpenAI-compatible services (OpenAI, Groq Whisper, LocalAI, Speaches, Kokoro), or your own speech server (faster-whisper and Piper)</td></tr>
   <tr><td><b>Delay</b></td><td>About 1.5–3 s after a sentence ends</td></tr>
   <tr><td><b>Interface</b></td><td>English (default), Turkish, German, Spanish, Chinese</td></tr>
@@ -53,7 +53,7 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
 
 - Twenty languages, any two of them, in either direction: English, Turkish, German, French, Spanish, Italian, Portuguese, Dutch, Polish, Russian, Ukrainian, Arabic, Greek, Romanian, Swedish, Indonesian, Hindi, Chinese, Japanese and Korean.
 - Subtitles like a film's, with the translation in large type and the original under it, and a panel with both sides, the live delay and a usage counter with an estimated cost.
-- A sentence is not lost to one failing service: translation falls back from Ollama to a second Ollama server, then to Claude Haiku (when a Claude key is set); from OpenAI or OpenRouter to Claude Haiku (with a key).
+- A sentence is not lost to one failing service: translation falls back from Ollama to a second Ollama server, then to Claude Haiku (when a Claude key is set); from OpenAI, OpenRouter or Gemini to Claude Haiku (with a key).
 
 > **Read this first.**
 > - This is consecutive interpretation: the translation starts after a sentence ends. Speech recognition waits 0.7 s of silence (0.5 s can be set), translation takes 0.3–2 s, the voice 0.2–0.5 s. In a long turn, finished sentences are translated while the speaker keeps going.
@@ -68,7 +68,7 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
 
 | | Speech recognition and voices | Translation |
 | --- | --- | --- |
-| **Hosted** | ElevenLabs (Scribe v2 Realtime, Flash v2.5 / v4 Turbo); OpenAI (Whisper, gpt-4o-transcribe, gpt-4o-mini-tts); Groq Whisper (recognition, fast and cheap) | Claude Opus, Sonnet or Haiku 5.5; OpenAI; OpenRouter (hundreds of models, one key) |
+| **Hosted** | ElevenLabs (Scribe v2 Realtime, Flash v2.5 / v4 Turbo); OpenAI (Whisper, gpt-4o-transcribe, gpt-4o-mini-tts); Groq Whisper (recognition, fast and cheap) | Claude Opus, Sonnet or Haiku 5.5; OpenAI; OpenRouter (hundreds of models, one key); Google Gemini |
 | **Recognition and translation in one** | Soniox (`stt-rt-v6`): hears and translates in the same stream, the fastest setup; Soniox's own voices (`tts-rt-v2`) or any of the voices above speak the translation | Soniox |
 | **Your own servers** | The speech server in [speech-server/](speech-server/README.md) (faster-whisper and Piper), or any server with OpenAI's audio API (Speaches, LocalAI, Kokoro-FastAPI) | Ollama (for example `gemma4:12b`), or any server with OpenAI's API (LM Studio, vLLM) |
 
@@ -85,6 +85,10 @@ The translation is spoken clause by clause: as soon as a translated clause is lo
 ### Foreign words said the right way
 
 A voice reads everything with its own language's rules, so an English term in Turkish speech ("API", "Apple") or a Turkish name in English speech ("Şükrü") can come out wrong. When the translation is spoken, the translator marks such words with how they sound, as `[[Apple|epıl]]` or `[[Şükrü|Shoo-kroo]]`. The screen and the transcript show only "Apple" and "Şükrü". Your own speech server, whose voices know one language each, reads the pronunciation; ElevenLabs and OpenAI get the word itself, since they handle mixed text, and OpenAI's `gpt-*-tts` voices are also told to say foreign words the way they are said in their own language. Where nothing is marked (Soniox), a built-in list of common terms and brands and short-acronym spelling (SGK: "se ge ke") help the local voices, and a list of your own (**Speech recognition and voices › Pronunciation of foreign words**, one `word = how it sounds` per line) is used for every voice. Measured with `gemma4:12b` on Ollama: the marks came back well formed in both directions; a mark a small model breaks is cleaned up so it never shows on screen.
+
+### Google Gemini for translation
+
+Choose **Google Gemini** as the translation service and paste a key from [Google AI Studio](https://aistudio.google.com/apikey); the list of models the key can use fills itself (models for speech, images, music and embeddings are left out). Most Gemini models think before they answer, which a live translation cannot wait for: the extension turns thinking down to the lowest level each model accepts, trying a budget of 0, then the MINIMAL and LOW levels, then a budget of 128 tokens, and remembers what the model took. Measured on 11 November 2026, first text after the request: `gemini-3.5-flash-lite` about 0.56 s (the default), `gemini-3.1-flash-lite` 0.56 s, `gemini-3.5-flash` 0.74 s, `gemini-3.8-flash` 1.4–2 s; `gemini-3.8-flash` with its own thinking took 5.6 s. Claude Haiku stands behind Gemini when a Claude key is set. Gemini's price is not in the panel's estimate.
 
 ### Ollama for translation
 
@@ -116,7 +120,7 @@ These services take whole recordings rather than a live stream: the extension cu
 - Chrome 116 or newer, Edge or Brave
 - Node.js 18 or newer, only to build the extension from source
 - For speech: an ElevenLabs API key (voice cloning needs a paid plan), an OpenAI or Groq key, or your own speech server; optionally a Soniox key to hear and translate in one stream
-- For translation: an API key for Claude, OpenAI, OpenRouter or Soniox, or a server of your own (Ollama, LM Studio, vLLM)
+- For translation: an API key for Claude, OpenAI, OpenRouter, Google Gemini or Soniox, or a server of your own (Ollama, LM Studio, vLLM)
 - Headphones for calls
 
 ---
@@ -150,7 +154,7 @@ your microphone -> speech recognition (your language)  -> translation -> speech 
 video tab audio -> speech recognition                  -> translation -> subtitles, or speech over the original
 
 speech recognition and speech: ElevenLabs, an OpenAI-compatible service or the speech server
-translation: the chosen service (Claude, OpenAI/compatible, OpenRouter, Ollama -> second Ollama) -> Claude Haiku if a key is set
+translation: the chosen service (Claude, OpenAI/compatible, OpenRouter, Gemini, Ollama -> second Ollama) -> Claude Haiku if a key is set
 with Soniox: Soniox hears and translates in one stream -> speech
 ```
 
@@ -166,7 +170,7 @@ with Soniox: Soniox hears and translates in one stream -> speech
 | `src/offscreen/tts.js`, `pipeline.js` | Offscreen document | Speech, clause by clause, in order and with the delay kept in check |
 | `src/offscreen/fallback-translator.js` | Offscreen document | One translator in front of another |
 | `src/offscreen/translator.js` | Offscreen document | Claude, and the instructions and examples every translation service gets |
-| `src/offscreen/openai-translator.js`, `ollama-translator.js` | Offscreen document | OpenAI, OpenRouter and compatible servers; Ollama, streamed sentence by sentence |
+| `src/offscreen/openai-translator.js`, `gemini-translator.js`, `ollama-translator.js` | Offscreen document | OpenAI, OpenRouter and compatible servers; Google Gemini, with thinking turned down per model; Ollama, streamed sentence by sentence |
 | `src/offscreen/voice-clone.js` | Offscreen document | ElevenLabs voice clones: yours, and theirs with consent |
 | `src/shared/pronounce.js` | Everywhere | Foreign words said the right way: the marks, the built-in list and yours |
 | `src/shared/transcript.js`, `recordings.js` | Everywhere | Transcripts and call recordings kept on this computer |

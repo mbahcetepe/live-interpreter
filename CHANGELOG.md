@@ -6,8 +6,13 @@ Versions follow [semantic versioning](https://semver.org): MAJOR for changes tha
 
 ### New
 
+- **Google Gemini translates.** Choose Google Gemini under Translation and paste a key from Google AI Studio; the models the key can use are listed (text models only). Thinking is turned down to the lowest level each model accepts (a budget of 0, MINIMAL, LOW, then 128 tokens), tried in that order and remembered per model, so it does not hold up the translation. `gemini-3.5-flash-lite` is the default: about 0.56 s to the first text. Claude Haiku stands behind it when a Claude key is set. No new permission: Google's API answers the extension directly.
 - **Soniox speaks too.** Soniox is a speech service like the others (Speech recognition and voices › Service): its own voices (about 230, each speaking every language) over one WebSocket kept open, the first sound of a piece about 0.35–0.5 s after it is asked for. With another translator Soniox listens (without translating) and speaks.
 - **The panel names the services at work**: which one hears, translates and speaks.
+
+### Fixed
+
+- **Debug copies no longer hold any API key.** The settings written into a debug copy left out only some keys (ElevenLabs, Anthropic, Groq, the speech server's); the OpenAI, OpenRouter, Soniox and speech-service keys were kept. Every setting that holds a key is now left out.
 
 ### Removed
 

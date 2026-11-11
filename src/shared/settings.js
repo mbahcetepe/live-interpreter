@@ -20,6 +20,7 @@ export const PROVIDERS = [
   { id: 'soniox', labelKey: 'provider.soniox' },
   { id: 'openai', labelKey: 'provider.openai' },
   { id: 'openrouter', labelKey: 'provider.openrouter' },
+  { id: 'gemini', labelKey: 'provider.gemini' },
   { id: 'ollama', labelKey: 'provider.ollama' },
 ];
 
@@ -119,6 +120,9 @@ export const DEFAULT_SETTINGS = {
   openaiModel: '',
   openrouterKey: '',
   openrouterModel: '',
+  // Google Gemini (AI Studio key).
+  geminiKey: '',
+  geminiModel: 'gemini-3.5-flash-lite',
   // Ollama: the main server and an optional second one (another computer) behind it.
   ollamaUrl: '',
   ollamaModel: 'gemma4:12b',
@@ -235,6 +239,7 @@ export function missingKeys(settings) {
   if (soniox) return missing;
   if (provider === 'claude' && !settings.anthropicKey) missing.push('Anthropic');
   if (provider === 'openrouter' && !String(settings.openrouterKey || '').trim()) missing.push('OpenRouter');
+  if (provider === 'gemini' && !String(settings.geminiKey || '').trim()) missing.push('Gemini');
   // OpenAI itself needs a key; a server of one's own with the same API may not.
   if (provider === 'openai' && !String(settings.openaiUrl || '').trim() && !String(settings.openaiKey || '').trim()) missing.push('OpenAI');
   return missing;
@@ -247,6 +252,7 @@ export function missingServers(settings) {
   if (provider === 'ollama' && !(String(settings.ollamaUrl || '').trim() && String(settings.ollamaModel || '').trim())) missing.push('ollama');
   if (provider === 'openai' && !String(settings.openaiModel || '').trim()) missing.push('model');
   if (provider === 'openrouter' && !String(settings.openrouterModel || '').trim()) missing.push('model');
+  if (provider === 'gemini' && !String(settings.geminiModel || '').trim()) missing.push('model');
   if (isLocalSpeech(settings) && !String(settings.localSpeechUrl || '').trim()) missing.push('speech');
   if (isOpenAISpeech(settings) && ((settings.oaiSttServer === 'custom' && !String(settings.oaiSttUrl || '').trim()) || (settings.oaiTtsServer === 'custom' && !String(settings.oaiTtsUrl || '').trim()))) missing.push('speech');
   return missing;

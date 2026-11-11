@@ -238,6 +238,8 @@ export default {
   'provider.claude': 'Claude (Anthropic)',
   'provider.openai': 'OpenAI o un servidor compatible',
   'provider.openrouter': 'OpenRouter',
+  'provider.gemini': "Google Gemini",
+  'opt.gemini.hint': "Una clave de Google AI Studio (aistudio.google.com › Get API key). El razonamiento se baja al nivel más bajo que acepta cada modelo, para que no añada retraso; el más rápido es gemini-3.5-flash-lite.",
   'provider.ollama': 'Ollama (su propio servidor)',
   'opt.oai.url': 'Servidor (vacío: OpenAI)',
   'opt.oai.key': 'Clave de API',

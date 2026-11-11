@@ -13,7 +13,7 @@ import net from 'node:net';
 import { WebSocketServer } from 'ws';
 import { LANGUAGES } from '../../src/shared/languages.js';
 
-export const API_HOSTS = ['api.elevenlabs.io', 'api.anthropic.com', 'api-free.deepl.com', 'api.mistral.ai', 'api.groq.com', 'stt-rt.soniox.com', 'tts-rt.soniox.com'];
+export const API_HOSTS = ['api.elevenlabs.io', 'api.anthropic.com', 'api-free.deepl.com', 'api.mistral.ai', 'api.groq.com', 'stt-rt.soniox.com', 'tts-rt.soniox.com', 'generativelanguage.googleapis.com'];
 const HOSTS = new Set(API_HOSTS);
 
 const HEARD = {
@@ -210,6 +210,34 @@ async function free(req, res, url, host, stats, faults, translator) {
   return json(res, { error: 'not mocked' }, 404);
 }
 
+// Google Gemini: like gemini-3.5-flash-lite, the mock refuses a thinking budget of 0 and
+// takes thinkingLevel MINIMAL. The key must come in the x-goog-api-key header.
+async function gemini(req, res, url, stats, faults) {
+  const key = req.headers['x-goog-api-key'];
+  if (key !== 'mock-gemini' || url.searchParams.has('key')) return json(res, { error: { code: 400, message: 'API key not valid. Please pass a valid API key.', details: [{ reason: 'API_KEY_INVALID' }] } }, 400);
+  if (req.method === 'GET' && url.pathname === '/v1beta/models') return json(res, { models: [{ name: 'models/gemini-3.5-flash-lite', displayName: 'Gemini 3.5 Flash Lite', supportedGenerationMethods: ['generateContent'], thinking: true }] });
+  if (req.method === 'GET' && url.pathname.startsWith('/v1beta/models/')) {
+    const id = url.pathname.split('/').pop();
+    return id === 'gemini-3.5-flash-lite' ? json(res, { name: `models/${id}` }) : json(res, { error: { code: 404, message: `models/${id} is not found` } }, 404);
+  }
+  const m = url.pathname.match(/^\/v1beta\/models\/([^:]+):streamGenerateContent$/);
+  if (req.method !== 'POST' || !m) return json(res, { error: { message: 'not mocked' } }, 404);
+  const body = JSON.parse((await readBody(req)).toString() || '{}');
+  const user = body.contents?.at(-1)?.parts?.[0]?.text || '';
+  const utterance = (String(user).match(/<utterance>\n([\s\S]*?)\n<\/utterance>/) || [])[1] || '';
+  const thinking = body.generationConfig?.thinkingConfig || null;
+  stats.gemini.push({ model: m[1], thinking, utterance, system: Boolean(body.systemInstruction?.parts?.[0]?.text) });
+  if (thinking?.thinkingBudget === 0) return json(res, { error: { code: 400, message: 'Request contains an invalid argument.', status: 'INVALID_ARGUMENT' } }, 400);
+  if (faults.gemini) return json(res, { error: { code: faults.gemini, message: 'The model is overloaded.' } }, faults.gemini);
+  res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
+  const words = translate(utterance).split(/(?<= )/);
+  for (let i = 0; i < words.length; i += 2) {
+    await sleep(30);
+    res.write(`data: ${JSON.stringify({ candidates: [{ content: { role: 'model', parts: [{ text: words.slice(i, i + 2).join('') }] } }] })}\r\n\r\n`);
+  }
+  res.end();
+}
+
 async function route(req, res, stats, faults, options = {}) {
   const host = (req.headers.host || '').split(':')[0];
   const url = new URL(req.url, `https://${host}`);
@@ -233,6 +261,15 @@ async function route(req, res, stats, faults, options = {}) {
       return json(res, { type: 'model', id: url.pathname.split('/').pop(), display_name: 'Mock', created_at: '2026-01-01T00:00:00Z' });
     }
     if (req.method === 'POST' && url.pathname === '/v1/messages') return claude(req, res, stats, faults, options.translator);
+  }
+  if (host === 'generativelanguage.googleapis.com') {
+    // Like Google, it answers the extension's origin (CORS): there is no host permission for it.
+    res.setHeader('access-control-allow-origin', req.headers.origin || '*');
+    if (req.method === 'OPTIONS') {
+      res.writeHead(200, { 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': req.headers['access-control-request-headers'] || '*', 'access-control-max-age': '3600' });
+      return res.end();
+    }
+    return gemini(req, res, url, stats, faults);
   }
   if (host === 'api-free.deepl.com' || host === 'api.mistral.ai' || host === 'api.groq.com') return free(req, res, url, host, stats, faults, options.translator);
   json(res, { error: 'not mocked' }, 404);
@@ -277,8 +314,8 @@ function sonioxSpeech(ws, req, stats, faults) {
 export async function startMockApi({ cert, key, passthrough = [], mockOnly = null, translator = null }) {
   const real = new Set(passthrough);
   const options = { translator };
-  const stats = { requests: [], stt: [], tts: [], claude: [], free: [], soniox: [], sonioxTts: [] };
-  const faults = { deepl: 0, mistral: 0, groq: 0, tts: 0, claude: 0, stt: null, soniox: 0 };
+  const stats = { requests: [], stt: [], tts: [], claude: [], free: [], soniox: [], sonioxTts: [], gemini: [] };
+  const faults = { deepl: 0, mistral: 0, groq: 0, tts: 0, claude: 0, stt: null, soniox: 0, gemini: 0 };
   const api = https.createServer({ cert, key }, (req, res) => {
     route(req, res, stats, faults, options).catch((err) => {
       res.writeHead(500);

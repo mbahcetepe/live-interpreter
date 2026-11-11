@@ -512,6 +512,61 @@ async function openaiTranslationTest() {
   }
 }
 
+// Google Gemini through the mock API: the key in a header, thinking turned down step by
+// step, Claude Haiku behind it.
+async function geminiTranslationTest() {
+  console.log('\n== Translation with Google Gemini (mock, Claude behind it) ==');
+  const mock = await startMockApi({
+    cert: readFileSync(path.join(fixtures, 'mock-cert.pem')),
+    key: readFileSync(path.join(fixtures, 'mock-key.pem')),
+  });
+  const env = await launch({ micWav: path.join(fixtures, 'turkish.wav'), remoteWav: path.join(fixtures, 'english.wav'), proxyPort: mock.port });
+  const { control, meet, tabId } = env;
+  const setSettings = (patch) =>
+    control.evaluate(async (p) => {
+      const { settings } = await chrome.storage.local.get('settings');
+      await chrome.storage.local.set({ settings: { ...(settings || {}), ...p } });
+    }, patch);
+  try {
+    await setSettings({ elevenLabsKey: 'mock-el', anthropicKey: 'mock-an', translationProvider: 'gemini', geminiKey: '', geminiModel: 'gemini-3.5-flash-lite' });
+    const bare = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('Gemini without a key does not start and names the missing key', bare?.ok === false && /Gemini/.test(bare?.error || ''), bare?.error);
+    await setSettings({ geminiKey: 'wrong-key' });
+    const wrong = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    const wrongState = (await sessionState(control))?.engine;
+    check('a wrong Gemini key is reported as a key error', /Gemini/.test(`${wrong?.error || ''} ${wrongState?.error || ''} ${JSON.stringify(wrongState?.warnings || '')}`) && /key|anahtar/i.test(`${wrong?.error || ''} ${wrongState?.error || ''} ${JSON.stringify(wrongState?.warnings || '')}`), `${wrong?.error || ''} ${wrongState?.error || ''} ${JSON.stringify(wrongState?.warnings || '')}`);
+    await send(control, { type: 'stop' });
+    await setSettings({ geminiKey: 'mock-gemini' });
+    const start = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('translation with Gemini starts', start?.ok === true, start?.error);
+    if (!start?.ok) return;
+    const incoming = await waitFor(async () => done((await readCaptions(meet)).incoming), 30000, 300);
+    check('the counterpart is translated into Turkish by Gemini', incoming?.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.', JSON.stringify(incoming));
+    const outgoing = await waitFor(async () => done((await readCaptions(meet)).outgoing), 30000, 300);
+    check('my Turkish is translated into English by Gemini', outgoing?.translation === 'Friday at three works for us.', JSON.stringify(outgoing));
+    const asked = mock.stats.gemini;
+    check('a refused thinking budget of 0 is followed by MINIMAL, which is then kept', asked[0]?.thinking?.thinkingBudget === 0 && asked.slice(1).every((g) => g.thinking?.thinkingLevel === 'MINIMAL') && asked.filter((g) => g.thinking?.thinkingBudget === 0).length === 1, JSON.stringify(asked.map((g) => g.thinking)));
+    check('Gemini gets the system prompt and the chosen model', asked.every((g) => g.system && g.model === 'gemini-3.5-flash-lite'), JSON.stringify(asked[0]));
+    check('Claude was not needed while Gemini worked', mock.stats.claude.length === 0, String(mock.stats.claude.length));
+    const services = await servicesLine(meet);
+    check('the panel names Gemini as the translator', /Google Gemini|Gemini/.test(services), services);
+
+    // Gemini overloaded: Claude Haiku translates the next sentences.
+    mock.faults.gemini = 503;
+    await send(control, { type: 'stop' });
+    const again = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('the call starts again', again?.ok === true, again?.error);
+    const backup = await waitFor(() => mock.stats.claude.length > 0, 40000, 300);
+    check('when Gemini fails, Claude translates', backup, `${mock.stats.claude.length} claude`);
+    await send(control, { type: 'stop' });
+    check('no script errors on the Meet page', env.pageErrors.length === 0, env.pageErrors.join(' | '));
+  } finally {
+    await env.context.close();
+    await rm(env.userDataDir, { recursive: true, force: true });
+    mock.close();
+  }
+}
+
 // Everything on one server with OpenAI's API (like LocalAI): recognition, translation and speech.
 async function openaiSpeechTest() {
   console.log('\n== Speech and translation on one OpenAI-compatible server (no ElevenLabs, no Claude) ==');
@@ -846,7 +901,7 @@ await mkdir(fixtures, { recursive: true });
 makeFixtures();
 // ONLY=local,media runs only the suites whose names contain one of these words.
 const only = (process.env.ONLY || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
-const suites = { connectionTest, zoomTest, recordingTest, mockTranslationTest, ollamaTranslationTest, openaiTranslationTest, openaiSpeechTest, sonioxTest, localServersTest, mediaTest };
+const suites = { connectionTest, zoomTest, recordingTest, mockTranslationTest, geminiTranslationTest, ollamaTranslationTest, openaiTranslationTest, openaiSpeechTest, sonioxTest, localServersTest, mediaTest };
 for (const [name, run] of Object.entries(suites)) {
   if (!only.length || only.some((w) => name.toLowerCase().includes(w))) await run();
 }

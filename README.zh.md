@@ -17,7 +17,7 @@
   <tr><td><b>其他标签页</b></td><td>YouTube、X、网络电台、任何有声音的网页</td></tr>
   <tr><td><b>浏览器</b></td><td>Chrome、Edge、Brave 以及其他 Chromium 浏览器</td></tr>
   <tr><td><b>语言</b></td><td>20 种，任意两种互译；首次启动时跟随浏览器语言；在视频标签页中可自动识别所说的语言</td></tr>
-  <tr><td><b>翻译</b></td><td>Claude、OpenAI 或兼容服务器、OpenRouter、你自己的 Ollama，或 Soniox；设置中会列出各服务的模型</td></tr>
+  <tr><td><b>翻译</b></td><td>Claude、OpenAI 或兼容服务器、OpenRouter、Google Gemini、你自己的 Ollama，或 Soniox；设置中会列出各服务的模型</td></tr>
   <tr><td><b>语音</b></td><td>ElevenLabs、兼容 OpenAI 的服务（OpenAI、Groq Whisper、LocalAI、Speaches、Kokoro），或你自己的语音服务器（faster-whisper 和 Piper）</td></tr>
   <tr><td><b>延迟</b></td><td>一句话结束后约 1.5–3 秒</td></tr>
   <tr><td><b>界面</b></td><td>英语（默认）、土耳其语、德语、西班牙语、中文</td></tr>
@@ -53,7 +53,7 @@
 
 - 二十种语言，任意两种，双向互译：英语、土耳其语、德语、法语、西班牙语、意大利语、葡萄牙语、荷兰语、波兰语、俄语、乌克兰语、阿拉伯语、希腊语、罗马尼亚语、瑞典语、印尼语、印地语、中文、日语和韩语。
 - 像电影一样的字幕：译文用大字显示，原文在下方；还有一个面板，显示双方内容、实时延迟以及带费用估算的用量计数。
-- 一个服务出错不会丢掉一句话：翻译会从 Ollama 依次退到第二台 Ollama 服务器、Claude Haiku（设置了 Claude 密钥时）；从 OpenAI 或 OpenRouter 退到 Claude Haiku（有密钥时）。
+- 一个服务出错不会丢掉一句话：翻译会从 Ollama 依次退到第二台 Ollama 服务器、Claude Haiku（设置了 Claude 密钥时）；从 OpenAI、OpenRouter 或 Gemini 退到 Claude Haiku（有密钥时）。
 
 > **请先阅读。**
 > - 这是交替传译：一句话结束后才开始翻译。语音识别等待 0.7 秒的静音（可设为 0.5 秒），翻译需要 0.3–2 秒，语音 0.2–0.5 秒。说话人讲得较长时，已经说完的句子会在其继续讲话时就开始翻译。
@@ -68,7 +68,7 @@
 
 | | 语音识别和声音 | 翻译 |
 | --- | --- | --- |
-| **托管服务** | ElevenLabs（Scribe v2 Realtime、Flash v2.5 / v4 Turbo）；OpenAI（Whisper、gpt-4o-transcribe、gpt-4o-mini-tts）；Groq Whisper（识别，快且便宜） | Claude Opus、Sonnet 或 Haiku 5.5；OpenAI；OpenRouter（数百个模型，一个密钥） |
+| **托管服务** | ElevenLabs（Scribe v2 Realtime、Flash v2.5 / v4 Turbo）；OpenAI（Whisper、gpt-4o-transcribe、gpt-4o-mini-tts）；Groq Whisper（识别，快且便宜） | Claude Opus、Sonnet 或 Haiku 5.5；OpenAI；OpenRouter（数百个模型，一个密钥）；Google Gemini |
 | **识别和翻译合一** | Soniox（`stt-rt-v6`）：在同一个流中听和翻译，最快的配置；译文由 Soniox 自己的声音（`tts-rt-v2`）或上面任一种声音朗读 | Soniox |
 | **你自己的服务器** | [speech-server/](speech-server/README.md) 中的语音服务器（faster-whisper 和 Piper），或任何提供 OpenAI 音频 API 的服务器（Speaches、LocalAI、Kokoro-FastAPI） | Ollama（例如 `gemma4:12b`），或任何提供 OpenAI API 的服务器（LM Studio、vLLM） |
 
@@ -85,6 +85,10 @@
 ### 外语词的正确读法
 
 每个声音都按自己语言的规则朗读一切，所以土耳其语语音中的英语术语（“API”、“Apple”）或英语语音中的土耳其名字（“Şükrü”）可能会读错。朗读译文时，翻译器会给这类词标注读音，例如 `[[Apple|epıl]]` 或 `[[Şükrü|Shoo-kroo]]`。屏幕和文字记录中只显示 “Apple” 和 “Şükrü”。你自己的语音服务器（每个声音只会一种语言）读的是标注的读音；ElevenLabs 和 OpenAI 收到的是词本身，因为它们能处理混合文本，而且 OpenAI 的 `gpt-*-tts` 声音还会被告知按外语词本来的语言去读。没有标注的情况下（Soniox），内置的常用术语和品牌列表以及短缩写的逐字母拼读（SGK：“se ge ke”）会帮助本地声音；你自己的列表（**语音识别和声音 › 外语词的读法**，每行一个 `词 = 读音`）对所有声音都有效。在 Ollama 上用 `gemma4:12b` 实测：两个方向返回的标注格式都正确；小模型弄坏的标注会被清理掉，不会出现在屏幕上。
+
+### 用 Google Gemini 翻译
+
+选择 **Google Gemini** 作为翻译服务，并粘贴来自 [Google AI Studio](https://aistudio.google.com/apikey) 的密钥；该密钥可用的模型列表会自动填充（语音、图像、音乐和嵌入模型会被排除）。大多数 Gemini 模型会先思考再回答，而实时翻译等不起：扩展会把思考降到每个模型接受的最低级别，依次尝试预算 0、MINIMAL 和 LOW 级别、128 token 的预算，并记住模型接受的设置。2026 年 11 月 11 日实测，从请求到第一段文字：`gemini-3.5-flash-lite` 约 0.56 秒（默认），`gemini-3.1-flash-lite` 0.56 秒，`gemini-3.5-flash` 0.74 秒，`gemini-3.8-flash` 1.4–2 秒；`gemini-3.8-flash` 按自己的方式思考时用了 5.6 秒。设置了 Claude 密钥时，Claude Haiku 作为 Gemini 的后备。Gemini 的价格不在面板的估算中。
 
 ### 用 Ollama 翻译
 
@@ -116,7 +120,7 @@ cd live-interpreter/speech-server && sudo ./install-ubuntu.sh
 - Chrome 116 或更新版本、Edge 或 Brave
 - Node.js 18 或更新版本，仅在从源码构建扩展时需要
 - 语音：ElevenLabs API 密钥（声音克隆需要付费套餐）、OpenAI 或 Groq 密钥，或你自己的语音服务器；可选 Soniox 密钥，用一个流完成识别和翻译
-- 翻译：Claude、OpenAI、OpenRouter 或 Soniox 的 API 密钥，或你自己的服务器（Ollama、LM Studio、vLLM）
+- 翻译：Claude、OpenAI、OpenRouter、Google Gemini 或 Soniox 的 API 密钥，或你自己的服务器（Ollama、LM Studio、vLLM）
 - 通话时戴耳机
 
 ---
@@ -150,7 +154,7 @@ npm run build
 视频标签页的声音 -> 语音识别               -> 翻译 -> 字幕，或盖在原声之上的语音
 
 语音识别和语音：ElevenLabs、兼容 OpenAI 的服务或语音服务器
-翻译：所选服务（Claude、OpenAI/兼容、OpenRouter、Ollama -> 第二台 Ollama）-> 设置了密钥时 Claude Haiku
+翻译：所选服务（Claude、OpenAI/兼容、OpenRouter、Gemini、Ollama -> 第二台 Ollama）-> 设置了密钥时 Claude Haiku
 使用 Soniox 时：Soniox 在一个流中听和翻译 -> 语音
 ```
 
@@ -166,7 +170,7 @@ npm run build
 | `src/offscreen/tts.js`、`pipeline.js` | 离屏文档 | 语音：按分句、按顺序朗读，并控制延迟 |
 | `src/offscreen/fallback-translator.js` | 离屏文档 | 一个翻译器在另一个之前 |
 | `src/offscreen/translator.js` | 离屏文档 | Claude，以及每个翻译服务都会收到的指令和示例 |
-| `src/offscreen/openai-translator.js`、`ollama-translator.js` | 离屏文档 | OpenAI、OpenRouter 和兼容服务器；Ollama，逐句流式返回 |
+| `src/offscreen/openai-translator.js`、`gemini-translator.js`、`ollama-translator.js` | 离屏文档 | OpenAI、OpenRouter 和兼容服务器；按模型降低思考的 Google Gemini；Ollama，逐句流式返回 |
 | `src/offscreen/voice-clone.js` | 离屏文档 | ElevenLabs 声音克隆：你的，以及经同意的对方的 |
 | `src/shared/pronounce.js` | 各处 | 外语词的正确读法：标注、内置列表和你的列表 |
 | `src/shared/transcript.js`、`recordings.js` | 各处 | 保存在这台电脑上的文字记录和通话录制 |

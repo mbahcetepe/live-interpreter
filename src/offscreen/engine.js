@@ -10,6 +10,7 @@
 
 import { PROVIDERS, isSoniox, isSonioxListening, whisperModelFor, translationProvider, claudeModelOf, missingKeys, missingServers, parseKeyterms, OPENAI_URL, OPENROUTER_URL } from '../shared/settings.js';
 import { OpenAITranslator, openaiRestMs } from './openai-translator.js';
+import { GeminiTranslator } from './gemini-translator.js';
 import { serverBase } from '../shared/servers.js';
 import { OllamaTranslator, ollamaRestMs } from './ollama-translator.js';
 import { listVoices, createVoiceClone, deleteVoice, describeElevenLabsError, speechAccount, speechHealth, speechModels, SPEECH_PROTOCOL } from '../shared/elevenlabs.js';
@@ -98,6 +99,7 @@ function translationSetup(s) {
   const provider = translationProvider(s);
   if (provider === 'claude') return provider;
   if (provider === 'ollama') return ['ollama', serverBase(s.ollamaUrl), s.ollamaModel, serverBase(s.ollamaBackupUrl), s.ollamaBackupModel, Boolean(s.anthropicKey)].join('|');
+  if (provider === 'gemini') return ['gemini', s.geminiKey, s.geminiModel, Boolean(s.anthropicKey)].join('|');
   return [provider, s.openaiUrl, s.openaiKey, s.openaiModel, s.openrouterKey, s.openrouterModel, Boolean(s.anthropicKey)].join('|');
 }
 
@@ -434,6 +436,11 @@ class Session {
     if (provider === 'claude') return claude(claudeModelOf(s), false);
     // Behind any other provider stands Claude Haiku, when a key is set.
     const behind = fallback && s.anthropicKey ? claude(OLLAMA_BACKUP_CLAUDE) : null;
+    if (provider === 'gemini') {
+      const primary = new GeminiTranslator({ ...common, key: s.geminiKey, model: s.geminiModel, log });
+      if (!behind) return primary;
+      return new FallbackTranslator({ primary, backup: behind, restFor: openaiRestMs, name: 'Gemini', onOff, log });
+    }
     if (provider === 'openai' || provider === 'openrouter') {
       const openrouter = provider === 'openrouter';
       const name = t(openrouter ? 'provider.openrouter' : 'provider.openai');
@@ -893,7 +900,7 @@ class Session {
       if (url && !this.debugSink) {
         this.debugSink = new DebugSink(url);
         logSink = this.debugSink;
-        this.debugSink.event({ kind: 'start', settings: { ...this.settings, elevenLabsKey: undefined, anthropicKey: undefined, groqKey: undefined, localSpeechKey: undefined }, recording: Boolean(this.recorder) });
+        this.debugSink.event({ kind: 'start', settings: Object.fromEntries(Object.entries(this.settings).filter(([name]) => !/Key$/.test(name))), recording: Boolean(this.recorder) });
         log('info', `debug copies go to ${url}`);
         // A recording that began before this carries its file header in the chunks already saved.
         const rec = this.recording;
