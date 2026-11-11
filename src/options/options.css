@@ -484,6 +484,7 @@ details > summary {
   margin: 6px 0 4px;
 }
 
+[data-stt][hidden],
 [data-custom][hidden] {
   display: none;
 }

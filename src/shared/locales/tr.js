@@ -325,6 +325,7 @@ export default {
   'opt.soniox.hint': "Soniox konuşmayı tanır ve aynı akışta, cümle bitmeden çevirir. Aşağıdaki servis yalnızca çeviriyi seslendirir.",
   'opt.soniox.key': "Soniox API anahtarı",
   'opt.soniox.voiceService': "Ses servisi (çeviriyi seslendirir)",
+  'opt.soniox.active': "Şu an: Soniox dinler ve çevirir; {service} yalnızca çeviriyi seslendirir, ses tanıma ayarları kullanılmaz.",
   'opt.soniox.translationNote': "Soniox açık (Ses tanıma ve sesler): duyduğu anda çeviriyor, aşağıdaki servis kullanılmıyor.",
   'opt.soniox.noKey': "Önce Soniox API anahtarını yapıştır.",
   'opt.soniox.noSocket': "Soniox'a ulaşılamadı. İnternet bağlantısını kontrol et.",

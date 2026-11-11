@@ -325,6 +325,7 @@ export default {
   'opt.soniox.hint': "Soniox 在同一个流中识别语音并翻译，不必等句子结束。下面的服务只负责朗读译文。",
   'opt.soniox.key': "Soniox API 密钥",
   'opt.soniox.voiceService': "语音服务（朗读译文）",
+  'opt.soniox.active': "当前：Soniox 负责识别和翻译；{service} 只朗读译文，其语音识别设置不会使用。",
   'opt.soniox.translationNote': "Soniox 已开启（语音识别和声音）：它边听边翻译，下面的服务不会被使用。",
   'opt.soniox.noKey': "请先粘贴你的 Soniox API 密钥。",
   'opt.soniox.noSocket': "无法连接 Soniox，请检查网络连接。",

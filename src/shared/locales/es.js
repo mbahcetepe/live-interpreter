@@ -325,6 +325,7 @@ export default {
   'opt.soniox.hint': "Soniox reconoce el habla y la traduce en el mismo flujo, antes de que termine la frase. El servicio de abajo solo pronuncia la traducción.",
   'opt.soniox.key': "Clave de API de Soniox",
   'opt.soniox.voiceService': "Servicio de voz (pronuncia la traducción)",
+  'opt.soniox.active': "Ahora: Soniox escucha y traduce; {service} solo pronuncia la traducción y sus ajustes de reconocimiento de voz no se usan.",
   'opt.soniox.translationNote': "Soniox está activado (Reconocimiento de voz y voces): traduce mientras escucha y el servicio de abajo no se usa.",
   'opt.soniox.noKey': "Pega primero tu clave de API de Soniox.",
   'opt.soniox.noSocket': "No se pudo conectar con Soniox. Comprueba la conexión a internet.",

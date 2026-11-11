@@ -334,6 +334,7 @@ function renderSoniox() {
   $('sonioxBox').hidden = !on;
   $('sonioxTranslationNote').hidden = !on;
   $('speechServiceLabel').textContent = on ? t('opt.soniox.voiceService') : t('opt.tr.provider');
+  renderSonioxRoles();
 }
 
 // Opens a stream with the key and a moment of silence: Soniox answers a refused key or an
@@ -382,10 +383,21 @@ async function testSoniox() {
   return result('sonioxResult', message, 'bad');
 }
 
+// With Soniox on, the service below only speaks: its speech recognition settings are
+// hidden, and a line says which service does what.
+function renderSonioxRoles() {
+  const on = isSoniox(settings);
+  for (const el of document.querySelectorAll('[data-stt]')) el.hidden = on;
+  const service = ($('speechProvider').selectedOptions[0]?.textContent || '').replace(/\s*\(.*\)\s*$/, '');
+  $('sonioxActive').textContent = on ? t('opt.soniox.active', { service }) : '';
+  $('sonioxActive').hidden = !on;
+}
+
 function renderSpeech() {
   const provider = isLocalSpeech(settings) ? 'local' : isOpenAISpeech(settings) ? 'openai' : 'elevenlabs';
   $('speechProvider').value = provider;
   for (const box of document.querySelectorAll('[data-speech]')) box.hidden = box.dataset.speech !== provider;
+  renderSonioxRoles();
   result('speechResult', '');
   if (provider === 'local') loadLocalSpeech({ quiet: true });
   else if (provider === 'openai') loadOpenAISpeech({ quiet: true });

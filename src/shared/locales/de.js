@@ -325,6 +325,7 @@ export default {
   'opt.soniox.hint': "Soniox erkennt die Sprache und übersetzt sie im selben Stream, noch bevor der Satz zu Ende ist. Der Dienst unten spricht dann nur die Übersetzung.",
   'opt.soniox.key': "Soniox-API-Schlüssel",
   'opt.soniox.voiceService': "Sprachdienst (spricht die Übersetzung)",
+  'opt.soniox.active': "Jetzt: Soniox hört zu und übersetzt; {service} spricht nur die Übersetzung, seine Spracherkennungs-Einstellungen werden nicht verwendet.",
   'opt.soniox.translationNote': "Soniox ist an (Spracherkennung und Stimmen): Es übersetzt beim Hören, der Dienst unten wird nicht verwendet.",
   'opt.soniox.noKey': "Fügen Sie zuerst Ihren Soniox-API-Schlüssel ein.",
   'opt.soniox.noSocket': "Soniox ist nicht erreichbar. Prüfen Sie die Internetverbindung.",

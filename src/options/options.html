@@ -205,8 +205,10 @@
             <option value="openai" data-i18n="opt.speech.openai">OpenAI-compatible (OpenAI, Groq, your own server)</option>
           </select>
         </label>
+        <p class="hint" id="sonioxActive" role="status" hidden></p>
 
         <div class="box" data-speech="openai">
+          <div data-stt>
           <p class="subhead" data-i18n="opt.oaiSpeech.stt">Speech recognition</p>
           <div class="grid3">
             <label class="field">
@@ -232,6 +234,7 @@
               <select id="oaiSttModel"></select>
             </label>
             <button type="button" class="refresh" data-models="oaiSpeech" data-i18n-title="opt.models.refresh">↻</button>
+          </div>
           </div>
           <p class="subhead" data-i18n="opt.oaiSpeech.tts">Voice</p>
           <div class="grid3">
@@ -355,7 +358,7 @@
               <input type="password" id="localSpeechKey" class="key" autocomplete="off" spellcheck="false" />
             </label>
           </div>
-          <div class="picker">
+          <div class="picker" data-stt>
             <label class="field">
               <span data-i18n="opt.speech.model">Recognition model</span>
               <select id="localWhisperModel"></select>
