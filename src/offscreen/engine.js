@@ -9,7 +9,7 @@
 // worker with each message, and everything for the Meet tab goes through a port the
 // tab's content script opens.
 
-import { isSoniox, whisperModelFor, isFreeTranslation, isOllamaTranslation, translationProvider, claudeModelOf, missingKeys, missingServers, parseKeyterms, OPENAI_URL, OPENROUTER_URL } from '../shared/settings.js';
+import { PROVIDERS, isSoniox, whisperModelFor, isFreeTranslation, isOllamaTranslation, translationProvider, claudeModelOf, missingKeys, missingServers, parseKeyterms, OPENAI_URL, OPENROUTER_URL } from '../shared/settings.js';
 import { OpenAITranslator, openaiRestMs } from './openai-translator.js';
 import { serverBase } from '../shared/servers.js';
 import { OllamaTranslator, ollamaRestMs } from './ollama-translator.js';
@@ -1145,11 +1145,24 @@ class Session {
     this.warnings.set(id, { key, params });
   }
 
+  // Which service hears, translates and speaks, for the panel: so it is plain which one
+  // is at work (Soniox and the voice service below it, for one).
+  servicesLabel() {
+    const s = this.settings;
+    const plain = (label) => label.replace(/\s*\(.*\)\s*$/, '');
+    const voice = this.speech.local ? t('opt.speech.local') : this.speech.kind === 'openai' ? (s.oaiTtsServer === 'custom' ? t('opt.oaiSpeech.custom') : 'OpenAI') : 'ElevenLabs';
+    if (isSoniox(s)) return t('overlay.servicesSoniox', { voice });
+    const hear = this.speech.local ? t('opt.speech.local') : this.speech.kind === 'openai' ? (s.oaiSttServer === 'groq' ? 'Groq' : s.oaiSttServer === 'custom' ? t('opt.oaiSpeech.custom') : 'OpenAI') : 'ElevenLabs';
+    const provider = PROVIDERS.find((p) => p.id === translationProvider(s));
+    return t('overlay.services', { hear, translate: provider ? plain(t(provider.labelKey)) : '', voice });
+  }
+
   status() {
     const latency = this.latencies.length ? Math.round(this.latencies.reduce((a, b) => a + b, 0) / this.latencies.length) : null;
     return {
       tabId: this.tabId,
       diagnostic: this.diagnostic,
+      services: this.diagnostic ? '' : this.servicesLabel(),
       incomingMode: this.incomingMode,
       outgoingMode: this.outgoingMode,
       cloneConsent: this.cloneConsent,

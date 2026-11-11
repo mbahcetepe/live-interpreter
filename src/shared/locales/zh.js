@@ -318,6 +318,8 @@ export default {
   'overlay.stageListen': "聆听 {n} 秒",
   'overlay.stageTranslate': "翻译 {n} 秒",
   'overlay.stageVoice': "语音 {n} 秒",
+  'overlay.services': "识别：{hear} · 翻译：{translate} · 朗读：{voice}",
+  'overlay.servicesSoniox': "识别和翻译：Soniox · 朗读：{voice}",
   'overlay.stagesTitle': "最近几句的平均值：等待说话结束、翻译出的第一个词、语音的第一个声音",
   'popup.mediaSubs': "同时显示字幕",
   'popup.mediaSubsHint': "取消勾选则只听翻译，视频上不显示文字。",

@@ -318,6 +318,8 @@ export default {
   'overlay.stageListen': "dinleme {n} sn",
   'overlay.stageTranslate': "çeviri {n} sn",
   'overlay.stageVoice': "ses {n} sn",
+  'overlay.services': "Dinleyen: {hear} · çeviren: {translate} · seslendiren: {voice}",
+  'overlay.servicesSoniox': "Dinleyen ve çeviren: Soniox · seslendiren: {voice}",
   'overlay.stagesTitle': "Son cümlelerin ortalaması: konuşmanın bitmesini bekleme, çevirinin ilk kelimeleri, sesin ilk duyulması",
   'popup.mediaSubs': "Altyazıyı da göster",
   'popup.mediaSubsHint': "İşareti kaldırırsan yalnızca çeviriyi duyarsın; videonun üzerinde yazı çıkmaz.",

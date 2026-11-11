@@ -190,6 +190,10 @@ async function recordingTest() {
   }
 }
 
+// The panel's line naming the services at work ("Hears: … · translates: … · speaks: …").
+const servicesLine = (meet) =>
+  meet.evaluate(() => [...(document.getElementById('meet-tercuman-overlay')?.shadowRoot?.querySelectorAll('.usage') || [])].map((el) => el.textContent).find((x) => /^Hears/.test(x)) || '');
+
 async function mockTranslationTest() {
   console.log('\n== Translation round trip against a local mock API (no keys, no cost) ==');
   const mock = await startMockApi({
@@ -210,6 +214,8 @@ async function mockTranslationTest() {
 
     const incoming = await waitFor(async () => done((await readCaptions(meet)).incoming), 30000, 300);
     check('the counterpart is transcribed and shown in Turkish', incoming?.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.', JSON.stringify(incoming));
+    const named = await waitFor(() => servicesLine(meet), 4000);
+    check('the panel names the services at work', named === 'Hears: ElevenLabs · translates: Claude · speaks: ElevenLabs', named);
     // A script in Meet's page cannot tick the consent box or ask for debug copies.
     const scripted = await meet.evaluate(async () => {
       localStorage.setItem('meet-tercuman-debug', '47913');
@@ -647,6 +653,8 @@ async function sonioxTest() {
     if (!start?.ok) return;
     const incoming = await waitFor(async () => done((await readCaptions(meet)).incoming), 30000, 300);
     check('the counterpart is heard and translated into Turkish by Soniox', incoming?.translation === 'Merhaba, bugün görüşmeye katıldığınız için teşekkürler.', JSON.stringify(incoming));
+    const named = await waitFor(() => servicesLine(meet), 4000);
+    check('the panel says Soniox hears and translates', /^Hears and translates: Soniox · speaks: /.test(named), named);
     const outgoing = await waitFor(async () => done((await readCaptions(meet)).outgoing), 30000, 300);
     check('my Turkish is translated into English by Soniox', outgoing?.translation === 'Friday at three works for us.', JSON.stringify(outgoing));
     const targets = mock.stats.soniox.map((x) => x.config?.translation?.target_language).sort();

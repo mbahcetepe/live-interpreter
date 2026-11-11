@@ -318,6 +318,8 @@ export default {
   'overlay.stageListen': "escucha {n} s",
   'overlay.stageTranslate': "traducción {n} s",
   'overlay.stageVoice': "voz {n} s",
+  'overlay.services': "Escucha: {hear} · traduce: {translate} · habla: {voice}",
+  'overlay.servicesSoniox': "Escucha y traduce: Soniox · habla: {voice}",
   'overlay.stagesTitle': "Media de las últimas frases: la espera a que termine el habla, las primeras palabras traducidas, el primer sonido de la voz",
   'popup.mediaSubs': "Mostrar también subtítulos",
   'popup.mediaSubsHint': "Desmárcalo para solo oír la traducción, sin texto sobre el vídeo.",

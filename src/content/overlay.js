@@ -198,6 +198,7 @@ export class Overlay {
     this.notices = h('div', {});
     this.usage = h('span', { class: 'usage' });
     this.stagesLine = h('div', { class: 'usage', hidden: true });
+    this.servicesLine = h('div', { class: 'usage', hidden: true });
     this.bottom = h(
       'div',
       { class: 'bottom' },
@@ -205,7 +206,7 @@ export class Overlay {
       h(
         'div',
         { class: 'footer' },
-        h('div', {}, this.stagesLine, this.usage),
+        h('div', {}, this.servicesLine, this.stagesLine, this.usage),
         h(
           'div',
           { class: 'buttons' },
@@ -422,6 +423,8 @@ export class Overlay {
     else if (status.latencyMs != null) this.meta.textContent = t('overlay.latency', { n: num(status.latencyMs / 1000, 1) });
     else this.meta.textContent = connecting ? t('overlay.connecting') : t('overlay.listening');
     this.usage.textContent = status.diagnostic ? '' : formatUsage(status.usage);
+    this.servicesLine.hidden = !status.services;
+    this.servicesLine.textContent = status.services || '';
     const stages = status.stages || {};
     const parts = [
       ['listen', 'overlay.stageListen'],
