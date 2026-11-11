@@ -2,9 +2,9 @@
 
 **English** · [Türkçe](ZOOM.tr.md)
 
-Live Interpreter works with **Zoom in the browser**: the web client (`app.zoom.us/wc/…`, or a company's own `name.zoom.us/wc/…`) and Zoom's web app installed from the browser. The desktop Zoom app is not supported: browser extensions only run in the browser. Setup: [SETUP.md](SETUP.md), step 8. Meet and Teams: [MEET.md](MEET.md), [TEAMS.md](TEAMS.md).
+Live Interpreter works with **Zoom in the browser**: the web client (`app.zoom.us/wc/…`, or a company's own `name.zoom.us/wc/…`), as Zoom's web app opens it from `app.zoom.us/wc/home`. The desktop Zoom app is not supported: browser extensions only run in the browser. Setup: [SETUP.md](SETUP.md), step 8. Meet and Teams: [MEET.md](MEET.md), [TEAMS.md](TEAMS.md).
 
-> **Status:** two-way translation has been used in a real Zoom call (version 2.5.0, Zoom's installed web app, Turkish and English); the translated voice reached the other side, and muting in Zoom (English interface) let nothing through. The "Unverified points" below are still being checked. Run a test call before an important meeting.
+> **Status:** two-way translation has been used in a real Zoom call (version 2.5.0, Zoom's web app in a Brave tab, Turkish and English); the translated voice reached the other side, and muting in Zoom (English interface) let nothing through. The "Unverified points" below are still being checked. Run a test call before an important meeting.
 
 ## Access to Zoom
 
@@ -16,7 +16,7 @@ Zoom is not in the manifest. The extension asks for access to `https://*.zoom.us
 ## How it works in Zoom
 
 - **Audio path** (`src/content/page-hook.js`): Zoom's web client sends no WebRTC audio track. It reads the microphone from `getUserMedia`, encodes it itself and sends it over a data channel. So the page gets a track of ours where it asks for the microphone: the microphone passes through it while translation is off, and the translated voice takes its place while it is on. The track keeps the microphone's name and settings, so Zoom's audio settings still show the real device.
-- **Frames:** Zoom's installed app, and its start page, are a shell (`/wc/<meeting>/start`) that runs the meeting in a frame of its own (`iframe#webclient`, `/wc/<meeting>/join`), next to helper frames such as `/wc/pwa-empty-page`. The scripts go into every frame; only the frame that holds the call answers the extension and connects to the engine (`src/content/bridge.js` → `takesPart`, `callFrame` in `platforms.js`). The shell steps back when it contains the call's frame.
+- **Frames:** Zoom's web app, and the meeting's start page, are a shell (`/wc/<meeting>/start`) that runs the meeting in a frame of its own (`iframe#webclient`, `/wc/<meeting>/join`), next to helper frames such as `/wc/pwa-empty-page`. The scripts go into every frame; only the frame that holds the call answers the extension and connects to the engine (`src/content/bridge.js` → `takesPart`, `callFrame` in `platforms.js`). The shell steps back when it contains the call's frame.
 - **Mute** (`src/shared/platforms.js` → `zoomMuted`): read from the label of Zoom's audio button. "Unmute…" means muted; "Join audio" means no audio is joined yet, which counts as muted. Buttons for everyone ("Mute all", participants) are skipped.
 - **Subtitles** sit 96 px from the bottom, above Zoom's controls. Zoom's own caption area is not looked for yet.
 - **Transcripts** keep the call's address without its query: Zoom puts the meeting password there.
@@ -32,7 +32,7 @@ Marked `UNVERIFIED` in the code.
 1. **Audio button** (`platforms.js` → `zoomMuted`, `page-hook.js` → `CANDIDATES.zoom`): the word lists cover Zoom in English and Turkish, and some German, French and Spanish. In another interface language the track state alone decides.
 2. **Caption area:** Zoom's own captions are not detected; with them on, both subtitles can overlap.
 3. **End of the call:** the translation stops when the tab leaves `zoom.us/wc/`, or 30 seconds after no call connection is left (`CALL_GONE_MS`). Whether Zoom closes its connections on every way of leaving is not yet checked.
-4. **Zoom in a normal browser tab** (not the installed app) has not been used in a real call. The scripts handle both layouts, the call in the top page or in a frame.
+4. **Zoom's web app installed as an app** (its own window, from the browser's install button) has not been used; it loads the same pages. A meeting opened straight from a link may run in the top page instead of a frame; the scripts handle both layouts.
 
 ## Checklist
 

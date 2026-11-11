@@ -150,7 +150,7 @@ Toplantı bitince çeviri, bağlantı kalmadıktan 30 saniye sonra kendiliğinde
 
 ## 8. Zoom görüşmesinde
 
-1. Toplantı bağlantısını aç ve Zoom uygulaması yerine tarayıcıdan katıl (adres `app.zoom.us/wc/` ile başlar). Zoom'un tarayıcıdan kurulan web uygulaması da aynı şekilde çalışır.
+1. Toplantı bağlantısını aç ve Zoom uygulaması yerine tarayıcıdan katıl (adres `app.zoom.us/wc/` ile başlar).
 2. Kulaklığı tak, toplantıya ve sesine katıl.
 3. Zoom sekmesindeyken eklenti simgesine tıkla ve **Çeviriyi başlat** de. İlk seferde tarayıcı `zoom.us` adresine erişim izni ister: izin ver, **Sekmeyi yenile** düğmesine bas, sonra yeniden başlat. Eklenti bu izni yalnızca Zoom'da kullandığında ister.
 

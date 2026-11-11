@@ -2,9 +2,9 @@
 
 [English](ZOOM.md) · **Türkçe**
 
-Live Interpreter (Türkçe arayüzde Canlı Tercüman) **tarayıcıdaki Zoom** ile çalışır: web istemcisi (`app.zoom.us/wc/…` ya da bir şirketin kendi `ad.zoom.us/wc/…` adresi) ve Zoom'un tarayıcıdan kurulan web uygulaması. Masaüstü Zoom uygulaması desteklenmez: tarayıcı eklentileri yalnızca tarayıcıda çalışır. Kurulum: [SETUP.tr.md](SETUP.tr.md), 8. adım. Meet ve Teams: [MEET.tr.md](MEET.tr.md), [TEAMS.tr.md](TEAMS.tr.md).
+Live Interpreter (Türkçe arayüzde Canlı Tercüman) **tarayıcıdaki Zoom** ile çalışır: web istemcisi (`app.zoom.us/wc/…` ya da bir şirketin kendi `ad.zoom.us/wc/…` adresi); Zoom'un web uygulaması onu `app.zoom.us/wc/home` sayfasından açar. Masaüstü Zoom uygulaması desteklenmez: tarayıcı eklentileri yalnızca tarayıcıda çalışır. Kurulum: [SETUP.tr.md](SETUP.tr.md), 8. adım. Meet ve Teams: [MEET.tr.md](MEET.tr.md), [TEAMS.tr.md](TEAMS.tr.md).
 
-> **Durum:** gerçek bir Zoom görüşmesinde iki yönlü çeviri kullanıldı (2.5.0 sürümü, Zoom'un kurulu web uygulaması, Türkçe ve İngilizce); çevrilmiş ses karşı tarafa ulaştı; Zoom'da sessize alınca (İngilizce arayüz) karşıya hiçbir şey gitmedi. Aşağıdaki "Doğrulanmamış noktalar" henüz kontrol ediliyor. Önemli bir toplantıdan önce deneme görüşmesi yapın.
+> **Durum:** gerçek bir Zoom görüşmesinde iki yönlü çeviri kullanıldı (2.5.0 sürümü, Brave sekmesinde Zoom'un web uygulaması, Türkçe ve İngilizce); çevrilmiş ses karşı tarafa ulaştı; Zoom'da sessize alınca (İngilizce arayüz) karşıya hiçbir şey gitmedi. Aşağıdaki "Doğrulanmamış noktalar" henüz kontrol ediliyor. Önemli bir toplantıdan önce deneme görüşmesi yapın.
 
 ## Zoom'a erişim
 
@@ -16,7 +16,7 @@ Zoom manifestte yer almaz. Eklenti `https://*.zoom.us/*` erişimini bir Zoom sek
 ## Zoom'da nasıl çalışır
 
 - **Ses yolu** (`src/content/page-hook.js`): Zoom'un web istemcisi WebRTC ses izi göndermez. Mikrofonu `getUserMedia`'dan okur, kendisi kodlar ve bir veri kanalından gönderir. Bu yüzden sayfa, mikrofonu istediği yerde bizim izimizi alır: çeviri kapalıyken mikrofon bu izden olduğu gibi geçer, çeviri açıkken yerini çevrilmiş ses alır. İz mikrofonun adını ve ayarlarını korur; Zoom'un ses ayarları gerçek cihazı göstermeye devam eder.
-- **Çerçeveler:** Zoom'un kurulu uygulaması ve başlangıç sayfası bir kabuktur (`/wc/<toplantı>/start`); toplantıyı kendi çerçevesinde çalıştırır (`iframe#webclient`, `/wc/<toplantı>/join`), yanında `/wc/pwa-empty-page` gibi yardımcı çerçeveler bulunur. Betikler her çerçeveye girer; yalnızca görüşmeyi taşıyan çerçeve eklentiye cevap verir ve motora bağlanır (`src/content/bridge.js` → `takesPart`, `platforms.js` içinde `callFrame`). Kabuk, içinde görüşme çerçevesi varsa geri çekilir.
+- **Çerçeveler:** Zoom'un web uygulaması ve toplantının başlangıç sayfası bir kabuktur (`/wc/<toplantı>/start`); toplantıyı kendi çerçevesinde çalıştırır (`iframe#webclient`, `/wc/<toplantı>/join`), yanında `/wc/pwa-empty-page` gibi yardımcı çerçeveler bulunur. Betikler her çerçeveye girer; yalnızca görüşmeyi taşıyan çerçeve eklentiye cevap verir ve motora bağlanır (`src/content/bridge.js` → `takesPart`, `platforms.js` içinde `callFrame`). Kabuk, içinde görüşme çerçevesi varsa geri çekilir.
 - **Sessize alma** (`src/shared/platforms.js` → `zoomMuted`): Zoom'un ses düğmesinin etiketinden okunur. "Sesi aç…" sessizde demektir; "Sese katıl" henüz sese katılınmadığını gösterir ve sessiz sayılır. Herkese yönelik düğmeler ("Tümünü sessize al", katılımcılar) atlanır.
 - **Altyazı çubuğu** Zoom'un düğmelerinin üstünde, alttan 96 px yukarıda durur. Zoom'un kendi altyazı alanı henüz aranmıyor.
 - **Dökümler** görüşmenin adresini soru işaretinden sonraki kısım olmadan saklar: Zoom toplantı şifresini oraya koyar.
@@ -32,7 +32,7 @@ Kodda `UNVERIFIED` olarak işaretli.
 1. **Ses düğmesi** (`platforms.js` → `zoomMuted`, `page-hook.js` → `CANDIDATES.zoom`): kelime listeleri İngilizce ve Türkçe Zoom'u, kısmen de Almanca, Fransızca ve İspanyolcayı kapsar. Başka bir arayüz dilinde yalnızca izin durumu karar verir.
 2. **Altyazı alanı:** Zoom'un kendi altyazıları algılanmıyor; açıksa iki altyazı üst üste binebilir.
 3. **Görüşmenin sonu:** çeviri, sekme `zoom.us/wc/` dışına çıkınca ya da görüşme bağlantısı kalmadıktan 30 saniye sonra durur (`CALL_GONE_MS`). Zoom'un her çıkış yolunda bağlantılarını kapatıp kapatmadığı henüz denetlenmedi.
-4. **Normal tarayıcı sekmesindeki Zoom** (kurulu uygulama değil) gerçek bir görüşmede kullanılmadı. Betikler iki düzeni de karşılar: görüşme üst sayfada ya da bir çerçevede.
+4. **Uygulama olarak kurulan Zoom** (tarayıcının yükle düğmesiyle, kendi penceresinde) denenmedi; aynı sayfaları yükler. Doğrudan bir bağlantıdan açılan toplantı çerçeve yerine üst sayfada çalışabilir; betikler iki düzeni de karşılar.
 
 ## Kontrol listesi
 

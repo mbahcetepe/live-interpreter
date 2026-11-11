@@ -41,7 +41,7 @@ export const PLATFORMS = [
     origins: ['https://*.zoom.us/*'],
     scriptMatches: ['https://*.zoom.us/wc/*'],
     matches: (url) => /^https:\/\/([a-z0-9-]+\.)*zoom\.us\/wc\//i.test(url),
-    // Zoom's installed app (and its own page) is a shell that runs the meeting in a frame
+    // Zoom's web app (app.zoom.us/wc/home, then /wc/<meeting>/start) is a shell that runs the meeting in a frame
     // of its own (/wc/<meeting>/join), next to frames such as /wc/pwa-empty-page. The
     // extension works in the frame that holds the meeting: the scripts go into every
     // frame, and only the meeting's frame takes part (bridge.js).

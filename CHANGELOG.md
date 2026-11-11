@@ -6,9 +6,9 @@ Versions follow [semantic versioning](https://semver.org): MAJOR for changes tha
 
 ### New
 
-- **Zoom in the browser** (the web client, `app.zoom.us/wc/…`, and Zoom's web app installed from the browser): both directions, like Teams and Meet; used in a real call. Zoom sends no WebRTC audio track (it encodes the microphone itself and sends it over a data channel), so the page gets a track of ours where it asks for the microphone: the microphone passes through it while translation is off, and the translated speech takes its place while it is on. Muting is read from Zoom's audio button.
+- **Zoom in the browser** (the web client, `app.zoom.us/wc/…`): both directions, like Teams and Meet; used in a real call in a browser tab. Zoom sends no WebRTC audio track (it encodes the microphone itself and sends it over a data channel), so the page gets a track of ours where it asks for the microphone: the microphone passes through it while translation is off, and the translated speech takes its place while it is on. Muting is read from Zoom's audio button.
 - Access to Zoom is asked for on the first start there, not at install, so nobody else sees a new permission; the tab is reloaded once after that.
-- Zoom's installed web app runs the meeting in a frame inside its own page; the extension works in that frame.
+- Zoom's web app runs the meeting in a frame inside its own page; the extension works in that frame.
 
 ### Changed
 

@@ -150,7 +150,7 @@ When the meeting ends the translation stops by itself 30 seconds after the last 
 
 ## 8. In a Zoom call
 
-1. Open the meeting link and join from your browser rather than the Zoom app (the address then starts with `app.zoom.us/wc/`). Zoom's web app, installed from the browser, works the same way.
+1. Open the meeting link and join from your browser rather than the Zoom app (the address then starts with `app.zoom.us/wc/`).
 2. Put on headphones, join the meeting and its audio.
 3. On the Zoom tab click the extension icon and press **Start translation**. The first time, the browser asks for access to `zoom.us`: allow it, press **Reload the tab**, then start again. The extension asks for this only when you use it on Zoom.
 
