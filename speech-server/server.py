@@ -243,12 +243,22 @@ def log_to(path: str) -> None:
     handler = RotatingFileHandler(path, maxBytes=2_000_000, backupCount=2, encoding='utf-8')
     handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
     logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
-    # pythonw has no stdout or stderr: whatever is printed goes to the log instead.
-    stream = handler.stream
-    if sys.stdout is None:
-        sys.stdout = stream
-    if sys.stderr is None:
-        sys.stderr = stream
+    # pythonw has no stdout or stderr, not even at the C level, and a server started that
+    # way stopped right after it began to listen, without a word. Both now go to a file
+    # of their own (output.log), for Python and for the native libraries alike.
+    output = None
+    if sys.stdout is None or sys.stderr is None:
+        output = open(os.path.join(os.path.dirname(os.path.abspath(path)), 'output.log'), 'a', buffering=1, encoding='utf-8', errors='replace')
+        for fd in (1, 2):
+            try:
+                os.dup2(output.fileno(), fd)
+            except OSError:
+                pass
+        sys.stdout = sys.stderr = output
+    # A crash inside a native library leaves its Python stack in the log.
+    import faulthandler
+
+    faulthandler.enable(file=output or sys.stderr, all_threads=True)
 
 
 def main():
