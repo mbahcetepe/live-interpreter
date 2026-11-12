@@ -32,10 +32,14 @@ jobs:
           path: dist-installers/*.exe
       - name: Install with Setup.exe (silent, processor)
         shell: pwsh
+        timeout-minutes: 30
         run: |
           $setup = Get-ChildItem dist-installers/*.exe | Select-Object -First 1
           $log = Join-Path $env:RUNNER_TEMP 'setup.log'
-          $p = Start-Process -FilePath $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS=localonly', "/LOG=`"$log`"" -Wait -PassThru
+          # Not -Wait: in PowerShell 7 it also waits for the server Setup.exe leaves running.
+          $p = Start-Process -FilePath $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS=localonly', "/LOG=`"$log`"" -PassThru
+          $null = $p.Handle
+          $p.WaitForExit()
           Get-Content $log -Tail 30
           if ($p.ExitCode -ne 0) { throw "Setup.exe exited with $($p.ExitCode)" }
           Invoke-RestMethod http://127.0.0.1:8765/health | ConvertTo-Json -Compress

@@ -15,6 +15,7 @@ Versions follow [semantic versioning](https://semver.org): MAJOR for changes tha
 - **Whisper on Apple silicon's GPU** through MLX (`mlx-whisper`, the same models from mlx-community), chosen by itself on a Mac (`WHISPER_ENGINE`).
 - `WHISPER_DEVICE` and `WHISPER_COMPUTE` default to `auto`: the NVIDIA GPU when there is one, else the processor in int8. Settings can come from a file (`--config`) and the log can go to one (`--log`). `/health` names the device.
 - `fetch_voices.py` downloads the Piper voices for the Windows and macOS installers. A workflow (`.github/workflows/speech-installers.yml`) builds both installers and checks each install with real engines on GitHub's Windows and macOS runners.
+- The Mexican Spanish voice (`es_MX-ald-medium`) loads: its settings file in piper-voices v1.0.0 names the phoneme type `PhonemeType.ESPEAK`, which Piper refuses; the server now repairs the file before loading the voice.
 
 ## 2.6.0 (2026-11-12)
 

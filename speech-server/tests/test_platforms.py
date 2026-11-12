@@ -91,3 +91,20 @@ def test_mlx_whisper_gets_the_chinese_prompt_and_a_chosen_model(monkeypatch):
 def test_mlx_whisper_drops_made_up_lines(monkeypatch):
     rec, _fake = mlx_with(monkeypatch, 'Thanks for watching!')
     assert rec.transcribe(np.zeros(16000, np.float32), 'en') == ''
+
+
+def test_a_voice_config_with_a_python_style_phoneme_type_is_repaired(tmp_path):
+    import json
+
+    model = tmp_path / 'es_MX-ald-medium.onnx'
+    config = tmp_path / 'es_MX-ald-medium.onnx.json'
+    config.write_text(json.dumps({'phoneme_type': 'PhonemeType.ESPEAK', 'audio': {'sample_rate': 22050}}), encoding='utf-8')
+    assert engines.repair_voice_config(str(model)) == str(model)
+    data = json.loads(config.read_text(encoding='utf-8'))
+    assert data['phoneme_type'] == 'espeak' and data['audio'] == {'sample_rate': 22050}
+
+    good = tmp_path / 'good.onnx.json'
+    good.write_text('{"phoneme_type": "espeak"}', encoding='utf-8')
+    before = good.stat().st_mtime_ns
+    engines.repair_voice_config(str(tmp_path / 'good.onnx'))
+    assert good.stat().st_mtime_ns == before

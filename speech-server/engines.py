@@ -285,6 +285,28 @@ class FakeRecognizer:
 # ---- speech ----------------------------------------------------------------------------
 
 
+def repair_voice_config(model_path: str) -> str:
+    """Fixes a voice's .onnx.json that names its phoneme type the way Python prints it.
+
+    es_MX-ald-medium in piper-voices v1.0.0 says "PhonemeType.ESPEAK" where Piper wants
+    "espeak", and Piper refuses to load it. Returns the model path for PiperVoice.load.
+    """
+    config = Path(f'{model_path}.json')
+    try:
+        data = json.loads(config.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return model_path
+    kind = data.get('phoneme_type')
+    if isinstance(kind, str) and kind.startswith('PhonemeType.'):
+        data['phoneme_type'] = kind.split('.', 1)[1].lower()
+        try:
+            config.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+            log.info('repaired the phoneme type in %s', config.name)
+        except OSError:
+            log.warning('could not repair %s', config.name)
+    return model_path
+
+
 class PiperSpeaker:
     """Piper voices from voices.json: {"tr": [{"name": ..., "path": ...}, ...], "en": [...]}"""
 
@@ -296,7 +318,7 @@ class PiperSpeaker:
         self.by_language: dict[str, list] = {}
         self.cache: dict[str, object] = {}
         self.lock = threading.Lock()
-        self._load = lambda path: PiperVoice.load(path, use_cuda=use_cuda)
+        self._load = lambda path: PiperVoice.load(repair_voice_config(path), use_cuda=use_cuda)
         for language, entries in config.items():
             for entry in entries:
                 path = str((base / entry['path']).resolve())
