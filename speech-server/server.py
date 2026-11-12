@@ -287,6 +287,7 @@ def main():
         else:
             recognizer = WhisperRecognizer(args.whisper_model, *resolve_device(args.device, args.compute_type))
         speaker = PiperSpeaker(args.voices)
+    log.info('listening on %s:%s', args.host, args.port)
     uvicorn.run(create_app(recognizer, speaker, args.key), host=args.host, port=args.port, log_level='warning')
 
 

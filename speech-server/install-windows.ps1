@@ -158,7 +158,7 @@ try {
   Step 'starting the server (the first start downloads the Whisper model, about 1.6 GB)'
   Start-Process -FilePath $Pythonw -ArgumentList $arguments -WorkingDirectory $Code -WindowStyle Hidden
   $health = $null
-  for ($i = 0; $i -lt 450; $i++) {
+  for ($i = 0; $i -lt 300; $i++) {
     try {
       $health = Invoke-RestMethod "http://127.0.0.1:$Port/health" -TimeoutSec 2
       break
