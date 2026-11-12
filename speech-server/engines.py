@@ -1,18 +1,25 @@
 """Speech recognition and speech engines.
 
-Real ones: faster-whisper for recognition and Piper for speech. The fake ones answer
+Real ones: Whisper for recognition (faster-whisper on NVIDIA GPUs and CPUs, MLX on Apple
+silicon) and Piper for speech. The fake ones answer
 fixed sentences and a tone, so the server and the extension can be tested without
 models or a GPU (`--engine fake`).
 """
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import logging
+import os
+import platform
 import re
+import sys
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -68,6 +75,53 @@ def to_pcm16(audio: np.ndarray) -> bytes:
 # ---- recognition -----------------------------------------------------------------------
 
 
+def on_apple_silicon() -> bool:
+    return sys.platform == 'darwin' and platform.machine() == 'arm64'
+
+
+def whisper_engine(choice: str = 'auto') -> str:
+    """'mlx' on Apple silicon (its GPU), 'faster' (faster-whisper) everywhere else."""
+    if choice in ('faster', 'mlx'):
+        return choice
+    return 'mlx' if on_apple_silicon() and importlib.util.find_spec('mlx_whisper') else 'faster'
+
+
+def add_cuda_dlls() -> list[str]:
+    """On Windows, cuBLAS and cuDNN come as pip packages (nvidia-cublas-cu12,
+    nvidia-cudnn-cu12) whose DLLs are not on the search path; CTranslate2 needs them."""
+    if os.name != 'nt':
+        return []
+    found = []
+    for name in ('nvidia.cublas', 'nvidia.cudnn', 'nvidia.cuda_runtime'):
+        try:
+            spec = importlib.util.find_spec(name)
+        except ModuleNotFoundError:
+            spec = None
+        for location in (spec.submodule_search_locations or []) if spec else []:
+            folder = Path(location) / 'bin'
+            if folder.is_dir():
+                os.add_dll_directory(str(folder))
+                os.environ['PATH'] = f"{folder}{os.pathsep}{os.environ.get('PATH', '')}"
+                found.append(str(folder))
+    return found
+
+
+def resolve_device(device: str = 'auto', compute_type: str = 'auto') -> tuple[str, str]:
+    """'auto': the NVIDIA GPU when CTranslate2 sees one, the CPU otherwise."""
+    if device in ('auto', 'cuda'):
+        add_cuda_dlls()
+    if device == 'auto':
+        try:
+            import ctranslate2
+
+            device = 'cuda' if ctranslate2.get_cuda_device_count() > 0 else 'cpu'
+        except Exception:  # noqa: BLE001 - no CUDA at all
+            device = 'cpu'
+    if compute_type == 'auto':
+        compute_type = 'float16' if device == 'cuda' else 'int8'
+    return device, compute_type
+
+
 class WhisperRecognizer:
     """The server's own model, plus one more a session asks for (kept loaded until a third
     one is asked for; a model is downloaded the first time it is used)."""
@@ -95,17 +149,20 @@ class WhisperRecognizer:
         name = name if name in self.available() else self.default
         with self.load_lock:
             if name not in self.models:
-                from faster_whisper import WhisperModel
-
-                log.info('loading faster-whisper %s on %s (%s)', name, self.device, self.compute_type)
-                self.models[name] = WhisperModel(name, device=self.device, compute_type=self.compute_type)
+                self.models[name] = self._load(name)
                 self.order.append(name)
                 while len(self.order) > 2:
                     old = next(n for n in self.order if n != self.default)
                     self.order.remove(old)
                     self.models.pop(old, None)
-                    log.info('unloaded faster-whisper %s', old)
+                    log.info('unloaded whisper %s', old)
             return self.models[name]
+
+    def _load(self, name: str):
+        from faster_whisper import WhisperModel
+
+        log.info('loading faster-whisper %s on %s (%s)', name, self.device, self.compute_type)
+        return WhisperModel(name, device=self.device, compute_type=self.compute_type)
 
     def speech_detector(self):
         """A Silero VAD per stream: it tells speech from music and noise (films)."""
@@ -154,6 +211,53 @@ class WhisperRecognizer:
         except TypeError:
             # An older faster-whisper without hotwords.
             return whisper.transcribe(audio, **{k: v for k, v in options.items() if k != 'hotwords'})
+
+
+class MlxWhisperRecognizer(WhisperRecognizer):
+    """Whisper on Apple silicon's GPU through MLX (mlx-whisper). Same models, same
+    prompts and filters as faster-whisper; no hotwords. MLX work stays on one thread of
+    its own: recent MLX versions do not let a thread use another thread's GPU stream."""
+
+    REPOS = {
+        'large-v3-turbo': 'mlx-community/whisper-large-v3-turbo',
+        'large-v3': 'mlx-community/whisper-large-v3-mlx',
+        'distil-large-v3': 'mlx-community/distil-whisper-large-v3',
+        'medium': 'mlx-community/whisper-medium-mlx',
+        'small': 'mlx-community/whisper-small-mlx',
+        'base': 'mlx-community/whisper-base-mlx',
+        'tiny': 'mlx-community/whisper-tiny-mlx',
+    }
+
+    def __init__(self, model: str = 'large-v3-turbo'):
+        self.worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix='mlx')
+        super().__init__(model, 'mlx', 'float16')
+
+    def _load(self, name: str):
+        # mlx-whisper loads (and downloads) the model on its first transcription and keeps
+        # one in memory; switching models loads the other one.
+        repo = self.REPOS.get(name, name)
+        log.info('using mlx-whisper %s (%s)', name, repo)
+        return repo
+
+    def _run(self, repo, audio: np.ndarray, options: dict):
+        def work():
+            import mlx_whisper
+
+            return mlx_whisper.transcribe(
+                audio,
+                path_or_hf_repo=repo,
+                language=options.get('language'),
+                initial_prompt=options.get('initial_prompt'),
+                condition_on_previous_text=False,
+                verbose=None,
+            )
+
+        result = self.worker.submit(work).result()
+        segments = [
+            SimpleNamespace(text=s.get('text', ''), no_speech_prob=s.get('no_speech_prob', 0.0), avg_logprob=s.get('avg_logprob', 0.0))
+            for s in result.get('segments', [])
+        ]
+        return segments, SimpleNamespace(language=result.get('language'))
 
 
 class FakeRecognizer:

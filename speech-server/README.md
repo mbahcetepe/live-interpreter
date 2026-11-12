@@ -4,7 +4,7 @@
 
 Runs Live Interpreter's speech recognition and speech on **your own computer** instead of ElevenLabs:
 
-- **Recognition:** [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (`large-v3-turbo` by default, on an NVIDIA GPU)
+- **Recognition:** Whisper (`large-v3-turbo` by default): [faster-whisper](https://github.com/SYSTRAN/faster-whisper) on an NVIDIA GPU (or the processor), [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper) on Apple silicon's GPU
 - **Speech:** [Piper](https://github.com/OHF-Voice/piper1-gpl) (voices for 16 of the extension's 20 languages, fast even on a CPU)
 
 The server speaks the part of the ElevenLabs API the extension already uses, so only the address changes in the extension. No fees, no quotas, and the audio stays on your network.
@@ -55,8 +55,40 @@ Settings live in `/etc/live-interpreter-speech.env`:
 | `SPEECH_KEY` | random | The key the extension sends |
 | `SPEECH_PORT` | 8765 | Port |
 | `WHISPER_MODEL` | large-v3-turbo | `medium` or `small` for more speed. `distil-large-v3` and `*.en` know only English: the extension (2.4.1 and newer) uses them only for English speech and sends other languages to `large-v3-turbo` |
-| `WHISPER_DEVICE` / `WHISPER_COMPUTE` | cuda / float16 | `cpu` / `int8` without a GPU |
+| `WHISPER_ENGINE` | auto | `mlx` on Apple silicon, `faster` (faster-whisper) elsewhere |
+| `WHISPER_DEVICE` / `WHISPER_COMPUTE` | cuda / float16 (Ubuntu), auto | `auto` takes the NVIDIA GPU when there is one, else `cpu` / `int8` |
 | `PIPER_VOICES` | voices/voices.json | Voices per language |
+
+## Install on Windows
+
+For a Windows computer with an NVIDIA graphics card (Whisper runs on it) or without one (Whisper runs on the processor, slower). Next to LM Studio or Ollama on the same computer, translation and speech both stay on it.
+
+**Setup.exe** (built with `installer/windows/build-setup.ps1`, Inno Setup 6): run it and follow the steps. It is not signed yet, so Windows SmartScreen warns the first time: **More info › Run anyway**. Or the script, in PowerShell inside `speech-server`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install-windows.ps1
+```
+
+Either way, for the signed-in user (no administrator rights):
+
+1. Fetches [uv](https://github.com/astral-sh/uv), Python 3.12 and the packages into `%LOCALAPPDATA%\LiveInterpreterSpeech`. With an NVIDIA card it adds NVIDIA's cuBLAS and cuDNN for CUDA 12 (about 1.3 GB); the card's driver is all that must already be there.
+2. Downloads the Piper voices (fewer with `-Langs "en tr"`).
+3. Makes a random key and writes the address and key to `connection.txt` (Setup.exe opens it at the end; also in the Start menu).
+4. Starts the server, without a window, now and at every sign-in (a shortcut in the Startup folder). The first start downloads the Whisper model (about 1.6 GB).
+
+By default other computers on the network can use it (with the key): Windows asks once whether Python may accept connections; allow it on private networks. Only this computer: tick the box in Setup.exe or add `-LocalOnly`. Log: `logs\server.log`. Update: run it again (the key is kept). Remove: Settings › Apps (Setup.exe), or `install-windows.ps1 -Uninstall`.
+
+## Install on macOS
+
+On Apple silicon Whisper runs on the GPU through [MLX](https://github.com/ml-explore/mlx) (`mlx-whisper`, the same models); on an Intel Mac on the processor. With 16 GB or more, a translation model in LM Studio or Ollama fits on the same Mac.
+
+**The .pkg** (built on a Mac with `installer/mac/build-pkg.sh`): open it and follow the steps. It is not signed or notarized yet: the first time, right-click it › **Open** (or System Settings › Privacy & Security › **Open Anyway**). Or the script, in Terminal inside `speech-server`:
+
+```bash
+./install-mac.sh
+```
+
+Either way, for the signed-in user (no sudo): uv, Python 3.12, the packages and the voices go to `~/Library/Application Support/LiveInterpreterSpeech`; the address and key are in `connection.txt` there (the .pkg opens it); launchd starts the server now and at every sign-in (`~/Library/LaunchAgents/com.liveinterpreter.speech.plist`). The first start downloads the Whisper model (about 1.6 GB). Other computers on the network can use it with the key; only this Mac: `./install-mac.sh --local-only`. Log: `logs/server.log`. Update: run it again (the key is kept). Remove: `"~/Library/Application Support/LiveInterpreterSpeech/install-mac.sh" --uninstall`.
 
 ## In the extension
 

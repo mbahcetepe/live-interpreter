@@ -2,6 +2,20 @@
 
 Versions follow [semantic versioning](https://semver.org): MAJOR for changes that need something done (new settings, a server update), MINOR for new features, PATCH for fixes. The version lives in `package.json`; the build writes it into the extension's manifest, and the popup and the settings page show it. The speech server has its own version and a protocol number (`/health`); the extension warns when the server is older than it needs.
 
+## Unreleased
+
+### New
+
+- **LM Studio has its own entry** under Translation: "LM Studio or another OpenAI-compatible server". The address of LM Studio on this computer (`http://localhost:1234/v1`) is filled in, the API key is optional, and the hint says how to start LM Studio's server; vLLM, llama.cpp's server, LocalAI and Jan work the same way. These servers used to hide under "OpenAI or a compatible server" with an address typed in; OpenAI's entry is now OpenAI alone (key and model).
+- A setup that had such an address under OpenAI moves to the new entry with its address, key and model. The extension removes the Origin header from its requests to that server, as it does for Ollama, in case the server checks it.
+
+### Speech server 2.1.0
+
+- **Windows and macOS.** `install-windows.ps1` and a Setup.exe (`installer/windows`, Inno Setup) install it on Windows for the signed-in user, with NVIDIA's cuBLAS and cuDNN when there is an NVIDIA card (the processor otherwise), and start it at every sign-in. `install-mac.sh` and a .pkg (`installer/mac`) do the same on a Mac through launchd. Neither needs administrator rights; both write the address and key to `connection.txt`. Not signed yet: SmartScreen and Gatekeeper warn the first time.
+- **Whisper on Apple silicon's GPU** through MLX (`mlx-whisper`, the same models from mlx-community), chosen by itself on a Mac (`WHISPER_ENGINE`).
+- `WHISPER_DEVICE` and `WHISPER_COMPUTE` default to `auto`: the NVIDIA GPU when there is one, else the processor in int8. Settings can come from a file (`--config`) and the log can go to one (`--log`). `/health` names the device.
+- `fetch_voices.py` downloads the Piper voices for the Windows and macOS installers. A workflow (`.github/workflows/speech-installers.yml`) builds both installers and checks each install with real engines on GitHub's Windows and macOS runners.
+
 ## 2.6.0 (2026-11-12)
 
 ### New

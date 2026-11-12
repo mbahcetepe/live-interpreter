@@ -1,0 +1,70 @@
+# Builds the speech server's installers (Setup.exe for Windows, .pkg for macOS), installs
+# the server with each platform's script on a clean runner and checks it with real
+# engines: Piper speaks a sentence, Whisper hears it (MLX on the macOS runner's Apple
+# silicon, the processor on Windows). Run by hand (Actions › Run workflow) or by a
+# speech-v* tag. The installers are kept as the run's artifacts.
+name: Speech server installers
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['speech-v*']
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup --no-progress -y }
+      - name: Build Setup.exe
+        shell: pwsh
+        run: ./installer/windows/build-setup.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-setup
+          path: dist-installers/*.exe
+      - name: Install with the script (two voices, processor)
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File speech-server/install-windows.ps1 -LocalOnly -Langs "en tr"
+      - name: Real engines
+        shell: pwsh
+        run: |
+          $app = Join-Path $env:LOCALAPPDATA 'LiveInterpreterSpeech'
+          & "$app\venv\Scripts\python.exe" speech-server/tests/smoke_real.py --config "$app\speech.env"
+      - name: Log
+        if: always()
+        shell: pwsh
+        run: Get-Content (Join-Path $env:LOCALAPPDATA 'LiveInterpreterSpeech\logs\server.log') -ErrorAction SilentlyContinue
+      - name: Uninstall
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File speech-server/install-windows.ps1 -Uninstall
+
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the .pkg
+        run: bash installer/mac/build-pkg.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-pkg
+          path: dist-installers/*.pkg
+      - name: Install with the script (two voices, MLX)
+        run: LANGS="en tr" bash speech-server/install-mac.sh --local-only
+      - name: Real engines
+        run: |
+          app="$HOME/Library/Application Support/LiveInterpreterSpeech"
+          "$app/venv/bin/python" speech-server/tests/smoke_real.py --config "$app/speech.env"
+      - name: Log
+        if: always()
+        run: cat "$HOME/Library/Application Support/LiveInterpreterSpeech/logs/server.log" || true
+      - name: Uninstall
+        run: bash speech-server/install-mac.sh --uninstall

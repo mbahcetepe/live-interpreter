@@ -1,0 +1,25 @@
+#!/bin/bash
+# Runs as root after the package's files are in place. The server is installed for the
+# person signed in at the screen, as them (install-mac.sh refuses root), and the address
+# and key are opened for them in TextEdit.
+set -u
+SOURCE="/Library/Application Support/LiveInterpreterSpeech/source"
+USER_NAME=$(stat -f%Su /dev/console)
+if [[ -z "$USER_NAME" || "$USER_NAME" == "root" || "$USER_NAME" == "loginwindow" ]]; then
+  echo "No one is signed in at the screen; run $SOURCE/install-mac.sh as that user." >&2
+  exit 1
+fi
+USER_ID=$(id -u "$USER_NAME")
+USER_HOME=$(dscl . -read "/Users/$USER_NAME" NFSHomeDirectory | awk '{print $2}')
+LOG="/tmp/live-interpreter-speech-install.log"
+
+launchctl asuser "$USER_ID" sudo -u "$USER_NAME" -H env HOME="$USER_HOME" /bin/bash "$SOURCE/install-mac.sh" --from-pkg >"$LOG" 2>&1
+status=$?
+chmod 644 "$LOG"
+if [[ $status -ne 0 ]]; then
+  echo "install-mac.sh failed ($status); see $LOG" >&2
+  exit $status
+fi
+CONNECTION="$USER_HOME/Library/Application Support/LiveInterpreterSpeech/connection.txt"
+launchctl asuser "$USER_ID" sudo -u "$USER_NAME" open -e "$CONNECTION" || true
+exit 0

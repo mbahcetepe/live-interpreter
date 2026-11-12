@@ -65,10 +65,11 @@ Ayarlar sayfası dört bölümden oluşur: **Diller**, **Çeviri**, **Ses tanım
 | Servis | Girilecekler |
 | --- | --- |
 | **Claude (Anthropic)** | [Claude Console › API keys](https://platform.claude.com/settings/keys) sayfasından bir API anahtarı (hesapta kredi olmalı) ve bir model; en kısa gecikme **Claude Haiku 5.5** |
-| **OpenAI ya da uyumlu bir sunucu** | OpenAI için **Sunucu**'yu boş bırak ve API anahtarını gir; ya da aynı arayüzü sunan bir sunucunun adresini gir (LM Studio, vLLM; örneğin `http://192.168.1.5:1234/v1`) |
+| **OpenAI** | [platform.openai.com](https://platform.openai.com/api-keys) adresinden bir API anahtarı |
 | **OpenRouter** | [openrouter.ai](https://openrouter.ai/keys) sayfasından bir API anahtarı |
 | **Google Gemini** | [Google AI Studio](https://aistudio.google.com/apikey)'dan bir API anahtarı; en hızlısı **gemini-3.5-flash-lite**. Düşünmeyi eklenti kısar |
 | **Ollama (kendi sunucunuz)** | Sunucunun adresi (örneğin `100.101.102.103`; port 11434 eklenir); altına bir **ikinci sunucu** eklenebilir |
+| **LM Studio ya da OpenAI uyumlu başka bir sunucu** | Sunucunun adresi: bu bilgisayardaki LM Studio için `http://localhost:1234/v1` (hazır gelir), başka bir bilgisayar için onun adresi (örneğin `http://192.168.1.5:1234/v1`). LM Studio'da **Developer** bölümünde sunucuyu başlat ve bir model yükle; başka bir bilgisayardan erişilecekse **Serve on Local Network**'ü aç. vLLM, llama.cpp sunucusu, LocalAI ve Jan da aynı şekilde çalışır. API anahtarı isteğe bağlı |
 
 **Model** listesi servisten kendiliğinden dolar; **↻** listeyi yeniden getirir. Kendi sunucunda (Ollama, LM Studio) tarayıcı o adrese erişim için bir kez izin ister: izin ver. Ollama sunucusunda `OLLAMA_ORIGINS` ayarı gerekmez.
 
@@ -98,7 +99,7 @@ Ayarlar sayfası dört bölümden oluşur: **Diller**, **Çeviri**, **Ses tanım
 
 **Kendi ses sunucum** (ücretsiz, ses ağının dışına çıkmaz):
 
-1. NVIDIA ekran kartlı bir Ubuntu bilgisayarda:
+1. NVIDIA ekran kartlı bir Ubuntu bilgisayarda (Windows ve Mac: [Setup.exe, .pkg ya da betik](speech-server/README.tr.md#windowsa-kurulum)):
    ```bash
    git clone https://github.com/mbahcetepe/live-interpreter.git
    cd live-interpreter/speech-server && sudo ./install-ubuntu.sh

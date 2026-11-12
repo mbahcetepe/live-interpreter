@@ -1,2 +1,5 @@
 # Shell scripts run on Linux and macOS servers: keep them LF even on a Windows checkout.
 *.sh text eol=lf
+installer/mac/scripts/* text eol=lf
+# Inno Setup reads its script as UTF-8 only with the byte order mark it has.
+*.iss -text

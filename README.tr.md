@@ -19,7 +19,7 @@ Görüşmede iki yönlü: karşı taraf İspanyolca konuşur, sen Türkçe duyar
   <tr><td><b>Diğer sekmeler</b></td><td>YouTube, X, çevrimiçi radyo, sesi olan her web sayfası</td></tr>
   <tr><td><b>Tarayıcılar</b></td><td>Chrome, Edge, Brave ve diğer Chromium tarayıcıları</td></tr>
   <tr><td><b>Diller</b></td><td>20 dil, herhangi ikisi; ilk açılışta tarayıcının dili seçilir; video sekmelerinde konuşulan dil kendiliğinden algılanabilir</td></tr>
-  <tr><td><b>Çeviri</b></td><td>Claude, OpenAI ya da uyumlu bir sunucu, OpenRouter, Google Gemini, kendi Ollama sunucun ya da Soniox; her birinin modelleri ayarlarda listelenir</td></tr>
+  <tr><td><b>Çeviri</b></td><td>Claude, OpenAI, OpenRouter, Google Gemini, Soniox ya da kendi Ollama, LM Studio veya OpenAI uyumlu başka bir sunucun; her birinin modelleri ayarlarda listelenir</td></tr>
   <tr><td><b>Ses</b></td><td>ElevenLabs, Google Gemini, Soniox, OpenAI uyumlu servisler (OpenAI, Groq Whisper, LocalAI, Speaches, Kokoro) ya da kendi ses sunucun (faster-whisper ve Piper)</td></tr>
   <tr><td><b>Gecikme</b></td><td>Cümle bittikten yaklaşık 1,5–3 sn sonra</td></tr>
   <tr><td><b>Arayüz</b></td><td>İngilizce (varsayılan), Türkçe, Almanca, İspanyolca, Çince</td></tr>
@@ -102,7 +102,7 @@ Ollama, tanımadığı bir `Origin` başlığı taşıyan istekleri reddeder ve 
 
 ### ElevenLabs yerine kendi ses sunucun
 
-NVIDIA GPU'lu bir Ubuntu bilgisayarda:
+NVIDIA GPU'lu bir Ubuntu bilgisayarda (Windows ve Mac için [Windows'a kurulum](speech-server/README.tr.md#windowsa-kurulum) ve [macOS'a kurulum](speech-server/README.tr.md#macosa-kurulum): Setup.exe, .pkg ya da betik):
 
 ```bash
 git clone https://github.com/mbahcetepe/live-interpreter.git

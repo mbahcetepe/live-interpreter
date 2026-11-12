@@ -14,8 +14,12 @@ Requests need the server's key in the `xi-api-key` header (the WebSocket takes t
 one-time token instead). Only the extension may call it: a request from a web page
 (an http or https Origin) is refused.
 
-  python server.py --key SECRET                            # faster-whisper + Piper
+  python server.py --key SECRET                            # Whisper + Piper
+  python server.py --config speech.env --log server.log    # settings from a file (Windows, macOS)
   python server.py --engine fake --port 8765 --key test    # no models (tests)
+
+Whisper runs on faster-whisper (an NVIDIA GPU when there is one, the CPU otherwise) or,
+on Apple silicon, on MLX (its GPU).
 """
 
 from __future__ import annotations
@@ -27,6 +31,7 @@ import json
 import logging
 import os
 import secrets
+import sys
 import time
 
 import numpy as np
@@ -39,7 +44,7 @@ from segmenter import Segmenter
 
 log = logging.getLogger('speech-server')
 
-VERSION = '2.0.1'
+VERSION = '2.1.0'
 # Raised when the extension needs something an older server cannot do.
 PROTOCOL = 2
 TOKEN_TTL = 60
@@ -71,6 +76,7 @@ def create_app(recognizer, speaker, key: str = '') -> FastAPI:
             'version': VERSION,
             'protocol': PROTOCOL,
             'recognizer': type(recognizer).__name__,
+            'device': getattr(recognizer, 'device', ''),
             'speaker': type(speaker).__name__,
             'voices': [v.id for v in speaker.voices()],
             'speech_languages': speaker.languages(),
@@ -220,26 +226,66 @@ class RealtimeSession:
             await self.send('committed_transcript', text)
 
 
+def read_config(path: str) -> None:
+    """NAME=value lines (the installers write them); the environment wins over the file."""
+    for line in open(path, encoding='utf-8-sig'):
+        line = line.strip()
+        if line and not line.startswith('#') and '=' in line:
+            name, value = line.split('=', 1)
+            os.environ.setdefault(name.strip(), value.strip())
+
+
+def log_to(path: str) -> None:
+    """A log file, for a server started with no console (pythonw on Windows, launchd)."""
+    from logging.handlers import RotatingFileHandler
+
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    handler = RotatingFileHandler(path, maxBytes=2_000_000, backupCount=2, encoding='utf-8')
+    handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+    logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
+    # pythonw has no stdout or stderr: whatever is printed goes to the log instead.
+    stream = handler.stream
+    if sys.stdout is None:
+        sys.stdout = stream
+    if sys.stderr is None:
+        sys.stderr = stream
+
+
 def main():
+    early = argparse.ArgumentParser(add_help=False)
+    early.add_argument('--config')
+    known, _rest = early.parse_known_args()
+    if known.config:
+        read_config(known.config)
     parser = argparse.ArgumentParser(description='Live Interpreter local speech server')
+    parser.add_argument('--config', help='a file of NAME=value settings (SPEECH_KEY, WHISPER_MODEL, ...)')
+    parser.add_argument('--log', default=os.environ.get('SPEECH_LOG', ''), help='write the log to this file')
     parser.add_argument('--host', default=os.environ.get('SPEECH_HOST', '0.0.0.0'))
     parser.add_argument('--port', type=int, default=int(os.environ.get('SPEECH_PORT', '8765')))
     parser.add_argument('--key', default=os.environ.get('SPEECH_KEY', ''), help='the key the extension sends (xi-api-key)')
     parser.add_argument('--engine', choices=['real', 'fake'], default=os.environ.get('SPEECH_ENGINE', 'real'))
     parser.add_argument('--whisper-model', default=os.environ.get('WHISPER_MODEL', 'large-v3-turbo'))
-    parser.add_argument('--device', default=os.environ.get('WHISPER_DEVICE', 'cuda'))
-    parser.add_argument('--compute-type', default=os.environ.get('WHISPER_COMPUTE', 'float16'))
+    parser.add_argument('--whisper-engine', choices=['auto', 'faster', 'mlx'], default=os.environ.get('WHISPER_ENGINE', 'auto'))
+    parser.add_argument('--device', default=os.environ.get('WHISPER_DEVICE', 'auto'), help='cuda, cpu or auto (faster-whisper)')
+    parser.add_argument('--compute-type', default=os.environ.get('WHISPER_COMPUTE', 'auto'), help='float16, int8 or auto (faster-whisper)')
     parser.add_argument('--voices', default=os.environ.get('PIPER_VOICES', os.path.join(os.path.dirname(__file__), 'voices', 'voices.json')))
     args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+    if args.log:
+        log_to(args.log)
+    else:
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+    log.info('speech server %s starting', VERSION)
     if not args.key:
         log.warning('no --key set: anyone who can reach this port can use the server')
     if args.engine == 'fake':
         recognizer, speaker = FakeRecognizer(), FakeSpeaker()
     else:
-        from engines import PiperSpeaker, WhisperRecognizer
+        from engines import MlxWhisperRecognizer, PiperSpeaker, WhisperRecognizer, resolve_device, whisper_engine
 
-        recognizer = WhisperRecognizer(args.whisper_model, args.device, args.compute_type)
+        if whisper_engine(args.whisper_engine) == 'mlx':
+            recognizer = MlxWhisperRecognizer(args.whisper_model)
+        else:
+            recognizer = WhisperRecognizer(args.whisper_model, *resolve_device(args.device, args.compute_type))
         speaker = PiperSpeaker(args.voices)
     uvicorn.run(create_app(recognizer, speaker, args.key), host=args.host, port=args.port, log_level='warning')
 

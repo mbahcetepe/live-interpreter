@@ -17,7 +17,7 @@ In a call both ways: they speak Spanish and you hear English; you speak English 
   <tr><td><b>Other tabs</b></td><td>YouTube, X, online radio, any web page with sound</td></tr>
   <tr><td><b>Browsers</b></td><td>Chrome, Edge, Brave and other Chromium browsers</td></tr>
   <tr><td><b>Languages</b></td><td>20, any two of them; the first start follows your browser's language; on video tabs the spoken language can be detected automatically</td></tr>
-  <tr><td><b>Translation</b></td><td>Claude, OpenAI or a compatible server, OpenRouter, Google Gemini, your own Ollama, or Soniox; each one's models listed in the settings</td></tr>
+  <tr><td><b>Translation</b></td><td>Claude, OpenAI, OpenRouter, Google Gemini, Soniox, or your own Ollama, LM Studio or other OpenAI-compatible server; each one's models listed in the settings</td></tr>
   <tr><td><b>Speech</b></td><td>ElevenLabs, Google Gemini, Soniox, OpenAI-compatible services (OpenAI, Groq Whisper, LocalAI, Speaches, Kokoro), or your own speech server (faster-whisper and Piper)</td></tr>
   <tr><td><b>Delay</b></td><td>About 1.5–3 s after a sentence ends</td></tr>
   <tr><td><b>Interface</b></td><td>English (default), Turkish, German, Spanish, Chinese</td></tr>
@@ -100,7 +100,7 @@ Ollama refuses requests whose `Origin` header it does not know, and browsers sen
 
 ### Your own speech server instead of ElevenLabs
 
-On an Ubuntu computer with an NVIDIA GPU:
+On an Ubuntu computer with an NVIDIA GPU (on Windows and on a Mac, see [Install on Windows](speech-server/README.md#install-on-windows) and [Install on macOS](speech-server/README.md#install-on-macos): a Setup.exe, a .pkg or a script):
 
 ```bash
 git clone https://github.com/mbahcetepe/live-interpreter.git

@@ -17,7 +17,7 @@
   <tr><td><b>其他标签页</b></td><td>YouTube、X、网络电台、任何有声音的网页</td></tr>
   <tr><td><b>浏览器</b></td><td>Chrome、Edge、Brave 以及其他 Chromium 浏览器</td></tr>
   <tr><td><b>语言</b></td><td>20 种，任意两种互译；首次启动时跟随浏览器语言；在视频标签页中可自动识别所说的语言</td></tr>
-  <tr><td><b>翻译</b></td><td>Claude、OpenAI 或兼容服务器、OpenRouter、Google Gemini、你自己的 Ollama，或 Soniox；设置中会列出各服务的模型</td></tr>
+  <tr><td><b>翻译</b></td><td>Claude、OpenAI、OpenRouter、Google Gemini、Soniox，或你自己的 Ollama、LM Studio 或其他兼容 OpenAI 的服务器；设置中会列出各服务的模型</td></tr>
   <tr><td><b>语音</b></td><td>ElevenLabs、Google Gemini、Soniox、兼容 OpenAI 的服务（OpenAI、Groq Whisper、LocalAI、Speaches、Kokoro），或你自己的语音服务器（faster-whisper 和 Piper）</td></tr>
   <tr><td><b>延迟</b></td><td>一句话结束后约 1.5–3 秒</td></tr>
   <tr><td><b>界面</b></td><td>英语（默认）、土耳其语、德语、西班牙语、中文</td></tr>
@@ -100,7 +100,7 @@ Ollama 会拒绝 `Origin` 请求头不认识的请求，而浏览器的每个 PO
 
 ### 用你自己的语音服务器代替 ElevenLabs
 
-在一台带 NVIDIA GPU 的 Ubuntu 电脑上：
+在一台带 NVIDIA GPU 的 Ubuntu 电脑上（Windows 和 Mac 请见 [Install on Windows](speech-server/README.md#install-on-windows) 和 [Install on macOS](speech-server/README.md#install-on-macos)：Setup.exe、.pkg 或脚本）：
 
 ```bash
 git clone https://github.com/mbahcetepe/live-interpreter.git

@@ -4,7 +4,7 @@
 
 Live Interpreter'ın (Canlı Tercüman) ses tanıma ve seslendirme işini ElevenLabs yerine **kendi bilgisayarınızda** yapar:
 
-- **Ses tanıma:** [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (varsayılan model `large-v3-turbo`, NVIDIA GPU'da)
+- **Ses tanıma:** Whisper (varsayılan model `large-v3-turbo`): NVIDIA GPU'da (ya da işlemcide) [faster-whisper](https://github.com/SYSTRAN/faster-whisper), Apple silicon'un GPU'sunda [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper)
 - **Seslendirme:** [Piper](https://github.com/OHF-Voice/piper1-gpl) (20 dilin 16'sı için ses, CPU'da da hızlı)
 
 Sunucu, eklentinin zaten kullandığı ElevenLabs arayüzünün aynısını konuşur. Eklentide yalnızca adres değişir. Ücret ve kota yoktur, ses ağınızın dışına çıkmaz.
@@ -55,8 +55,40 @@ Ayarlar `/etc/live-interpreter-speech.env` dosyasındadır:
 | `SPEECH_KEY` | rastgele | Eklentinin gönderdiği anahtar |
 | `SPEECH_PORT` | 8765 | Port |
 | `WHISPER_MODEL` | large-v3-turbo | Daha hızlısı için `medium` ya da `small`. `distil-large-v3` ve `*.en` yalnızca İngilizce bilir: eklenti (2.4.1 ve sonrası) onları yalnızca İngilizce konuşmada kullanır, diğer dilleri `large-v3-turbo`ya gönderir |
-| `WHISPER_DEVICE` / `WHISPER_COMPUTE` | cuda / float16 | GPU yoksa `cpu` / `int8` |
+| `WHISPER_ENGINE` | auto | Apple silicon'da `mlx`, diğerlerinde `faster` (faster-whisper) |
+| `WHISPER_DEVICE` / `WHISPER_COMPUTE` | cuda / float16 (Ubuntu), auto | `auto`: NVIDIA GPU varsa onu, yoksa `cpu` / `int8` kullanır |
 | `PIPER_VOICES` | voices/voices.json | Dil başına ses listesi |
+
+## Windows'a kurulum
+
+NVIDIA ekran kartlı (Whisper onda çalışır) ya da kartsız (Whisper işlemcide, daha yavaş çalışır) bir Windows bilgisayar için. Aynı bilgisayardaki LM Studio ya da Ollama ile birlikte çeviri de ses de o bilgisayarda kalır.
+
+**Setup.exe** (`installer/windows/build-setup.ps1` ile, Inno Setup 6 kullanılarak derlenir): çalıştırın ve adımları izleyin. Henüz imzalı değil, bu yüzden Windows SmartScreen ilk seferde uyarır: **Ek bilgi › Yine de çalıştır**. Ya da betik, `speech-server` içinde PowerShell'de:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install-windows.ps1
+```
+
+İkisi de oturum açmış kullanıcı için kurar (yönetici yetkisi gerekmez):
+
+1. [uv](https://github.com/astral-sh/uv), Python 3.12 ve paketleri `%LOCALAPPDATA%\LiveInterpreterSpeech` altına getirir. NVIDIA kart varsa NVIDIA'nın CUDA 12 için cuBLAS ve cuDNN paketlerini de ekler (yaklaşık 1,3 GB); önceden kurulu olması gereken tek şey kartın sürücüsüdür.
+2. Piper seslerini indirir (daha azı için `-Langs "en tr"`).
+3. Rastgele bir anahtar üretir, adresi ve anahtarı `connection.txt` dosyasına yazar (Setup.exe en sonda açar; Başlat menüsünde de durur).
+4. Sunucuyu penceresiz olarak hemen ve her oturum açılışında başlatır (Başlangıç klasöründe bir kısayol). İlk açılışta Whisper modeli (yaklaşık 1,6 GB) indirilir.
+
+Varsayılan olarak ağdaki diğer bilgisayarlar da (anahtarla) kullanabilir: Windows bir kez Python'un bağlantı kabul edip etmeyeceğini sorar; özel ağlarda izin verin. Yalnızca bu bilgisayar için Setup.exe'deki kutuyu işaretleyin ya da `-LocalOnly` ekleyin. Günlük: `logs\server.log`. Güncellemek için yeniden çalıştırın (anahtar korunur). Kaldırmak için: Ayarlar › Uygulamalar (Setup.exe) ya da `install-windows.ps1 -Uninstall`.
+
+## macOS'a kurulum
+
+Apple silicon'da Whisper, [MLX](https://github.com/ml-explore/mlx) ile ekran işlemcisinde (GPU) çalışır (`mlx-whisper`, aynı modeller); Intel Mac'te işlemcide. 16 GB ve üzerinde LM Studio ya da Ollama'daki bir çeviri modeli de aynı Mac'e sığar.
+
+**.pkg paketi** (bir Mac'te `installer/mac/build-pkg.sh` ile derlenir): açın ve adımları izleyin. Henüz imzalı ve noter onaylı değil: ilk seferde sağ tıklayıp **Aç**'ı seçin (ya da Sistem Ayarları › Gizlilik ve Güvenlik › **Yine de Aç**). Ya da betik, `speech-server` içinde Terminal'de:
+
+```bash
+./install-mac.sh
+```
+
+İkisi de oturum açmış kullanıcı için kurar (sudo gerekmez): uv, Python 3.12, paketler ve sesler `~/Library/Application Support/LiveInterpreterSpeech` altına gider; adres ve anahtar oradaki `connection.txt` dosyasındadır (.pkg onu açar); launchd sunucuyu hemen ve her oturum açılışında başlatır (`~/Library/LaunchAgents/com.liveinterpreter.speech.plist`). İlk açılışta Whisper modeli (yaklaşık 1,6 GB) indirilir. Ağdaki diğer bilgisayarlar anahtarla kullanabilir; yalnızca bu Mac için: `./install-mac.sh --local-only`. Günlük: `logs/server.log`. Güncellemek için yeniden çalıştırın (anahtar korunur). Kaldırmak için: `"~/Library/Application Support/LiveInterpreterSpeech/install-mac.sh" --uninstall`.
 
 ## Eklentide
 

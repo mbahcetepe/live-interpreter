@@ -65,10 +65,11 @@ Choose the **Service**:
 | Service | What to enter |
 | --- | --- |
 | **Claude (Anthropic)** | An API key from [Claude Console › API keys](https://platform.claude.com/settings/keys) (the account needs credit) and a model; **Claude Haiku 5.5** has the shortest delay |
-| **OpenAI or a compatible server** | Leave **Server** empty for OpenAI and enter its API key; or enter the address of a server with the same API (LM Studio, vLLM, for example `http://192.168.1.5:1234/v1`) |
+| **OpenAI** | An API key from [platform.openai.com](https://platform.openai.com/api-keys) |
 | **OpenRouter** | An API key from [openrouter.ai](https://openrouter.ai/keys) |
 | **Google Gemini** | An API key from [Google AI Studio](https://aistudio.google.com/apikey); **gemini-3.5-flash-lite** is the fastest. Thinking is turned down by the extension |
 | **Ollama (your own server)** | The server's address (for example `100.101.102.103`; port 11434 is added); a **second server** can be added below it |
+| **LM Studio or another OpenAI-compatible server** | The server's address: `http://localhost:1234/v1` (filled in) for LM Studio on this computer, or another computer's (for example `http://192.168.1.5:1234/v1`). In LM Studio, start the server under **Developer** and load a model; for access from another computer turn on **Serve on Local Network**. vLLM, llama.cpp's server, LocalAI and Jan work the same way. The API key is optional |
 
 The **Model** list fills itself from the service; **↻** fetches it again. For a server of your own (Ollama, LM Studio) the browser asks once for access to its address: allow it. No `OLLAMA_ORIGINS` setting is needed on an Ollama server.
 
@@ -98,7 +99,7 @@ Choose the **Service**.
 
 **My own speech server** (free, the audio stays on your network):
 
-1. On an Ubuntu computer with an NVIDIA GPU:
+1. On an Ubuntu computer with an NVIDIA GPU (Windows and Mac: [Setup.exe, .pkg or a script](speech-server/README.md#install-on-windows)):
    ```bash
    git clone https://github.com/mbahcetepe/live-interpreter.git
    cd live-interpreter/speech-server && sudo ./install-ubuntu.sh
