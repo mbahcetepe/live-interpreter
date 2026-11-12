@@ -103,7 +103,7 @@ try {
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
   }
   Stop-Server
-  foreach ($file in @('server.py', 'engines.py', 'segmenter.py', 'fetch_voices.py', 'requirements.txt', 'requirements-cuda-windows.txt')) {
+  foreach ($file in @('server.py', 'engines.py', 'segmenter.py', 'fetch_voices.py', 'launch.py', 'requirements.txt', 'requirements-cuda-windows.txt')) {
     Copy-Item (Join-Path $Here $file) $Code -Force
   }
 
@@ -126,7 +126,6 @@ try {
     if ((Run $Uv venv --python 3.12 $Venv) -ne 0) { throw 'could not make the Python environment' }
   }
   $Python = Join-Path $Venv 'Scripts\python.exe'
-  $Pythonw = Join-Path $Venv 'Scripts\pythonw.exe'
   $requirements = @('-r', (Join-Path $Code 'requirements.txt'))
   $nvidia = @(Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match 'NVIDIA' })
   if ($nvidia.Count -gt 0) {
@@ -170,7 +169,13 @@ try {
   $Port = [int]$settings['SPEECH_PORT']
 
   Step 'start at sign-in'
-  $arguments = "`"$(Join-Path $Code 'server.py')`" --config `"$Config`" --log `"$LogFile`""
+  # Python's own pythonw.exe runs the server, not the environment's Scripts\pythonw.exe:
+  # some antivirus programs (Acronis Cyber Protect) remove that small launcher as malware.
+  # launch.py adds the environment's packages.
+  $pythonHome = ([IO.File]::ReadAllLines((Join-Path $Venv 'pyvenv.cfg')) | Where-Object { $_ -match '^\s*home\s*=' } | Select-Object -First 1) -replace '^\s*home\s*=\s*', ''
+  $Pythonw = Join-Path $pythonHome.Trim() 'pythonw.exe'
+  if (-not (Test-Path $Pythonw)) { throw "Python's pythonw.exe is missing: $Pythonw" }
+  $arguments = "-s `"$(Join-Path $Code 'launch.py')`" `"$Venv`" --config `"$Config`" --log `"$LogFile`""
   $shell = New-Object -ComObject WScript.Shell
   $link = $shell.CreateShortcut($Shortcut)
   $link.TargetPath = $Pythonw

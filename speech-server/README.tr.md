@@ -78,6 +78,8 @@ powershell -ExecutionPolicy Bypass -File install-windows.ps1
 
 Varsayılan olarak ağdaki diğer bilgisayarlar da (anahtarla) kullanabilir: Windows bir kez Python'un bağlantı kabul edip etmeyeceğini sorar; özel ağlarda izin verin. Yalnızca bu bilgisayar için Setup.exe'deki kutuyu işaretleyin ya da `-LocalOnly` ekleyin. Günlük: `logs\server.log`. Güncellemek için yeniden çalıştırın (anahtar korunur). Kaldırmak için: Ayarlar › Uygulamalar (Setup.exe) ya da `install-windows.ps1 -Uninstall`.
 
+Sunucu, ortamın `Scripts\pythonw.exe` dosyasıyla değil, Python'un kendi `pythonw.exe` dosyasıyla (`launch.py` üzerinden) çalışır: bazı antivirüs programları (örneğin Acronis Cyber Protect) o küçük başlatıcıyı zararlı yazılım sanıp siler.
+
 ## macOS'a kurulum
 
 Apple silicon'da Whisper, [MLX](https://github.com/ml-explore/mlx) ile ekran işlemcisinde (GPU) çalışır (`mlx-whisper`, aynı modeller); Intel Mac'te işlemcide. 16 GB ve üzerinde LM Studio ya da Ollama'daki bir çeviri modeli de aynı Mac'e sığar.

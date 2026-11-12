@@ -43,6 +43,10 @@ jobs:
           Get-Content $log -Tail 30
           if ($p.ExitCode -ne 0) { throw "Setup.exe exited with $($p.ExitCode)" }
           Invoke-RestMethod http://127.0.0.1:8765/health | ConvertTo-Json -Compress
+          # Python's own pythonw.exe runs it, not the environment's launcher (antivirus programs remove that one).
+          $server = Get-CimInstance Win32_Process -Filter "Name='pythonw.exe'" | Where-Object { $_.CommandLine -like '*launch.py*' } | Select-Object -First 1
+          if (-not $server -or $server.ExecutablePath -like '*\venv\*') { throw "the server runs from $($server.ExecutablePath)" }
+          "server: $($server.ExecutablePath)"
       - name: Real engines
         shell: pwsh
         run: |

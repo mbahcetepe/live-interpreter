@@ -78,6 +78,8 @@ Either way, for the signed-in user (no administrator rights):
 
 By default other computers on the network can use it (with the key): Windows asks once whether Python may accept connections; allow it on private networks. Only this computer: tick the box in Setup.exe or add `-LocalOnly`. Log: `logs\server.log`. Update: run it again (the key is kept). Remove: Settings › Apps (Setup.exe), or `install-windows.ps1 -Uninstall`.
 
+The server runs from Python's own `pythonw.exe` (through `launch.py`), not the environment's `Scripts\pythonw.exe`: some antivirus programs (Acronis Cyber Protect, for one) take that small launcher for malware and remove it.
+
 ## Install on macOS
 
 On Apple silicon Whisper runs on the GPU through [MLX](https://github.com/ml-explore/mlx) (`mlx-whisper`, the same models); on an Intel Mac on the processor. With 16 GB or more, a translation model in LM Studio or Ollama fits on the same Mac.

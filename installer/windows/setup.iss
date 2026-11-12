@@ -61,6 +61,7 @@ Source: "{#Source}\server.py"; DestDir: "{app}\source"; Flags: ignoreversion
 Source: "{#Source}\engines.py"; DestDir: "{app}\source"; Flags: ignoreversion
 Source: "{#Source}\segmenter.py"; DestDir: "{app}\source"; Flags: ignoreversion
 Source: "{#Source}\fetch_voices.py"; DestDir: "{app}\source"; Flags: ignoreversion
+Source: "{#Source}\launch.py"; DestDir: "{app}\source"; Flags: ignoreversion
 Source: "{#Source}\requirements.txt"; DestDir: "{app}\source"; Flags: ignoreversion
 Source: "{#Source}\requirements-cuda-windows.txt"; DestDir: "{app}\source"; Flags: ignoreversion
 Source: "{#Source}\install-windows.ps1"; DestDir: "{app}\source"; Flags: ignoreversion
