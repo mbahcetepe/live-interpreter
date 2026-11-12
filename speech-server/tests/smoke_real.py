@@ -31,6 +31,9 @@ SENTENCES = {
 
 
 def main() -> int:
+    # Windows consoles default to a code page without Turkish letters.
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', required=True)
     args = parser.parse_args()
