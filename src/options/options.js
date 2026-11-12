@@ -30,7 +30,7 @@ import { OpenAITranscriber, openaiSynthesize, listAudioModels, listAudioVoices }
 import { StreamResampler } from '../shared/dsp.js';
 import { SONIOX_WS, sonioxConfig } from '../offscreen/soniox.js';
 import { sonioxSynthesize, listSonioxVoices, SONIOX_VOICES, SONIOX_DEFAULT_VOICES } from '../offscreen/soniox-tts.js';
-import { serverBase, originPattern, originRules } from '../shared/servers.js';
+import { serverBase, originPattern, originRules, openAIService } from '../shared/servers.js';
 import { PcmByteAligner, encodeWav, float32ToInt16 } from '../shared/pcm.js';
 import { PcmScheduler } from '../shared/scheduler.js';
 
@@ -186,6 +186,7 @@ function renderProvider() {
 // stays in the list even before the server has answered.
 const PICKERS = {
   openai: { select: 'openaiModel', setting: 'openaiModel' },
+  compatible: { select: 'compatibleModel', setting: 'compatibleModel' },
   openrouter: { select: 'openrouterModel', setting: 'openrouterModel' },
   gemini: { select: 'geminiModel', setting: 'geminiModel' },
   ollama: { select: 'ollamaModel', setting: 'ollamaModel', url: 'ollamaUrl' },
@@ -218,10 +219,14 @@ async function loadModels(kind, { quiet = false } = {}) {
       if (!String(settings.geminiKey || '').trim()) return;
       models = await listGeminiModels({ key: settings.geminiKey });
     } else if (kind === 'openai') {
-      const base = serverBase(settings.openaiUrl, { defaultPort: '' }) || OPENAI_URL;
-      if (base !== OPENAI_URL && !(quiet ? await chrome.permissions.contains({ origins: [originPattern(base)] }) : await allow(base))) return;
-      if (base === OPENAI_URL && !settings.openaiKey) return;
-      models = await listOpenAIModels({ base, key: settings.openaiKey });
+      if (!String(settings.openaiKey || '').trim()) return;
+      models = await listOpenAIModels({ base: OPENAI_URL, key: settings.openaiKey });
+    } else if (kind === 'compatible') {
+      const base = serverBase(settings.compatibleUrl, { defaultPort: '' });
+      if (!base) return;
+      if (!(quiet ? await chrome.permissions.contains({ origins: [originPattern(base)] }) : await allow(base))) return;
+      await applyOriginRules();
+      models = await listOpenAIModels({ base, key: settings.compatibleKey });
     } else {
       const base = serverBase(settings[PICKERS[kind].url]);
       if (!base) return;
@@ -271,12 +276,13 @@ async function testTranslation() {
   };
   if (provider === 'claude') {
     await run('Claude', new Translator({ ...common, apiKey: settings.anthropicKey, model: claudeModelOf(settings), maxRetries: 1 }));
-  } else if (provider === 'openai' || provider === 'openrouter') {
-    const openrouter = provider === 'openrouter';
-    const base = openrouter ? OPENROUTER_URL : serverBase(settings.openaiUrl, { defaultPort: '' }) || OPENAI_URL;
-    if (base !== OPENAI_URL && base !== OPENROUTER_URL && !(await allow(base))) return result('translationResult', t('opt.denied', { url: base }), 'bad');
-    const label = t(openrouter ? 'provider.openrouter' : 'provider.openai');
-    await run(label, new OpenAITranslator({ ...common, base, key: openrouter ? settings.openrouterKey : settings.openaiKey, model: openrouter ? settings.openrouterModel : settings.openaiModel, label }));
+  } else if (provider === 'openai' || provider === 'openrouter' || provider === 'compatible') {
+    const { base, key, model, name } = openAIService(settings, provider);
+    if (provider === 'compatible') {
+      if (!(await allow(base))) return result('translationResult', t('opt.denied', { url: base }), 'bad');
+      await applyOriginRules();
+    }
+    await run(name, new OpenAITranslator({ ...common, base, key, model, label: name }));
   } else if (provider === 'gemini') {
     await run('Gemini', new GeminiTranslator({ ...common, key: settings.geminiKey, model: settings.geminiModel }));
   } else if (provider === 'ollama') {
@@ -742,7 +748,7 @@ const presetInUse = (preset) => Object.entries(preset.patch).every(([name, value
 
 // What the current setup still needs, in words.
 function setupNeeds() {
-  const servers = { ollama: t('server.ollama'), speech: t('opt.speech.local'), model: t('opt.tr.model') };
+  const servers = { ollama: t('server.ollama'), compatible: t('server.compatible'), speech: t('opt.speech.local'), model: t('opt.tr.model') };
   const names = [...missingKeys(settings), ...missingServers(settings).map((m) => servers[m] || m)];
   return names.length ? t('help.needs', { names: joinNames(names) }) : t('help.ready');
 }
@@ -976,7 +982,7 @@ async function init() {
     },
   });
   bindSelect('claudeModel');
-  for (const id of ['anthropicKey', 'openaiUrl', 'openaiKey', 'openrouterKey', 'ollamaUrl', 'ollamaBackupUrl', 'meetingContext', 'keyterms']) bindText(id);
+  for (const id of ['anthropicKey', 'compatibleUrl', 'compatibleKey', 'openaiKey', 'openrouterKey', 'ollamaUrl', 'ollamaBackupUrl', 'meetingContext', 'keyterms']) bindText(id);
   for (const kind of Object.keys(PICKERS)) bindSelect(PICKERS[kind].select);
   for (const button of document.querySelectorAll('[data-models]')) {
     if (button.dataset.models === 'speech' || button.dataset.models === 'oaiSpeech') continue;
@@ -988,8 +994,9 @@ async function init() {
     clearTimeout(reload);
     reload = setTimeout(() => loadModels(kind, { quiet: true }), 900);
   };
-  $('openaiUrl').addEventListener('input', () => later('openai'));
   $('openaiKey').addEventListener('input', () => later('openai'));
+  $('compatibleUrl').addEventListener('input', () => later('compatible'));
+  $('compatibleKey').addEventListener('input', () => later('compatible'));
   $('ollamaUrl').addEventListener('change', () => loadModels('ollama'));
   $('ollamaBackupUrl').addEventListener('change', () => loadModels('ollamaBackup'));
   if (settings.ollamaBackupUrl) $('ollamaBackup').open = true;

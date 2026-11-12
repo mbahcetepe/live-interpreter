@@ -12,8 +12,9 @@ export const CLAUDE_MODELS = [
 ];
 const CLAUDE_IDS = new Set(CLAUDE_MODELS.map((m) => m.id));
 
-// Who translates. 'openai' is OpenAI itself or any server with the same API (LM Studio,
-// vLLM, a company gateway); 'openrouter' reaches hundreds of models with one key.
+// Who translates. 'openai' is OpenAI itself; 'compatible' is a server of one's own with
+// the same API (LM Studio, vLLM, llama.cpp, a company gateway); 'openrouter' reaches
+// hundreds of models with one key. shortKey names the service in the panel.
 export const PROVIDERS = [
   { id: 'claude', labelKey: 'provider.claude' },
   // Soniox hears and translates in one stream, so it also does the listening.
@@ -22,6 +23,7 @@ export const PROVIDERS = [
   { id: 'openrouter', labelKey: 'provider.openrouter' },
   { id: 'gemini', labelKey: 'provider.gemini' },
   { id: 'ollama', labelKey: 'provider.ollama' },
+  { id: 'compatible', labelKey: 'provider.compatible', shortKey: 'server.compatible' },
 ];
 
 // Whisper models that know only English: Distil-Whisper (distil-large-v3 and the like) and
@@ -52,7 +54,6 @@ export const claudeModelOf = (settings) => (CLAUDE_IDS.has(settings?.claudeModel
 
 export const isOllamaTranslation = (settings) => translationProvider(settings) === 'ollama';
 export const isClaudeTranslation = (settings) => translationProvider(settings) === 'claude';
-export const isOpenAITranslation = (settings) => ['openai', 'openrouter'].includes(translationProvider(settings));
 // Speech recognition and speech on the local speech server instead of ElevenLabs.
 export const isLocalSpeech = (settings) => settings.speechProvider === 'local';
 // Speech recognition and speech through OpenAI's audio API (offscreen/openai-speech.js).
@@ -116,12 +117,16 @@ export const DEFAULT_SETTINGS = {
   claudeModel: 'claude-opus-5-5',
   // When the chosen translation fails on a sentence, the ones behind it translate it.
   translationFallback: true,
-  // OpenAI or a server with the same API.
+  // OpenAI itself. openaiUrl is no longer used (2.6.1: such servers are 'compatible').
   openaiUrl: '',
   openaiKey: '',
   openaiModel: '',
   openrouterKey: '',
   openrouterModel: '',
+  // A server of one's own with OpenAI's API; LM Studio's address on this computer.
+  compatibleUrl: 'http://localhost:1234/v1',
+  compatibleKey: '',
+  compatibleModel: '',
   // Google Gemini (AI Studio key).
   geminiKey: '',
   geminiModel: 'gemini-3.5-flash-lite',
@@ -217,6 +222,21 @@ export function migrateSettings(stored) {
   }
   // Free translation is gone since 2.6: Claude takes its place.
   if (merged.translationProvider === 'free') merged.translationProvider = 'claude';
+  // Before 2.6.1 a server of one's own was OpenAI with an address; it has its own entry now,
+  // and its address, key and model go with it. OpenAI's own address stays OpenAI.
+  const oldUrl = String(merged.openaiUrl || '').trim();
+  if (oldUrl) {
+    if (!/^(https?:\/\/)?api\.openai\.com(\/|$)/i.test(oldUrl)) {
+      const chosen = merged.translationProvider === 'openai';
+      merged.compatibleUrl = oldUrl;
+      merged.compatibleKey = merged.openaiKey || '';
+      if (chosen) merged.compatibleModel = merged.openaiModel || '';
+      if (chosen) merged.translationProvider = 'compatible';
+      merged.openaiKey = '';
+      merged.openaiModel = '';
+    }
+    merged.openaiUrl = '';
+  }
   return merged;
 }
 
@@ -248,7 +268,7 @@ export function missingKeys(settings) {
   if (provider === 'claude' && !settings.anthropicKey) missing.push('Anthropic');
   if (provider === 'openrouter' && !String(settings.openrouterKey || '').trim()) missing.push('OpenRouter');
   // OpenAI itself needs a key; a server of one's own with the same API may not.
-  if (provider === 'openai' && !String(settings.openaiUrl || '').trim() && !String(settings.openaiKey || '').trim()) missing.push('OpenAI');
+  if (provider === 'openai' && !String(settings.openaiKey || '').trim()) missing.push('OpenAI');
   return missing;
 }
 
@@ -257,7 +277,8 @@ export function missingServers(settings) {
   const missing = [];
   const provider = translationProvider(settings);
   if (provider === 'ollama' && !(String(settings.ollamaUrl || '').trim() && String(settings.ollamaModel || '').trim())) missing.push('ollama');
-  if (provider === 'openai' && !String(settings.openaiModel || '').trim()) missing.push('model');
+  if (provider === 'compatible' && !String(settings.compatibleUrl || '').trim()) missing.push('compatible');
+  if ((provider === 'openai' || provider === 'compatible') && !String(settings[`${provider}Model`] || '').trim()) missing.push('model');
   if (provider === 'openrouter' && !String(settings.openrouterModel || '').trim()) missing.push('model');
   if (provider === 'gemini' && !String(settings.geminiModel || '').trim()) missing.push('model');
   if (isLocalSpeech(settings) && !String(settings.localSpeechUrl || '').trim()) missing.push('speech');

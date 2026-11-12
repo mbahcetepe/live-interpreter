@@ -1,14 +1,23 @@
-// The person's own servers: Ollama for translation and the local speech server
-// (speech-server/). Their addresses are typed into the settings, so the extension asks
+// The person's own servers: Ollama or an OpenAI-compatible server (LM Studio) for
+// translation, and the local speech server (speech-server/). Their addresses are typed into the settings, so the extension asks
 // for access to each one when it is tested there (optional host permissions).
 //
 // Ollama refuses requests whose Origin header it does not know, and the browser sends
 // one with every POST. Rather than asking for OLLAMA_ORIGINS on the server, the extension
-// removes that header from its own requests to the addresses in its settings, and only
+// removes that header from its own requests to the addresses in its settings (Ollama's,
+// and an OpenAI-compatible server's, which may check it the same way), and only
 // from its own: the rule names this extension as the initiator, so a web page's request
 // to the same server still carries its origin and is refused.
 
-import { translationProvider } from './settings.js';
+import { translationProvider, OPENAI_URL, OPENROUTER_URL } from './settings.js';
+import { t } from './i18n.js';
+
+// OpenAI, OpenRouter or a server with the same API (LM Studio): where, with what.
+export function openAIService(s, provider) {
+  if (provider === 'openrouter') return { base: OPENROUTER_URL, key: s.openrouterKey, model: s.openrouterModel, name: t('provider.openrouter') };
+  if (provider === 'compatible') return { base: serverBase(s.compatibleUrl, { defaultPort: '' }), key: s.compatibleKey, model: s.compatibleModel, name: t('server.compatible') };
+  return { base: OPENAI_URL, key: s.openaiKey, model: s.openaiModel, name: t('provider.openai') };
+}
 
 const OLLAMA_PORT = '11434';
 
@@ -61,7 +70,7 @@ export function configuredServers(settings) {
     add(settings.ollamaBackupUrl, 'ollama');
   }
   // A server of one's own with OpenAI's API (LM Studio, vLLM); OpenAI itself needs no entry.
-  if (provider === 'openai' && String(settings.openaiUrl || '').trim()) add(settings.openaiUrl, 'openai', '');
+  if (provider === 'compatible') add(settings.compatibleUrl, 'compatible', '');
   if (settings?.speechProvider === 'local') add(settings.localSpeechUrl, 'speech', '8765');
   return out;
 }
@@ -69,7 +78,7 @@ export function configuredServers(settings) {
 // declarativeNetRequest rules that drop the Origin header from this extension's own
 // requests to its Ollama servers. Ids start at 100; older ones are replaced.
 export function originRules(settings, extensionId) {
-  const hosts = [...new Set(configuredServers(settings).filter((s) => s.kind === 'ollama').map((s) => hostOf(s.base)).filter(Boolean))];
+  const hosts = [...new Set(configuredServers(settings).filter((s) => s.kind === 'ollama' || s.kind === 'compatible').map((s) => hostOf(s.base)).filter(Boolean))];
   if (!hosts.length) return [];
   return [
     {

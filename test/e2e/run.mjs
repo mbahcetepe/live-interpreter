@@ -489,10 +489,10 @@ async function openaiTranslationTest() {
       await chrome.storage.local.set({ settings: { ...(settings || {}), ...p } });
     }, patch);
   try {
-    await setSettings({ elevenLabsKey: 'mock-el', anthropicKey: '', translationProvider: 'openai', openaiUrl: server.url, openaiKey: server.key, openaiModel: '' });
+    await setSettings({ elevenLabsKey: 'mock-el', anthropicKey: '', translationProvider: 'compatible', compatibleUrl: server.url, compatibleKey: server.key, compatibleModel: '' });
     const bare = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
     check('without a model chosen it does not start and says so', bare?.ok === false && /model/i.test(bare?.error || ''), bare?.error);
-    await setSettings({ openaiModel: 'mock-llm' });
+    await setSettings({ compatibleModel: 'mock-llm' });
     const start = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
     check('translation on an OpenAI-compatible server starts', start?.ok === true, start?.error);
     if (!start?.ok) return;
@@ -502,6 +502,14 @@ async function openaiTranslationTest() {
     check('my Turkish is translated by that server', outgoing?.translation === 'Friday at three works for us.', JSON.stringify(outgoing));
     check('the chosen model is asked, streamed, with the key', server.stats.chats.length > 0 && server.stats.chats.every((c) => c.model === 'mock-llm' && c.stream === true) && server.stats.refused === 0, JSON.stringify(server.stats.chats[0]));
     check('no Claude request was made', mock.stats.claude.length === 0, String(mock.stats.claude.length));
+    await send(control, { type: 'stop' });
+    // Saved before 2.6.1: the server was OpenAI with an address.
+    const chats = server.stats.chats.length;
+    await setSettings({ translationProvider: 'openai', openaiUrl: server.url, openaiKey: server.key, openaiModel: 'mock-llm', compatibleUrl: 'http://localhost:1234/v1', compatibleKey: '', compatibleModel: '' });
+    const old = await send(control, { type: 'start', tabId, options: { incomingMode: 'voice', outgoingMode: 'voice' } });
+    check('a setup saved before 2.6.1 (OpenAI with an address) starts on that server', old?.ok === true, old?.error);
+    const more = await waitFor(async () => server.stats.chats.length > chats || null, 30000, 300);
+    check('and that server translates', Boolean(more), String(server.stats.chats.length - chats));
     await send(control, { type: 'stop' });
     check('no script errors on the Meet page', env.pageErrors.length === 0, env.pageErrors.join(' | '));
   } finally {
@@ -633,7 +641,7 @@ async function openaiSpeechTest() {
   try {
     await setSettings({
       elevenLabsKey: '', anthropicKey: '',
-      translationProvider: 'openai', openaiUrl: server.url, openaiKey: server.key, openaiModel: 'mock-llm',
+      translationProvider: 'compatible', compatibleUrl: server.url, compatibleKey: server.key, compatibleModel: 'mock-llm',
       speechProvider: 'openai', oaiSttServer: 'custom', oaiSttUrl: server.url, oaiSttKey: server.key, oaiSttModel: 'whisper-mock',
       oaiTtsServer: 'custom', oaiTtsUrl: server.url, oaiTtsKey: server.key, oaiTtsModel: 'tts-mock', oaiMyVoice: 'echo', oaiTheirVoice: 'nova',
     });

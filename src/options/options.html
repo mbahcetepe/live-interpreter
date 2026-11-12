@@ -100,16 +100,10 @@
         </div>
 
         <div class="box" data-provider="openai">
-          <div class="grid2">
-            <label class="field">
-              <span data-i18n="opt.oai.url">Server (empty: OpenAI)</span>
-              <input id="openaiUrl" autocomplete="off" spellcheck="false" placeholder="https://api.openai.com/v1" />
-            </label>
-            <label class="field">
-              <span data-i18n="opt.oai.key">API key</span>
-              <input type="password" id="openaiKey" class="key" autocomplete="off" spellcheck="false" />
-            </label>
-          </div>
+          <label class="field">
+            <span data-i18n="opt.oai.key">API key</span>
+            <input type="password" id="openaiKey" class="key" autocomplete="off" spellcheck="false" />
+          </label>
           <div class="picker">
             <label class="field">
               <span data-i18n="opt.tr.model">Model</span>
@@ -146,6 +140,27 @@
             <button type="button" class="refresh" data-models="gemini" data-i18n-title="opt.models.refresh">↻</button>
           </div>
           <small class="hint" data-i18n="opt.gemini.hint">A key from Google AI Studio (aistudio.google.com › Get API key). Thinking is turned down to the lowest level each model takes, so it does not add to the delay; gemini-3.5-flash-lite is the fastest.</small>
+        </div>
+
+        <div class="box" data-provider="compatible">
+          <div class="grid2">
+            <label class="field">
+              <span data-i18n="opt.ollama.url">Server address</span>
+              <input id="compatibleUrl" autocomplete="off" spellcheck="false" placeholder="http://localhost:1234/v1" />
+            </label>
+            <label class="field">
+              <span data-i18n="opt.compat.key">API key (optional)</span>
+              <input type="password" id="compatibleKey" class="key" autocomplete="off" spellcheck="false" />
+            </label>
+          </div>
+          <div class="picker">
+            <label class="field">
+              <span data-i18n="opt.tr.model">Model</span>
+              <select id="compatibleModel"></select>
+            </label>
+            <button type="button" class="refresh" data-models="compatible" data-i18n-title="opt.models.refresh">↻</button>
+          </div>
+          <small class="hint" data-i18n="opt.compat.hint">LM Studio: start the server under Developer (port 1234) and load a model; for another computer, turn on Serve on Local Network there. vLLM, llama.cpp's server, LocalAI or Jan work too: any server with OpenAI's chat API. The browser asks once for access to the address.</small>
         </div>
 
         <div class="box" data-provider="ollama">

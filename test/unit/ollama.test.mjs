@@ -57,6 +57,11 @@ test('the Origin rule covers only Ollama servers in the settings and only this e
   assert.equal(rule.action.requestHeaders[0].header, 'origin');
   assert.deepEqual(originRules({ claudeModel: 'claude-opus-5-5', ollamaUrl: '100.101.102.103' }, 'extid'), []);
   assert.deepEqual(configuredServers(settings).map((s) => s.kind), ['ollama', 'ollama', 'speech']);
+
+  // An OpenAI-compatible server (LM Studio) gets the same rule.
+  const lm = { ...DEFAULT_SETTINGS, translationProvider: 'compatible', compatibleUrl: 'http://192.168.1.5:1234/v1' };
+  assert.deepEqual(configuredServers(lm), [{ base: 'http://192.168.1.5:1234/v1', kind: 'compatible' }]);
+  assert.deepEqual(originRules(lm, 'extid')[0].condition.requestDomains, ['192.168.1.5']);
 });
 
 test('with Ollama no Anthropic key is needed, but the server address is', () => {

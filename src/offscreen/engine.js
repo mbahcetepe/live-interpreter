@@ -8,10 +8,10 @@
 // worker with each message, and everything for the Meet tab goes through a port the
 // tab's content script opens.
 
-import { PROVIDERS, isSoniox, isSonioxListening, whisperModelFor, translationProvider, claudeModelOf, missingKeys, missingServers, parseKeyterms, OPENAI_URL, OPENROUTER_URL } from '../shared/settings.js';
+import { PROVIDERS, isSoniox, isSonioxListening, whisperModelFor, translationProvider, claudeModelOf, missingKeys, missingServers, parseKeyterms } from '../shared/settings.js';
 import { OpenAITranslator, openaiRestMs } from './openai-translator.js';
 import { GeminiTranslator } from './gemini-translator.js';
-import { serverBase } from '../shared/servers.js';
+import { serverBase, openAIService } from '../shared/servers.js';
 import { OllamaTranslator, ollamaRestMs } from './ollama-translator.js';
 import { listVoices, createVoiceClone, deleteVoice, describeElevenLabsError, speechAccount, speechHealth, speechModels, SPEECH_PROTOCOL } from '../shared/elevenlabs.js';
 import { PcmScheduler, testChime } from '../shared/scheduler.js';
@@ -103,7 +103,7 @@ function translationSetup(s) {
   if (provider === 'claude') return provider;
   if (provider === 'ollama') return ['ollama', serverBase(s.ollamaUrl), s.ollamaModel, serverBase(s.ollamaBackupUrl), s.ollamaBackupModel, Boolean(s.anthropicKey)].join('|');
   if (provider === 'gemini') return ['gemini', s.geminiKey, s.geminiModel, Boolean(s.anthropicKey)].join('|');
-  return [provider, s.openaiUrl, s.openaiKey, s.openaiModel, s.openrouterKey, s.openrouterModel, Boolean(s.anthropicKey)].join('|');
+  return [provider, s.compatibleUrl, s.compatibleKey, s.compatibleModel, s.openaiKey, s.openaiModel, s.openrouterKey, s.openrouterModel, Boolean(s.anthropicKey)].join('|');
 }
 
 // How loud a video stays while its spoken translation plays.
@@ -444,17 +444,9 @@ class Session {
       if (!behind) return primary;
       return new FallbackTranslator({ primary, backup: behind, restFor: openaiRestMs, name: 'Gemini', onOff, log });
     }
-    if (provider === 'openai' || provider === 'openrouter') {
-      const openrouter = provider === 'openrouter';
-      const name = t(openrouter ? 'provider.openrouter' : 'provider.openai');
-      const primary = new OpenAITranslator({
-        ...common,
-        base: openrouter ? OPENROUTER_URL : serverBase(s.openaiUrl, { defaultPort: '' }) || OPENAI_URL,
-        key: openrouter ? s.openrouterKey : s.openaiKey,
-        model: openrouter ? s.openrouterModel : s.openaiModel,
-        label: name,
-        log,
-      });
+    if (provider === 'openai' || provider === 'openrouter' || provider === 'compatible') {
+      const { base, key, model, name } = openAIService(s, provider);
+      const primary = new OpenAITranslator({ ...common, base, key, model, label: name, log });
       if (!behind) return primary;
       return new FallbackTranslator({ primary, backup: behind, restFor: openaiRestMs, name, onOff, log });
     }
@@ -1193,7 +1185,7 @@ class Session {
     if (isSoniox(s)) return t('overlay.servicesSoniox', { voice });
     const hear = this.speech.kind === 'gemini' ? 'Gemini' : this.speech.kind === 'soniox' ? 'Soniox' : this.speech.local ? t('opt.speech.local') : this.speech.kind === 'openai' ? (s.oaiSttServer === 'groq' ? 'Groq' : s.oaiSttServer === 'custom' ? t('opt.oaiSpeech.custom') : 'OpenAI') : 'ElevenLabs';
     const provider = PROVIDERS.find((p) => p.id === translationProvider(s));
-    return t('overlay.services', { hear, translate: provider ? plain(t(provider.labelKey)) : '', voice });
+    return t('overlay.services', { hear, translate: provider ? plain(t(provider.shortKey || provider.labelKey)) : '', voice });
   }
 
   status() {

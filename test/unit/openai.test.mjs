@@ -116,9 +116,30 @@ test('each provider asks for what it needs', () => {
   assert.deepEqual(missingKeys({ ...base, translationProvider: 'openrouter' }), ['OpenRouter']);
   assert.deepEqual(missingServers({ ...base, translationProvider: 'openrouter', openrouterKey: 'k' }), ['model']);
   assert.deepEqual(missingKeys({ ...base, translationProvider: 'openai' }), ['OpenAI']);
-  // A server of one's own with the same API may need no key.
-  assert.deepEqual(missingKeys({ ...base, translationProvider: 'openai', openaiUrl: 'http://127.0.0.1:1234/v1' }), []);
-  assert.deepEqual(missingServers({ ...base, translationProvider: 'openai', openaiUrl: 'x', openaiModel: 'm' }), []);
+  // A server of one's own with the same API (LM Studio) needs no key, only an address and a model.
+  assert.deepEqual(missingKeys({ ...base, translationProvider: 'compatible' }), []);
+  assert.deepEqual(missingServers({ ...base, translationProvider: 'compatible' }), ['model']);
+  assert.deepEqual(missingServers({ ...base, translationProvider: 'compatible', compatibleUrl: ' ', compatibleModel: 'm' }), ['compatible']);
+  assert.deepEqual(missingServers({ ...base, translationProvider: 'compatible', compatibleModel: 'm' }), []);
+});
+
+test('a server chosen under OpenAI moves to its own entry (LM Studio and the like)', async () => {
+  const { migrateSettings, DEFAULT_SETTINGS: D } = await import('../../src/shared/settings.js');
+  const moved = migrateSettings({ translationProvider: 'openai', openaiUrl: 'http://192.168.1.5:1234/v1', openaiKey: 'lm', openaiModel: 'qwen' });
+  assert.equal(moved.translationProvider, 'compatible');
+  assert.deepEqual([moved.compatibleUrl, moved.compatibleKey, moved.compatibleModel], ['http://192.168.1.5:1234/v1', 'lm', 'qwen']);
+  assert.deepEqual([moved.openaiUrl, moved.openaiKey, moved.openaiModel], ['', '', '']);
+  // Not chosen: the address and key still move, the choice stays.
+  const kept = migrateSettings({ translationProvider: 'claude', openaiUrl: 'localhost:1234/v1', openaiKey: 'x', openaiModel: 'm' });
+  assert.equal(kept.translationProvider, 'claude');
+  assert.equal(kept.compatibleUrl, 'localhost:1234/v1');
+  assert.equal(kept.compatibleModel, D.compatibleModel);
+  // OpenAI's own address written out stays OpenAI, key and model kept.
+  const openai = migrateSettings({ translationProvider: 'openai', openaiUrl: 'https://api.openai.com/v1', openaiKey: 'sk', openaiModel: 'gpt' });
+  assert.deepEqual([openai.translationProvider, openai.openaiUrl, openai.openaiKey, openai.openaiModel, openai.compatibleUrl], ['openai', '', 'sk', 'gpt', D.compatibleUrl]);
+  // Nothing to move: untouched, LM Studio's usual address offered.
+  assert.equal(migrateSettings({ translationProvider: 'openai', openaiKey: 'sk' }).openaiKey, 'sk');
+  assert.equal(D.compatibleUrl, 'http://localhost:1234/v1');
 });
 
 test('a setup that had free translation chosen moves to Claude', async () => {
