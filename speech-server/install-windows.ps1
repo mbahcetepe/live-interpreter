@@ -56,9 +56,32 @@ function Stop-Server {
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 }
 
+# From Setup.exe a failure stays on screen until a key is pressed, or 5 minutes (a silent
+# install has nobody to press it).
 function Finish($code) {
-  if ($FromSetup -and $code -ne 0) { Read-Host 'Press Enter to close' | Out-Null }
+  if ($FromSetup -and $code -ne 0) {
+    Write-Host 'Press a key to close (it closes by itself in 5 minutes).'
+    for ($i = 0; $i -lt 300; $i++) {
+      try { if ([Console]::KeyAvailable) { break } } catch { break }
+      Start-Sleep -Seconds 1
+    }
+  }
   exit $code
+}
+
+# uv links each Python minor version (cpython-3.12-...) to the patch it installed. An
+# install stopped half way can leave that link pointing nowhere; it is removed so uv can
+# make it again. Only the link goes, never what it pointed to.
+function Clear-BrokenPythonLinks($folder) {
+  if (-not (Test-Path $folder)) { return }
+  Get-ChildItem $folder -Force -ErrorAction SilentlyContinue |
+    Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint } |
+    ForEach-Object {
+      if (-not (Test-Path (Join-Path $_.FullName 'python.exe'))) {
+        Write-Host "  removing a broken link: $($_.Name)"
+        [IO.Directory]::Delete($_.FullName, $false)
+      }
+    }
 }
 
 if ($Uninstall) {
@@ -94,6 +117,7 @@ try {
     Remove-Item $zip -Force
   }
   $env:UV_PYTHON_INSTALL_DIR = Join-Path $App 'python'
+  Clear-BrokenPythonLinks $env:UV_PYTHON_INSTALL_DIR
   $env:UV_CACHE_DIR = Join-Path $App 'uv-cache'
   $env:UV_LINK_MODE = 'copy'
 

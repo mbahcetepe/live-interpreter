@@ -30,6 +30,10 @@ SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayName=Live Interpreter speech server
 SetupLogging=yes
+; Since Inno Setup 6.7 Setup turns on Windows' RedirectionGuard, and a per-user Setup
+; passes it on to the PowerShell it runs: uv could then not open the link it makes for
+; the Python it installs (os error 448).
+RedirectionGuard=no
 
 [Languages]
 Name: "en"; MessagesFile: "compiler:Default.isl"

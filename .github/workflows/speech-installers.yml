@@ -30,9 +30,15 @@ jobs:
         with:
           name: windows-setup
           path: dist-installers/*.exe
-      - name: Install with the script (two voices, processor)
+      - name: Install with Setup.exe (silent, processor)
         shell: pwsh
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File speech-server/install-windows.ps1 -LocalOnly -Langs "en tr"
+        run: |
+          $setup = Get-ChildItem dist-installers/*.exe | Select-Object -First 1
+          $log = Join-Path $env:RUNNER_TEMP 'setup.log'
+          $p = Start-Process -FilePath $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS=localonly', "/LOG=`"$log`"" -Wait -PassThru
+          Get-Content $log -Tail 30
+          if ($p.ExitCode -ne 0) { throw "Setup.exe exited with $($p.ExitCode)" }
+          Invoke-RestMethod http://127.0.0.1:8765/health | ConvertTo-Json -Compress
       - name: Real engines
         shell: pwsh
         run: |
@@ -55,9 +61,15 @@ jobs:
           for ($i = 0; $i -lt 60; $i++) { Start-Sleep 3; try { Invoke-RestMethod http://127.0.0.1:8765/health -TimeoutSec 3 | ConvertTo-Json -Compress; break } catch { if ($p.HasExited) { "exited with $($p.ExitCode)"; break } } }
           '--- stdout'; Get-Content $out -ErrorAction SilentlyContinue | Select-Object -Last 40
           '--- stderr'; Get-Content $err -ErrorAction SilentlyContinue | Where-Object { $_ -notmatch 'HTTP Request' } | Select-Object -Last 60
-      - name: Uninstall
+      - name: Uninstall with the uninstaller
         shell: pwsh
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File speech-server/install-windows.ps1 -Uninstall
+        run: |
+          $app = Join-Path $env:LOCALAPPDATA 'LiveInterpreterSpeech'
+          $p = Start-Process -FilePath (Join-Path $app 'unins000.exe') -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES' -Wait -PassThru
+          for ($i = 0; $i -lt 120 -and (Test-Path (Join-Path $app 'venv')); $i++) { Start-Sleep -Seconds 1 }
+          if (Test-Path (Join-Path $app 'venv')) { throw 'the uninstaller left the server behind' }
+          if (Get-CimInstance Win32_Process -Filter "Name='pythonw.exe'" | Where-Object { $_.CommandLine -like "*$app*" }) { throw 'the server still runs' }
+          'removed'
 
   macos:
     runs-on: macos-latest
