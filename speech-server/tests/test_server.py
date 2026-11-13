@@ -303,3 +303,26 @@ def test_made_up_chinese_and_japanese_video_lines_are_caught():
     for line in ('请不吝点赞 订阅 转发 打赏支持明镜与点点栏目', '字幕由Amara.org社区提供', 'ご視聴ありがとうございました'):
         assert HALLUCINATIONS.search(line), line
     assert not HALLUCINATIONS.search('那你觉得说好汉语的一个关键是什么?')
+
+
+def test_a_text_ready_after_the_extension_left_is_dropped_quietly(caplog):
+    import asyncio
+
+    from fastapi import WebSocketDisconnect
+
+    from server import RealtimeSession
+
+    class GoneSocket:
+        sent = 0
+
+        async def send_text(self, text):
+            GoneSocket.sent += 1
+            raise WebSocketDisconnect(code=1006)
+
+    session = RealtimeSession(GoneSocket(), FakeRecognizer(), 'en', 0.5, '')
+    with caplog.at_level('ERROR'):
+        asyncio.run(session.partial(np.zeros(RATE, dtype=np.float32), session.utterance))
+        asyncio.run(session.send('committed_transcript', 'later'))
+    assert session.closed
+    assert GoneSocket.sent == 1
+    assert not [r for r in caplog.records if r.levelname == 'ERROR']

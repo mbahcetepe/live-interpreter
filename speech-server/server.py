@@ -176,9 +176,17 @@ class RealtimeSession:
         self.partial_busy = False
         # A partial that comes back after its utterance was finished is dropped.
         self.utterance = 0
+        self.closed = False
 
     async def send(self, kind: str, text: str = '', **extra):
-        await self.ws.send_text(json.dumps({'message_type': kind, 'text': text, **extra}, ensure_ascii=False))
+        # A text that is ready after the extension has closed the connection is dropped
+        # (the browser tab stopped or the call ended), not logged as an error.
+        if self.closed:
+            return
+        try:
+            await self.ws.send_text(json.dumps({'message_type': kind, 'text': text, **extra}, ensure_ascii=False))
+        except (WebSocketDisconnect, RuntimeError):
+            self.closed = True
 
     async def run(self):
         await self.send('session_started', session_id=secrets.token_hex(6), config={'language_code': self.language})
@@ -202,6 +210,7 @@ class RealtimeSession:
         except (WebSocketDisconnect, RuntimeError):
             pass
         finally:
+            self.closed = True
             worker.cancel()
 
     async def partial(self, audio, utterance):

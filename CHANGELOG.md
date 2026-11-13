@@ -17,6 +17,7 @@ Versions follow [semantic versioning](https://semver.org): MAJOR for changes tha
 - `fetch_voices.py` downloads the Piper voices for the Windows and macOS installers. A workflow (`.github/workflows/speech-installers.yml`) builds both installers and checks each install with real engines on GitHub's Windows and macOS runners.
 - The Mexican Spanish voice (`es_MX-ald-medium`) loads: its settings file in piper-voices v1.0.0 names the phoneme type `PhonemeType.ESPEAK`, which Piper refuses; the server now repairs the file before loading the voice.
 - Without an NVIDIA card (Windows) or Apple silicon (an Intel Mac) the installers choose the `small` Whisper model: measured on a laptop i7-1255U, about 3.3 s per sentence against about 10 s for `large-v3-turbo`.
+- A text that is ready after the extension has closed the connection is dropped quietly; it used to leave a long `ClientDisconnected` error in the log.
 - On Windows the server runs from Python's own `pythonw.exe` through `launch.py`. Acronis Cyber Protect removed the virtual environment's `pythonw.exe` launcher as malware (`ML:Generic.MaliciousExe`, a false positive), and the install stopped with "cannot find the file".
 
 ## 2.6.0 (2026-11-12)
