@@ -128,11 +128,15 @@ try {
   $Python = Join-Path $Venv 'Scripts\python.exe'
   $requirements = @('-r', (Join-Path $Code 'requirements.txt'))
   $nvidia = @(Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match 'NVIDIA' })
+  # On a processor large-v3-turbo takes 10 s and more per sentence (a laptop i7-1255U and
+  # GitHub's runner); small takes about 3 s.
+  $whisperModel = 'large-v3-turbo'
   if ($nvidia.Count -gt 0) {
     Write-Host "  NVIDIA card found: $($nvidia[0].Name); installing cuBLAS and cuDNN (about 1.3 GB)"
     $requirements += @('-r', (Join-Path $Code 'requirements-cuda-windows.txt'))
   } else {
-    Write-Host '  no NVIDIA card: Whisper runs on the processor'
+    $whisperModel = 'small'
+    Write-Host '  no NVIDIA card: Whisper runs on the processor, with the small model'
   }
   if ((Run $Uv pip install --python $Python @requirements) -ne 0) { throw 'could not install the packages' }
   Run $Uv cache clean | Out-Null
@@ -150,7 +154,7 @@ try {
       "SPEECH_KEY=$key",
       "SPEECH_HOST=$listen",
       "SPEECH_PORT=$Port",
-      'WHISPER_MODEL=large-v3-turbo',
+      "WHISPER_MODEL=$whisperModel",
       'WHISPER_DEVICE=auto',
       'WHISPER_COMPUTE=auto',
       "PIPER_VOICES=$(Join-Path $App 'voices\voices.json')",
@@ -184,7 +188,7 @@ try {
   $link.Description = 'Live Interpreter speech server'
   $link.Save()
 
-  Step 'starting the server (the first start downloads the Whisper model, about 1.6 GB)'
+  Step 'starting the server (the first start downloads the Whisper model: large-v3-turbo about 1.6 GB, small about 0.5 GB)'
   Start-Process -FilePath $Pythonw -ArgumentList $arguments -WorkingDirectory $Code -WindowStyle Hidden
   $health = $null
   for ($i = 0; $i -lt 300; $i++) {

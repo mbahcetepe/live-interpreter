@@ -83,12 +83,15 @@ step "settings"
 LISTEN=0.0.0.0
 [[ $LOCAL_ONLY == 1 ]] && LISTEN=127.0.0.1
 if [[ ! -f "$CONFIG" ]]; then
+  # Apple silicon runs large-v3-turbo on its GPU (MLX); an Intel Mac has only the processor.
+  MODEL=large-v3-turbo
+  [[ "$(uname -m)" == arm64 ]] || MODEL=small
   KEY=$("$VENV/bin/python" -c 'import secrets; print(secrets.token_urlsafe(24))')
   cat >"$CONFIG" <<EOF
 SPEECH_KEY=$KEY
 SPEECH_HOST=$LISTEN
 SPEECH_PORT=8765
-WHISPER_MODEL=large-v3-turbo
+WHISPER_MODEL=$MODEL
 WHISPER_ENGINE=auto
 PIPER_VOICES=$APP/voices/voices.json
 HF_HOME=$APP/cache
@@ -149,7 +152,7 @@ if [[ $FROM_PKG == 1 ]]; then
   exit 0
 fi
 
-step "waiting for the server (the first start downloads the Whisper model, about 1.6 GB)"
+step "waiting for the server (the first start downloads the Whisper model: large-v3-turbo about 1.6 GB, small about 0.5 GB)"
 for _ in $(seq 1 450); do
   if health=$(curl -fs "http://127.0.0.1:$PORT/health"); then
     echo

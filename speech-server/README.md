@@ -76,6 +76,8 @@ Either way, for the signed-in user (no administrator rights):
 3. Makes a random key and writes the address and key to `connection.txt` (Setup.exe opens it at the end; also in the Start menu).
 4. Starts the server, without a window, now and at every sign-in (a shortcut in the Startup folder). The first start downloads the Whisper model (about 1.6 GB).
 
+Without an NVIDIA card the installer chooses the `small` model (about 0.5 GB): on a laptop processor (i7-1255U) it took about 3.3 s per sentence, `large-v3-turbo` about 10 s, `base` about 1 s but with more mistakes in Turkish. A faster computer on the network (an NVIDIA card or a Mac with Apple silicon) does better: put its address in the extension. To change the model, edit `WHISPER_MODEL` in `speech.env` and sign in again (or restart the server).
+
 By default other computers on the network can use it (with the key): Windows asks once whether Python may accept connections; allow it on private networks. Only this computer: tick the box in Setup.exe or add `-LocalOnly`. Log: `logs\server.log`. Update: run it again (the key is kept). Remove: Settings › Apps (Setup.exe), or `install-windows.ps1 -Uninstall`.
 
 The server runs from Python's own `pythonw.exe` (through `launch.py`), not the environment's `Scripts\pythonw.exe`: some antivirus programs (Acronis Cyber Protect, for one) take that small launcher for malware and remove it.
@@ -90,7 +92,7 @@ On Apple silicon Whisper runs on the GPU through [MLX](https://github.com/ml-exp
 ./install-mac.sh
 ```
 
-Either way, for the signed-in user (no sudo): uv, Python 3.12, the packages and the voices go to `~/Library/Application Support/LiveInterpreterSpeech`; the address and key are in `connection.txt` there (the .pkg opens it); launchd starts the server now and at every sign-in (`~/Library/LaunchAgents/com.liveinterpreter.speech.plist`). The first start downloads the Whisper model (about 1.6 GB). Other computers on the network can use it with the key; only this Mac: `./install-mac.sh --local-only`. Log: `logs/server.log`. Update: run it again (the key is kept). Remove: `"~/Library/Application Support/LiveInterpreterSpeech/install-mac.sh" --uninstall`.
+Either way, for the signed-in user (no sudo): uv, Python 3.12, the packages and the voices go to `~/Library/Application Support/LiveInterpreterSpeech`; the address and key are in `connection.txt` there (the .pkg opens it); launchd starts the server now and at every sign-in (`~/Library/LaunchAgents/com.liveinterpreter.speech.plist`). The first start downloads the Whisper model (about 1.6 GB; on an Intel Mac the installer chooses `small`, about 0.5 GB). Other computers on the network can use it with the key; only this Mac: `./install-mac.sh --local-only`. Log: `logs/server.log`. Update: run it again (the key is kept). Remove: `"~/Library/Application Support/LiveInterpreterSpeech/install-mac.sh" --uninstall`.
 
 ## In the extension
 

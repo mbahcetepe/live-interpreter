@@ -76,6 +76,8 @@ powershell -ExecutionPolicy Bypass -File install-windows.ps1
 3. Rastgele bir anahtar üretir, adresi ve anahtarı `connection.txt` dosyasına yazar (Setup.exe en sonda açar; Başlat menüsünde de durur).
 4. Sunucuyu penceresiz olarak hemen ve her oturum açılışında başlatır (Başlangıç klasöründe bir kısayol). İlk açılışta Whisper modeli (yaklaşık 1,6 GB) indirilir.
 
+NVIDIA kart yoksa kurulum `small` modelini seçer (yaklaşık 0,5 GB): bir dizüstü işlemcisinde (i7-1255U) cümle başına yaklaşık 3,3 sn sürdü; `large-v3-turbo` yaklaşık 10 sn, `base` yaklaşık 1 sn ama Türkçede daha çok hatayla. Ağdaki daha hızlı bir bilgisayar (NVIDIA kartlı ya da Apple çipli bir Mac) daha iyi sonuç verir: eklentiye onun adresini girin. Modeli değiştirmek için `speech.env` içindeki `WHISPER_MODEL` satırını düzenleyip oturumu yeniden açın (ya da sunucuyu yeniden başlatın).
+
 Varsayılan olarak ağdaki diğer bilgisayarlar da (anahtarla) kullanabilir: Windows bir kez Python'un bağlantı kabul edip etmeyeceğini sorar; özel ağlarda izin verin. Yalnızca bu bilgisayar için Setup.exe'deki kutuyu işaretleyin ya da `-LocalOnly` ekleyin. Günlük: `logs\server.log`. Güncellemek için yeniden çalıştırın (anahtar korunur). Kaldırmak için: Ayarlar › Uygulamalar (Setup.exe) ya da `install-windows.ps1 -Uninstall`.
 
 Sunucu, ortamın `Scripts\pythonw.exe` dosyasıyla değil, Python'un kendi `pythonw.exe` dosyasıyla (`launch.py` üzerinden) çalışır: bazı antivirüs programları (örneğin Acronis Cyber Protect) o küçük başlatıcıyı zararlı yazılım sanıp siler.
@@ -90,7 +92,7 @@ Apple silicon'da Whisper, [MLX](https://github.com/ml-explore/mlx) ile ekran iş
 ./install-mac.sh
 ```
 
-İkisi de oturum açmış kullanıcı için kurar (sudo gerekmez): uv, Python 3.12, paketler ve sesler `~/Library/Application Support/LiveInterpreterSpeech` altına gider; adres ve anahtar oradaki `connection.txt` dosyasındadır (.pkg onu açar); launchd sunucuyu hemen ve her oturum açılışında başlatır (`~/Library/LaunchAgents/com.liveinterpreter.speech.plist`). İlk açılışta Whisper modeli (yaklaşık 1,6 GB) indirilir. Ağdaki diğer bilgisayarlar anahtarla kullanabilir; yalnızca bu Mac için: `./install-mac.sh --local-only`. Günlük: `logs/server.log`. Güncellemek için yeniden çalıştırın (anahtar korunur). Kaldırmak için: `"~/Library/Application Support/LiveInterpreterSpeech/install-mac.sh" --uninstall`.
+İkisi de oturum açmış kullanıcı için kurar (sudo gerekmez): uv, Python 3.12, paketler ve sesler `~/Library/Application Support/LiveInterpreterSpeech` altına gider; adres ve anahtar oradaki `connection.txt` dosyasındadır (.pkg onu açar); launchd sunucuyu hemen ve her oturum açılışında başlatır (`~/Library/LaunchAgents/com.liveinterpreter.speech.plist`). İlk açılışta Whisper modeli (yaklaşık 1,6 GB; Intel Mac'te kurulum `small` modelini seçer, yaklaşık 0,5 GB) indirilir. Ağdaki diğer bilgisayarlar anahtarla kullanabilir; yalnızca bu Mac için: `./install-mac.sh --local-only`. Günlük: `logs/server.log`. Güncellemek için yeniden çalıştırın (anahtar korunur). Kaldırmak için: `"~/Library/Application Support/LiveInterpreterSpeech/install-mac.sh" --uninstall`.
 
 ## Eklentide
 
