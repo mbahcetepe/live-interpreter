@@ -79,8 +79,12 @@ jobs:
           if (Get-CimInstance Win32_Process -Filter "Name='pythonw.exe'" | Where-Object { $_.CommandLine -like "*$app*" }) { throw 'the server still runs' }
           'removed'
 
+  # GitHub's Apple silicon runners are sometimes not available for hours. The repository
+  # variable MAC_RUNNER can send this job to a self-hosted Mac instead, as a JSON label
+  # list such as ["self-hosted","macOS","ARM64","speech-mac"]. That runner must run as a
+  # macOS user of its own: the job installs and removes the server in that user's Library.
   macos:
-    runs-on: macos-latest
+    runs-on: ${{ fromJSON(vars.MAC_RUNNER || '"macos-latest"') }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
